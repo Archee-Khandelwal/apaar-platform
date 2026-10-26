@@ -115,14 +115,14 @@ Legend: ☐ not started · ◐ in progress · ☑ done
 - [x] Unit tests: exactly at intake (no flag), over by regular, over only via a supernumerary bucket, lateral entry not counted in year 1
 - **Check:** scenario A from `ground_truth.json` detected exactly
 
-## Step 8 — Duplicate & identity detection  ☐
+## Step 8 — Duplicate & identity detection  ☑
 
-- [ ] `CROSS_INSTITUTION_DUPLICATE`: same `apaar_hash`, active enrolments at 2+ institutions in the same year
-- [ ] One program `mode = online` → `POSSIBLE_DUAL_DEGREE` (low, informational); both full-time regular → `CROSS_INSTITUTION_DUPLICATE` (high)
-- [ ] `IDENTITY_DUPLICATE`: different `apaar_hash`, same normalised name (decrypted only inside the service, never returned) + same DOB + same `guardian_phone_hash`
-- [ ] College-facing flags never name the other institution (CLAUDE.md §5.10); officer view shows both sides
-- [ ] Evidence JSON: masked APAARs, institution ids, programs, years, classification reason
-- [ ] Tests + scenarios C, D, J classified correctly (**D must not be flagged as fraud**)
+- [x] `CROSS_INSTITUTION_DUPLICATE`: same `apaar_hash`, active enrolments at 2+ institutions in the same year
+- [x] One program `mode = online` → `POSSIBLE_DUAL_DEGREE` (low, informational); both full-time regular → `CROSS_INSTITUTION_DUPLICATE` (high)
+- [x] `IDENTITY_DUPLICATE`: different `apaar_hash`, same normalised name (decrypted only inside the service, never returned) + same DOB + same `guardian_phone_hash`
+- [x] College-facing flags never name the other institution (CLAUDE.md §5.10); officer view shows both sides
+- [x] Evidence JSON: masked APAARs, institution ids, programs, years, classification reason
+- [x] Tests + scenarios C, D, J classified correctly (**D must not be flagged as fraud**)
 
 ## Step 9 — Ghost-student graph detector (headline)  ☐
 
