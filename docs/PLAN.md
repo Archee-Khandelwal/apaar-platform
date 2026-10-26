@@ -51,15 +51,15 @@ Legend: ☐ not started · ◐ in progress · ☑ done
 - [x] Tests: wrong role → 403; institution user passing another institution's id in the URL still cannot read it; suppression works
 - **Check:** manual 403 with an institution token on an AICTE route
 
-## Step 4 — Mock APAAR registry  ☐
+## Step 4 — Mock APAAR registry  ☑
 
-- [ ] Registry SQLite DB of issued APAARs (apaar, name, dob) + `POST /registry/apaar/bulk` seeding hook
-- [ ] `POST /verify` → `match | mismatch | not_found | consent_required` (rapidfuzz ≥ 90 on name, exact DOB)
-- [ ] `POST /verify/batch` (≤ 500 records)
-- [ ] API-key auth (`X-API-Key`) + artificial 20–50 ms latency
-- [ ] `app/services/registry_client.py`: typed client, timeout + retry, `source_unavailable` result
-- [ ] README note: same shape as the real APAAR/ABC API would be
-- [ ] Tests: match, mismatch, not_found, registry-down
+- [x] Registry SQLite DB of issued APAARs (apaar, name, dob) + `POST /registry/apaar/bulk` seeding hook
+- [x] `POST /verify` → `match | mismatch | not_found | consent_required` (rapidfuzz ≥ 90 on name, exact DOB)
+- [x] `POST /verify/batch` (≤ 500 records)
+- [x] API-key auth (`X-API-Key`) + artificial 20–50 ms latency
+- [x] `app/services/registry_client.py`: typed client, timeout + retry, `source_unavailable` result
+- [x] README note: same shape as the real APAAR/ABC API would be
+- [x] Tests: match, mismatch, not_found, registry-down
 - **Check:** stop the registry → main API reports "source unavailable", does not crash
 
 ## Step 5 — Synthetic data generator with fraud scenarios  ☐

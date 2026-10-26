@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.core.db import engine, init_db
 from app.core.errors import install_error_handlers
 from app.routers import auth as auth_router
+from app.services.registry_client import RegistryClient
 
 logger = logging.getLogger("apaar.api")
 
@@ -59,11 +60,15 @@ def health() -> dict:
         logger.exception("DB health check failed")
         db_status = f"error: {type(exc).__name__}"
 
+    # A down registry degrades the API but never breaks it (Step 4).
+    registry_status = RegistryClient(timeout=1.0, retries=0).health().get("status", "unavailable")
+
     return {
         "status": "ok" if db_status == "ok" else "degraded",
         "service": "api",
         "version": settings.version,
         "db": db_status,
+        "registry": registry_status,
         "synthetic_data": True,
         "missing_secrets": settings.missing_secrets,
     }
