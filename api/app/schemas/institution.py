@@ -1,7 +1,7 @@
 """Institution-facing request/response schemas."""
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -233,3 +233,105 @@ class ShortlistOut(BaseModel):
     academic_year: str
     items: list[ShortlistRowOut]
     csv_url: str
+
+
+class InstitutionFlagOut(BaseModel):
+    """Institution view of a flag: another college is never named (CLAUDE.md rule 10)."""
+
+    id: int
+    type: str
+    severity: str
+    status: str
+    title: str
+    explanation: str
+    evidence: dict[str, Any] = Field(default_factory=dict)
+    student_id: int | None = None
+    enrolment_id: int | None = None
+    cluster_id: int | None = None
+    program_id: int | None = None
+    academic_year: str | None = None
+    created_at: datetime
+
+
+class InstitutionFlagPage(BaseModel):
+    items: list[InstitutionFlagOut]
+    page: int
+    page_size: int
+    total: int
+    total_pages: int
+    sort: str | None = None
+
+
+class InstitutionFlagUpdate(BaseModel):
+    status: str | None = None
+    note: str | None = Field(default=None, max_length=2000)
+
+
+class StudentEnrolmentOut(BaseModel):
+    id: int
+    program_id: int
+    course: str
+    branch: str
+    academic_year: str
+    year_of_study: int
+    admission_type: str
+    status: str
+    admitted_on: date | None = None
+    version: int
+
+
+class StudentRowOut(BaseModel):
+    student_id: int
+    apaar_masked: str
+    apaar_status: str
+    name_masked: str
+    gender: str | None = None
+    category: str | None = None
+    nationality_status: str
+    dob_year: int | None = None
+    is_minor: bool
+    flag_count: int
+    student_confirmation: str
+    enrolment: StudentEnrolmentOut
+
+
+class StudentPage(BaseModel):
+    items: list[StudentRowOut]
+    page: int
+    page_size: int
+    total: int
+    total_pages: int
+    sort: str | None = None
+
+
+class EnrolmentStatusUpdate(BaseModel):
+    status: str
+    reason: str = Field(min_length=1, max_length=2000)
+    effective_date: date | None = None
+
+
+class EnrolmentStatusResponse(BaseModel):
+    enrolment_id: int
+    status: str
+    previous_status: str
+    version: int
+    changed_at: datetime
+    audit_log_id: int | None = None
+
+
+class QualityPoint(BaseModel):
+    upload_id: int
+    created_at: datetime
+    quality_score: int | None = None
+
+
+class InstitutionDashboard(BaseModel):
+    academic_year: str
+    students_reported: int
+    open_flags: dict[str, int]
+    latest_quality_score: int | None = None
+    quality_trend: list[QualityPoint] = Field(default_factory=list)
+    seat_matrix_summary: dict[str, Any]
+    compliance_certificate_eligible: bool
+    compliance_certificate_reasons: list[str] = Field(default_factory=list)
+    last_upload_at: datetime | None = None

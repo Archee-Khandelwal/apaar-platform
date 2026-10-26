@@ -157,16 +157,16 @@ Legend: ☐ not started · ◐ in progress · ☑ done
 - [x] Supernumerary-misuse review signal (`STATISTICAL_ANOMALY` with `signal=supernumerary_share`), modest risk weight, scenario K injected in the main ground truth
 - [x] `EXCESS_INTAKE` severity scaled by % over approved intake (<=5% medium, 5-15% high, >15% critical), configurable
 
-## Step 12 — Flags, cases, reveal, AICTE APIs  ☐
+## Step 12 — Flags, cases, reveal, AICTE APIs  ☑
 
-- [ ] `GET /aicte/overview` (national KPIs + state breakdown, suppression for viewer)
-- [ ] `GET /aicte/institutions` (search/filter by state, risk), `GET /aicte/institutions/{id}` (profile, seat matrix, flags, risk reasons)
-- [ ] `GET /aicte/flags` (filters + pagination), `GET /aicte/flags/{id}`, `PATCH /aicte/flags/{id}` (status, assignment, notes) — every change audit-logged
-- [ ] `POST /aicte/reveal` (officer only, reason ≥ 10 chars, access-logged; everything else stays masked)
-- [ ] `GET /aicte/non-reporting`, `POST /aicte/remind/{id}` (mocked, logged)
-- [ ] `GET /aicte/reports/trends` + CSV export
-- [ ] Institution side: `GET /institution/flags` (own only, rule-10 wording), `PATCH /institution/enrolments/{id}/status` (versioned, with reason), `GET /institution/compliance-certificate` (only with no open high/critical)
-- [ ] Tests: RBAC on every new route, reveal requires a reason, suppression
+- [x] `GET /aicte/overview` (national KPIs + state breakdown, suppression for viewer)
+- [x] `GET /aicte/institutions` (search/filter by state, risk), `GET /aicte/institutions/{id}` (profile, seat matrix, flags, risk reasons)
+- [x] `GET /aicte/flags` (filters + pagination), `GET /aicte/flags/{id}`, `PATCH /aicte/flags/{id}` (status, assignment, notes) — every change audit-logged
+- [x] `POST /aicte/reveal` (officer only, reason ≥ 10 chars, access-logged; everything else stays masked)
+- [x] `GET /aicte/non-reporting`, `POST /aicte/remind/{id}` (mocked, logged)
+- [x] `GET /aicte/reports/trends` + CSV export
+- [x] Institution side: `GET /institution/flags` (own only, rule-10 wording), `PATCH /institution/enrolments/{id}/status` (versioned, with reason), `GET /institution/compliance-certificate` (only with no open high/critical)
+- [x] Tests: RBAC on every new route, reveal requires a reason, suppression
 
 ## Step 13 — Student & verifier APIs, consent, tokens  ☐
 

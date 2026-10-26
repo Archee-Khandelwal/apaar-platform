@@ -17,6 +17,7 @@ from app.services.rules import supernumerary_caps, year_calendar
 from datagen.builder import GroundTruthCase
 from datagen.scenarios import (
     _count_admission_type,
+    _eligible_programs,
     _count_regular_year1,
     _eligible_institutions,
     _pick_program,
@@ -310,11 +311,7 @@ def scenario_d_dual_degrees(gen: Any) -> None:
     """Dual degrees across other programme combinations, including same-institution."""
     year = CURRENT_YEAR
     calendar = year_calendar(year)
-    online_programs = [
-        program
-        for program in gen.b.programs
-        if program["mode"] == "online" and program["institution_id"] != gen.clean_institution_id
-    ]
+    online_programs = _eligible_programs(gen, mode="online")
     if not online_programs:
         return
     institutions = {inst["id"]: inst for inst in gen.b.institutions}
@@ -325,10 +322,8 @@ def scenario_d_dual_degrees(gen: Any) -> None:
         online_program = gen.rng.choice(online_programs)
         sources = [
             program
-            for program in gen.b.programs
-            if program["mode"] == "regular"
-            and program["institution_id"] != online_program["institution_id"]
-            and program["institution_id"] != gen.clean_institution_id
+            for program in _eligible_programs(gen, mode="regular")
+            if program["institution_id"] != online_program["institution_id"]
             and program["id"] not in _reserved(gen)
         ]
         if not sources:

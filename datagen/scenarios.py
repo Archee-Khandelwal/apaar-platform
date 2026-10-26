@@ -28,8 +28,25 @@ def _sample(gen: SyntheticDataGenerator, population: list[Any], k: int) -> list[
     return gen.rng.sample(population, min(k, len(population)))
 
 
+def _excluded_institutions(gen: SyntheticDataGenerator) -> set[int]:
+    """Institutions no scenario may touch: the clean model one and the non-reporting ones."""
+    return {gen.clean_institution_id} | getattr(gen, "non_reporting_ids", set())
+
+
 def _eligible_institutions(gen: SyntheticDataGenerator) -> list[dict[str, Any]]:
-    return [inst for inst in gen.b.institutions if inst["id"] != gen.clean_institution_id]
+    excluded = _excluded_institutions(gen)
+    return [inst for inst in gen.b.institutions if inst["id"] not in excluded]
+
+
+def _eligible_programs(gen: SyntheticDataGenerator, *, mode: str | None = None) -> list[dict[str, Any]]:
+    """Programmes at institutions a scenario may touch."""
+    excluded = _excluded_institutions(gen)
+    return [
+        program
+        for program in gen.b.programs
+        if program["institution_id"] not in excluded
+        and (mode is None or program["mode"] == mode)
+    ]
 
 
 def _reserved(gen: SyntheticDataGenerator) -> set[int]:
@@ -423,11 +440,7 @@ def scenario_d_dual_degree(gen: SyntheticDataGenerator) -> None:
     """10 students with one regular and one online/ODL enrolment — legal, not fraud."""
     year = CURRENT_YEAR
     calendar = year_calendar(year)
-    online_programs = [
-        program
-        for program in gen.b.programs
-        if program["mode"] == "online" and program["institution_id"] != gen.clean_institution_id
-    ]
+    online_programs = _eligible_programs(gen, mode="online")
     if not online_programs:
         return
 
@@ -439,11 +452,11 @@ def scenario_d_dual_degree(gen: SyntheticDataGenerator) -> None:
         online_program = gen.rng.choice(online_programs)
         source_candidates = [
             program
-            for program in gen.b.programs
-            if program["mode"] == "regular"
-            and program["institution_id"] != online_program["institution_id"]
-            and program["institution_id"] != gen.clean_institution_id
+            for program in _eligible_programs(gen, mode="regular")
+            if program["institution_id"] != online_program["institution_id"]
         ]
+        if not source_candidates:
+            continue
         program = gen.rng.choice(source_candidates)
         if program["id"] in _reserved(gen):
             continue

@@ -45,7 +45,7 @@ GROUND_TRUTH_PATH = Path(__file__).resolve().parent / "ground_truth.json"
 DEFAULT_YEARS = ("2025-26", "2026-27")
 # Share of the student target allocated to base year-1 cohorts (the rest is
 # supernumerary admissions, lateral entrants and the injected scenarios).
-BASE_COHORT_SHARE = 0.885
+BASE_COHORT_SHARE = 0.70
 
 # Tables wiped by a reseed, children first.
 WIPE_ORDER = (
@@ -99,11 +99,15 @@ class SyntheticDataGenerator:
 
         # Filled during generation.
         self.clean_institution_id: int | None = None
+        self.non_reporting_ids: set[int] = set()
         self.programs_by_institution: dict[int, list[dict[str, Any]]] = {}
         self.cohorts: dict[tuple[int, str], list[int]] = {}  # (program_id, year) -> student ids
         # A TFW or PMSSS student keeps that seat category when they move into year 2,
         # so progression has to know how each cohort member was admitted.
         self.admission_type_of: dict[tuple[int, str, int], str] = {}
+        # Everyone enrolled in a programme-year, with the year of study they are in, so
+        # progression can advance each student by one year rather than assuming year 2.
+        self.enrolled_of: dict[tuple[int, str], list[tuple[int, int]]] = {}
         self.upload_by: dict[tuple[int, str], dict[str, Any]] = {}
         self.demo_students: list[dict[str, Any]] = []
 
@@ -215,10 +219,19 @@ class SyntheticDataGenerator:
 
         # The last institution is the clean "model" one (no issues at all).
         self.clean_institution_id = self.b.institutions[-1]["id"]
+        # Three institutions have never filed anything, so the AICTE non-reporting
+        # screen and the reminder action have something real to work with. They are
+        # approved and have programmes; they simply have not reported.
+        self.non_reporting_ids = {
+            institution["id"]
+            for institution in self.b.institutions[-4:-1]
+        }
 
     def build_uploads(self) -> None:
         """One upload per institution per year, timed inside the reporting window."""
         for institution in self.b.institutions:
+            if institution["id"] in self.non_reporting_ids:
+                continue  # never filed, so there is no upload row either
             for year in self.years:
                 calendar = year_calendar(year)
                 deadline = calendar.reporting_deadline
@@ -267,6 +280,8 @@ class SyntheticDataGenerator:
         for year in self.years:
             calendar = year_calendar(year)
             for institution in self.b.institutions:
+                if institution["id"] in self.non_reporting_ids:
+                    continue
                 for program in self.programs_by_institution[institution["id"]]:
                     upload = self.upload_by[(institution["id"], year)]
                     # Wide spread: some programmes nearly full, others half empty.
@@ -275,6 +290,7 @@ class SyntheticDataGenerator:
                         fill *= 0.6
                     count = max(int(program["intake"] * fill), 5)
                     cohort: list[int] = []
+                    enrolled: list[tuple[int, int]] = []
                     for _ in range(count):
                         nationality, apaar_status, registry_status = self._identity_mix()
                         student_id = self.b.add_student(
@@ -302,17 +318,49 @@ class SyntheticDataGenerator:
                         )
                         cohort.append(student_id)
                         self.admission_type_of[(program["id"], year, student_id)] = "regular"
-                    cohort.extend(self._add_supernumerary(program, year, upload, calendar))
+                        enrolled.append((student_id, 1))
+                    for student_id in self._add_supernumerary(program, year, upload, calendar):
+                        cohort.append(student_id)
+                        enrolled.append((student_id, 1))
                     self.cohorts[(program["id"], year)] = cohort
+
+                    # In the first year of data, also seed a second-year cohort: these
+                    # students were admitted before our records begin. Without them the
+                    # first year has one cohort and the second has two, which would show
+                    # up as every branch doubling year on year.
+                    if year == first_year:
+                        senior_count = max(int(count * self.rng.uniform(0.85, 1.0)), 4)
+                        for _ in range(senior_count):
+                            nationality, apaar_status, registry_status = self._identity_mix()
+                            student_id = self.b.add_student(
+                                nationality_status=nationality,
+                                apaar_status=apaar_status,
+                                registry_status=registry_status,
+                            )
+                            self.b.add_enrolment(
+                                student_id=student_id,
+                                program=program,
+                                academic_year=year,
+                                year_of_study=2,
+                                admission_type="regular",
+                                admitted_on=None,
+                                created_at=upload["created_at"],
+                                upload_id=upload["id"],
+                            )
+                            self.admission_type_of[(program["id"], year, student_id)] = "regular"
+                            enrolled.append((student_id, 2))
+                    self.enrolled_of[(program["id"], year)] = enrolled
 
         # Progression: first-year cohort moves into year 2 in the next year.
         for index, year in enumerate(later_years):
             previous_year = self.years[index]
             calendar = year_calendar(year)
             for program in self.b.programs:
-                previous_cohort = self.cohorts.get((program["id"], previous_year), [])
-                if not previous_cohort:
+                previous_enrolled = self.enrolled_of.get((program["id"], previous_year), [])
+                if not previous_enrolled:
                     continue
+                previous_cohort = [student_id for student_id, _year in previous_enrolled]
+                year_of_study_of = dict(previous_enrolled)
                 upload = self.upload_by[(program["institution_id"], year)]
                 # A small, normal share leaves with a proper status.
                 leavers = set(
@@ -324,12 +372,13 @@ class SyntheticDataGenerator:
                     admission_type = self.admission_type_of.get(
                         (program["id"], previous_year, student_id), "regular"
                     )
+                    next_year_of_study = min(year_of_study_of.get(student_id, 1) + 1, 4)
                     if student_id in leavers:
                         self.b.add_enrolment(
                             student_id=student_id,
                             program=program,
                             academic_year=year,
-                            year_of_study=2,
+                            year_of_study=next_year_of_study,
                             admission_type=admission_type,
                             status=self.rng.choice(["dropped", "migrated", "cancelled"]),
                             admitted_on=None,
@@ -341,12 +390,15 @@ class SyntheticDataGenerator:
                         student_id=student_id,
                         program=program,
                         academic_year=year,
-                        year_of_study=2,
+                        year_of_study=next_year_of_study,
                         admission_type=admission_type,
                         admitted_on=None,
                         created_at=upload["created_at"]
                         + timedelta(seconds=self.rng.randint(0, 3600)),
                         upload_id=upload["id"],
+                    )
+                    self.enrolled_of.setdefault((program["id"], year), []).append(
+                        (student_id, next_year_of_study)
                     )
                 # Lateral entrants join in year 2, inside the lateral window.
                 if program["mode"] == "regular" and self.rng.random() < 0.5:
@@ -527,8 +579,14 @@ class SyntheticDataGenerator:
         clean = next(
             (inst for inst in self.b.institutions if inst["id"] == self.clean_institution_id), None
         )
+        non_reporting = [
+            {"id": inst["id"], "name": inst["name"]}
+            for inst in self.b.institutions
+            if inst["id"] in self.non_reporting_ids
+        ]
         payload = {
             "generated_at": datetime.now().replace(microsecond=0).isoformat(),
+            "non_reporting_institutions": non_reporting,
             "seed": self.seed,
             "years": list(self.years),
             "counts": {
