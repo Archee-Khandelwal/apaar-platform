@@ -183,23 +183,23 @@ Legend: ☐ not started · ◐ in progress · ☑ done
 - [x] Tests: nothing before approval, denied + expired paths, revoked consent invalidates the token, tampered token fails
 - **Backend milestone:** `make reset && make test && make eval` all green before heavy frontend integration
 
-## Step 14 — Frontend foundation  ☐
+## Step 14 — Frontend foundation  ☑
 
-- [ ] `web/lib/api.ts` typed client from `docs/API_CONTRACT.md` (fetch + TanStack Query, JWT in memory, sessionStorage wrapped in try/catch)
-- [ ] Login page + demo role switcher (top bar) using `/auth/demo-users`
-- [ ] App shell: per-role sidebar, role badge, permanent banner "Prototype — all data is synthetic"
-- [ ] Shared components: `MaskedApaar`, `MaskedName`, `SeverityBadge` (low=slate, medium=amber, high=orange, critical=red), `StatCard`, `DataTable` (sort/filter/paginate), `EmptyState`, `LoadingSkeleton`, `ExplanationPanel`, `RevealButton` (reason modal)
-- [ ] Government-dashboard look: neutral palette + one accent, responsive to tablet width
-- [ ] Route guards per role
+- [x] `web/lib/api.ts` typed client from `docs/API_CONTRACT.md` (fetch + TanStack Query, JWT in memory, sessionStorage wrapped in try/catch)
+- [x] Login page + demo role switcher (top bar) using `/auth/demo-users`
+- [x] App shell: per-role sidebar, role badge, permanent banner "Prototype — all data is synthetic"
+- [x] Shared components: `MaskedApaar`, `MaskedName`, `SeverityBadge` (low=slate, medium=amber, high=orange, critical=red), `StatCard`, `DataTable` (sort/filter/paginate), `EmptyState`, `LoadingSkeleton`, `ExplanationPanel`, `RevealButton` (reason modal)
+- [x] Government-dashboard look: neutral palette + one accent, responsive to tablet width
+- [x] Route guards per role
 
-## Step 15 — Institution portal  ☐
+## Step 15 — Institution portal  ☑
 
-- [ ] Dashboard: quality score trend, open flags, seat matrix summary, upload CTA
-- [ ] Upload flow: drag-and-drop → mapping screen (header, proposed field, confidence, override dropdown) → confirm → quality report (score dial, errors/warnings with fixes, error CSV download)
-- [ ] Seat matrix page: stacked bar (intake vs regular vs each supernumerary bucket vs excess) + plain-English explanation
-- [ ] Flag inbox (own only, rule-10 wording) with "mark resolved / correct & resubmit"
-- [ ] Students list (masked) + status update (cancel/migrate/drop with reason)
-- [ ] Upload history, compliance certificate download (disabled with a reason when ineligible), template download
+- [x] Dashboard: quality score trend, open flags, seat matrix summary, upload CTA
+- [x] Upload flow: drag-and-drop → mapping screen (header, proposed field, confidence, override dropdown) → confirm → quality report (score dial, errors/warnings with fixes, error CSV download)
+- [x] Seat matrix page: stacked bar (intake vs regular vs each supernumerary bucket vs excess) + plain-English explanation
+- [x] Flag inbox (own only, rule-10 wording) with "mark resolved / correct & resubmit"
+- [x] Students list (masked) + status update (cancel/migrate/drop with reason)
+- [x] Upload history, compliance certificate download (disabled with a reason when ineligible), template download
 
 ## Step 16 — AICTE dashboard  ☐
 
