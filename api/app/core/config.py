@@ -9,6 +9,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 REPO_ROOT = Path(__file__).resolve().parents[3]
 API_ROOT = Path(__file__).resolve().parents[2]
 RULES_DIR = API_ROOT / "app" / "rules"
+# Uploaded files are kept between the mapping and confirm steps. Gitignored.
+UPLOAD_DIR = REPO_ROOT / "var" / "uploads"
 
 
 class Settings(BaseSettings):
@@ -43,6 +45,7 @@ class Settings(BaseSettings):
     verify_token_ttl_minutes: int = 15
     registry_timeout_seconds: float = 3.0
     bcrypt_rounds: int = 12  # lowered in tests for speed
+    max_upload_mb: int = 10
     log_level: str = "info"
 
     app_name: str = "APAAR Student Data & Verification Platform"

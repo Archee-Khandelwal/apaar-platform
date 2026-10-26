@@ -386,11 +386,15 @@ def test_not_found_students_are_absent_from_the_registry(seeded) -> None:
 
 
 def test_sample_files_exist_and_are_messy() -> None:
+    """Reads the committed sample files; it must not regenerate them.
+
+    write_samples() targets whichever programme is under-filled in the live database,
+    so calling it here would rewrite the repo's samples against a test database.
+    """
     import pandas as pd
 
-    from datagen.samples import SAMPLES_DIR, write_samples
+    from datagen.samples import SAMPLES_DIR
 
-    paths = write_samples(seed=1)
     assert (SAMPLES_DIR / "sample_1_excess_intake.xlsx").exists()
     assert (SAMPLES_DIR / "sample_2_dirty_errors.xlsx").exists()
     assert (SAMPLES_DIR / "sample_3_garbage.csv").exists()

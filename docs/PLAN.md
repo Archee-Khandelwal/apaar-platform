@@ -84,7 +84,7 @@ Legend: ☐ not started · ◐ in progress · ☑ done
 - [x] `make seed` / `make reset` wired; deterministic `--seed`
 - **Check:** `make reset` runs; spot-check `ground_truth.json` counts
 
-## Step 6 — Upload pipeline & validation  ☐
+## Step 6 — Upload pipeline & validation  ☑
 
 > **Added after Step 5 review:** re-uploading the same file or overlapping rows must not
 > create duplicate enrolments or inflate intake counts. Rows that already exist for that
@@ -94,16 +94,16 @@ Legend: ☐ not started · ◐ in progress · ☑ done
 > **Also:** `make eval` scores the seeded data only and must always run from a fresh
 > `make reset`, so demo uploads never change the published numbers (noted in the README).
 
-- [ ] `POST /institution/uploads` (multipart Excel/CSV, pandas/openpyxl, skip blank rows)
-- [ ] Column mapping with rapidfuzz + synonym dictionary, confidence per column, state `pending_mapping`
-- [ ] `POST /institution/uploads/{id}/confirm-mapping` → runs validation
-- [ ] Row validation: required fields, APAAR format, `apaar_status` rules (`not_applicable` only FN/OCI), multi-format date parsing, DOB plausibility, admission window (else `LATE_ADMISSION`), in-upload duplicates, batch registry check
-- [ ] Valid rows stored (hashes + vault, never raw contacts); invalid rows reported, not stored
-- [ ] Quality report: score 0–100, counts, per-row errors/warnings each with a fix suggestion
-- [ ] `GET /institution/uploads`, `GET /institution/uploads/{id}`, errors CSV, `GET /institution/template`
-- [ ] Every upload writes to the audit log
-- [ ] Tests on `/samples` files + an all-garbage file that must not crash
-- [ ] Synchronous but batched: 5,000 rows finishes in reasonable time
+- [x] `POST /institution/uploads` (multipart Excel/CSV, pandas/openpyxl, skip blank rows)
+- [x] Column mapping with rapidfuzz + synonym dictionary, confidence per column, state `pending_mapping`
+- [x] `POST /institution/uploads/{id}/confirm-mapping` → runs validation
+- [x] Row validation: required fields, APAAR format, `apaar_status` rules (`not_applicable` only FN/OCI), multi-format date parsing, DOB plausibility, admission window (else `LATE_ADMISSION`), in-upload duplicates, batch registry check
+- [x] Valid rows stored (hashes + vault, never raw contacts); invalid rows reported, not stored
+- [x] Quality report: score 0–100, counts, per-row errors/warnings each with a fix suggestion
+- [x] `GET /institution/uploads`, `GET /institution/uploads/{id}`, errors CSV, `GET /institution/template`
+- [x] Every upload writes to the audit log
+- [x] Tests on `/samples` files + an all-garbage file that must not crash
+- [x] Synchronous but batched: 5,000 rows finishes in reasonable time
 - **Check:** upload a sample file via `http://localhost:8000/docs`
 
 ## Step 7 — Intake compliance engine  ☐

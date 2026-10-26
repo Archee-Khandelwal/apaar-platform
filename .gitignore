@@ -32,3 +32,6 @@ samples/generated/
 
 # Build artefacts
 web/tsconfig.tsbuildinfo
+
+# Uploaded files kept between the mapping and confirm steps
+var/
