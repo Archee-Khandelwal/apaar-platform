@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.core.db import engine, init_db
 from app.core.errors import install_error_handlers
 from app.routers import auth as auth_router
+from app.routers import aicte as aicte_router
 from app.routers import institution as institution_router
 from app.services.registry_client import RegistryClient
 
@@ -49,6 +50,7 @@ def on_startup() -> None:
 
 app.include_router(auth_router.router)
 app.include_router(institution_router.router)
+app.include_router(aicte_router.router)
 
 
 @app.get("/health", tags=["meta"])

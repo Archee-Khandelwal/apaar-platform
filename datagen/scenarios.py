@@ -32,6 +32,34 @@ def _eligible_institutions(gen: SyntheticDataGenerator) -> list[dict[str, Any]]:
     return [inst for inst in gen.b.institutions if inst["id"] != gen.clean_institution_id]
 
 
+def _reserved(gen: SyntheticDataGenerator) -> set[int]:
+    """Programmes whose seat counts another scenario owns and must not be disturbed."""
+    if not hasattr(gen, "reserved_programs"):
+        gen.reserved_programs = set()  # type: ignore[attr-defined]
+    return gen.reserved_programs  # type: ignore[attr-defined]
+
+
+def _pick_program(
+    gen: SyntheticDataGenerator, institution_id: int, *, adding: int = 0, year: str = CURRENT_YEAR
+) -> dict[str, Any] | None:
+    """Pick a programme that can absorb ``adding`` more year-1 students without tipping
+    over its approved intake, so injected students never create an unlabelled
+    EXCESS_INTAKE case."""
+    candidates = [
+        program
+        for program in _regular_programs(gen, institution_id)
+        if program["id"] not in _reserved(gen)
+    ]
+    if not candidates:
+        return None
+    with_room = [
+        program
+        for program in candidates
+        if _count_regular_year1(gen, program["id"], year) + adding <= program["intake"]
+    ]
+    return gen.rng.choice(with_room or candidates)
+
+
 def _regular_programs(gen: SyntheticDataGenerator, institution_id: int) -> list[dict[str, Any]]:
     return [
         program
@@ -78,6 +106,7 @@ def scenario_a_excess_intake(gen: SyntheticDataGenerator) -> None:
 
     for institution, excess in zip(chosen, (3, 12, 25)):
         program = gen.rng.choice(_regular_programs(gen, institution["id"]))
+        _reserved(gen).add(program["id"])
         upload = gen.upload_by[(institution["id"], year)]
         current = _count_regular_year1(gen, program["id"], year)
         target = program["intake"] + excess
@@ -121,6 +150,7 @@ def scenario_a_excess_intake(gen: SyntheticDataGenerator) -> None:
         return
     institution = gen.rng.choice(remaining)
     program = gen.rng.choice(_regular_programs(gen, institution["id"]))
+    _reserved(gen).add(program["id"])
     upload = gen.upload_by[(institution["id"], year)]
     caps = supernumerary_caps(program["intake"])
     cap = caps.get("tfw", 0)
@@ -178,7 +208,9 @@ def scenario_b_ghost_clusters(gen: SyntheticDataGenerator) -> None:
     for institution, (size_min, size_max, contacts, band) in zip(
         _sample(gen, candidates, len(cluster_specs)), cluster_specs
     ):
-        program = gen.rng.choice(_regular_programs(gen, institution["id"]))
+        program = _pick_program(gen, institution["id"], adding=size_max)
+        if program is None:
+            continue
         upload = gen.upload_by[(institution["id"], year)]
         size = gen.rng.randint(size_min, size_max)
         guardian_phones = [gen.b.new_phone() for _ in range(contacts)]
@@ -225,7 +257,9 @@ def scenario_b_ghost_clusters(gen: SyntheticDataGenerator) -> None:
     # and a ghost cluster, so the detector's threshold has to be a real decision rather
     # than a trivially separable one. These must NOT be flagged either.
     for institution in _sample(gen, candidates, 3):
-        program = gen.rng.choice(_regular_programs(gen, institution["id"]))
+        program = _pick_program(gen, institution["id"], adding=6)
+        if program is None:
+            continue
         upload = gen.upload_by[(institution["id"], year)]
         shared = gen.b.new_phone()
         size = gen.rng.randint(4, 6)
@@ -264,7 +298,9 @@ def scenario_b_ghost_clusters(gen: SyntheticDataGenerator) -> None:
 
     # Normal sibling pairs — these must NOT be flagged (false-positive control).
     for institution in _sample(gen, candidates, 6):
-        program = gen.rng.choice(_regular_programs(gen, institution["id"]))
+        program = _pick_program(gen, institution["id"], adding=3)
+        if program is None:
+            continue
         upload = gen.upload_by[(institution["id"], year)]
         shared = gen.b.new_phone()
         for _ in range(gen.rng.randint(2, 3)):
@@ -320,10 +356,9 @@ def scenario_c_cross_institution_duplicates(gen: SyntheticDataGenerator) -> None
             continue
 
         other = gen.rng.choice([inst for inst in institutions if inst["id"] != source["id"]])
-        other_programs = _regular_programs(gen, other["id"])
-        if not other_programs:
+        other_program = _pick_program(gen, other["id"], adding=1)
+        if other_program is None:
             continue
-        other_program = gen.rng.choice(other_programs)
         upload = gen.upload_by[(other["id"], year)]
         gen.b.add_enrolment(
             student_id=student_id,
@@ -381,6 +416,8 @@ def scenario_d_dual_degree(gen: SyntheticDataGenerator) -> None:
             and program["institution_id"] != gen.clean_institution_id
         ]
         program = gen.rng.choice(source_candidates)
+        if program["id"] in _reserved(gen):
+            continue
         cohort = gen.cohorts.get((program["id"], year), [])
         if not cohort:
             continue
@@ -494,7 +531,9 @@ def scenario_f_late_admissions(gen: SyntheticDataGenerator) -> None:
         inst for inst in _eligible_institutions(gen) if _regular_programs(gen, inst["id"])
     ]
     for institution in _sample(gen, candidates, 2):
-        program = gen.rng.choice(_regular_programs(gen, institution["id"]))
+        program = _pick_program(gen, institution["id"], adding=20)
+        if program is None:
+            continue
         upload = gen.upload_by[(institution["id"], year)]
         for _ in range(20):
             student_id = gen.b.add_student()
@@ -535,7 +574,9 @@ def scenario_g_sequential_apaar(gen: SyntheticDataGenerator) -> None:
     if not candidates:
         return
     institution = gen.rng.choice(candidates)
-    program = gen.rng.choice(_regular_programs(gen, institution["id"]))
+    program = _pick_program(gen, institution["id"], adding=20)
+    if program is None:
+        return
     upload = gen.upload_by[(institution["id"], year)]
     run = gen.b.sequential_apaars(20)
     student_ids: list[int] = []
@@ -643,7 +684,9 @@ def scenario_i_phantom_progression(gen: SyntheticDataGenerator) -> None:
 
     # (a) Year-2 regular students who were never in year 1 and are not lateral entrants.
     institution = gen.rng.choice(candidates)
-    program = gen.rng.choice(_regular_programs(gen, institution["id"]))
+    program = _pick_program(gen, institution["id"])
+    if program is None:
+        return
     upload = gen.upload_by[(institution["id"], year)]
     for _ in range(12):
         student_id = gen.b.add_student()
@@ -677,7 +720,9 @@ def scenario_i_phantom_progression(gen: SyntheticDataGenerator) -> None:
     if not others:
         return
     other = gen.rng.choice(others)
-    other_program = gen.rng.choice(_regular_programs(gen, other["id"]))
+    other_program = _pick_program(gen, other["id"])
+    if other_program is None:
+        return
     cohort = gen.cohorts.get((other_program["id"], previous_year), [])
     vanishing = set(gen.rng.sample(cohort, min(15, len(cohort))))
     if vanishing:
@@ -734,7 +779,9 @@ def scenario_j_identity_duplicates(gen: SyntheticDataGenerator) -> None:
             return
 
         for institution in pair_institutions:
-            program = gen.rng.choice(_regular_programs(gen, institution["id"]))
+            program = _pick_program(gen, institution["id"], adding=1)
+            if program is None:
+                continue
             upload = gen.upload_by[(institution["id"], year)]
             student_id = gen.b.add_student(
                 name=name, dob=dob, guardian_phone=guardian_phone

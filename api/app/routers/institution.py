@@ -22,10 +22,12 @@ from app.schemas.institution import (
     InstitutionProfile,
     ProgramOut,
     QualityReport,
+    SeatMatrixOut,
     UploadCreateResponse,
     UploadPage,
 )
 from app.services import upload as upload_service
+from app.services.intake import institution_seat_matrix
 from app.services.upload import UploadError
 
 router = APIRouter(prefix="/institution", tags=["institution"])
@@ -218,4 +220,18 @@ def download_errors(
         headers={
             "Content-Disposition": f'attachment; filename="upload_{upload_id}_errors.csv"'
         },
+    )
+
+
+@router.get("/seat-matrix", response_model=SeatMatrixOut)
+def seat_matrix(
+    academic_year: Annotated[str, Query(min_length=7, max_length=7)],
+    institution_id: int = Depends(require_institution_scope),
+    db: Session = Depends(get_db),
+) -> SeatMatrixOut:
+    """Approved intake vs regular vs each supernumerary bucket vs excess, per programme."""
+    return SeatMatrixOut(
+        **institution_seat_matrix(
+            db, institution_id=institution_id, academic_year=academic_year
+        )
     )

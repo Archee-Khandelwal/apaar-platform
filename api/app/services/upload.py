@@ -557,6 +557,12 @@ def confirm_mapping(
 
     flags_created = _flags_for_upload(db, context, upload, parsed_rows, stored)
 
+    # Recompute the seat matrix for this institution; a new upload can push a programme
+    # past its approved intake (Step 7 item 3).
+    from app.services.detectors import run_all_detectors
+
+    run_all_detectors(db, institution_id=context.institution.id, commit=False)
+
     log_audit(
         db,
         actor=actor,
@@ -573,6 +579,21 @@ def confirm_mapping(
         },
     )
     db.flush()
+
+    # Include any EXCESS_INTAKE flag raised or refreshed by this upload.
+    from app.models.core import Flag as _Flag
+
+    excess_flags = db.execute(
+        select(_Flag).where(
+            _Flag.type == "EXCESS_INTAKE",
+            _Flag.institution_id == context.institution.id,
+            _Flag.status.in_(("open", "under_review", "escalated")),
+        )
+    ).scalars()
+    known = {entry["id"] for entry in flags_created}
+    for flag in excess_flags:
+        if flag.id not in known:
+            flags_created.append({"id": flag.id, "type": flag.type, "severity": flag.severity})
 
     return quality_report(upload, flags_created=flags_created, stored=stored)
 

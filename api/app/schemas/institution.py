@@ -113,3 +113,48 @@ class UploadPage(BaseModel):
     total: int
     total_pages: int
     sort: str | None = None
+
+
+class SupernumeraryBucketOut(BaseModel):
+    admission_type: str
+    label: str
+    admitted: int
+    cap: int
+    cap_basis: str
+    valid: int
+    excess: int
+
+
+class ProgramSeatMatrixOut(BaseModel):
+    program_id: int
+    course: str
+    branch: str
+    mode: str
+    academic_year: str
+    approved_intake: int
+    regular_admitted: int
+    regular_excess: int
+    supernumerary: list[SupernumeraryBucketOut] = Field(default_factory=list)
+    total_admitted: int
+    valid_supernumerary: int
+    supernumerary_excess: int
+    vacant_regular_seats: int
+    excess: int
+    explanation: str
+    rule_set: str
+    flag_id: int | None = None
+
+
+class SeatMatrixTotals(BaseModel):
+    approved_intake: int
+    regular_admitted: int
+    valid_supernumerary: int
+    total_admitted: int
+    excess: int
+
+
+class SeatMatrixOut(BaseModel):
+    academic_year: str
+    rule_set: str
+    programs: list[ProgramSeatMatrixOut]
+    totals: SeatMatrixTotals

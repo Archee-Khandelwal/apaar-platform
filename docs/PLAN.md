@@ -106,13 +106,13 @@ Legend: ☐ not started · ◐ in progress · ☑ done
 - [x] Synchronous but batched: 5,000 rows finishes in reasonable time
 - **Check:** upload a sample file via `http://localhost:8000/docs`
 
-## Step 7 — Intake compliance engine  ☐
+## Step 7 — Intake compliance engine  ☑
 
-- [ ] `intake_rules.yaml`: versioned `rule_set: APH_2026_27_v1`, which admission types count within intake, cap per supernumerary category (% of intake), lateral-entry rules (year 2, cap + vacant year-1 seats), every number with `# VERIFY against AICTE Approval Process Handbook 2026-27`
-- [ ] `compute_seat_matrix(program, year)` → intake, regular admitted, per-bucket admitted vs cap, valid supernumerary, excess, step-by-step explanation
-- [ ] Runs after every upload confirmation and after seeding; creates/updates `EXCESS_INTAKE` with the seat matrix as evidence
-- [ ] `GET /institution/seat-matrix` (own only), `GET /aicte/institutions/{id}/seat-matrix`
-- [ ] Unit tests: exactly at intake (no flag), over by regular, over only via a supernumerary bucket, lateral entry not counted in year 1
+- [x] `intake_rules.yaml`: versioned `rule_set: APH_2026_27_v1`, which admission types count within intake, cap per supernumerary category (% of intake), lateral-entry rules (year 2, cap + vacant year-1 seats), every number with `# VERIFY against AICTE Approval Process Handbook 2026-27`
+- [x] `compute_seat_matrix(program, year)` → intake, regular admitted, per-bucket admitted vs cap, valid supernumerary, excess, step-by-step explanation
+- [x] Runs after every upload confirmation and after seeding; creates/updates `EXCESS_INTAKE` with the seat matrix as evidence
+- [x] `GET /institution/seat-matrix` (own only), `GET /aicte/institutions/{id}/seat-matrix`
+- [x] Unit tests: exactly at intake (no flag), over by regular, over only via a supernumerary bucket, lateral entry not counted in year 1
 - **Check:** scenario A from `ground_truth.json` detected exactly
 
 ## Step 8 — Duplicate & identity detection  ☐
