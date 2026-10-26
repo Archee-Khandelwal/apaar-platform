@@ -97,6 +97,9 @@ class SyntheticDataGenerator:
         self.clean_institution_id: int | None = None
         self.programs_by_institution: dict[int, list[dict[str, Any]]] = {}
         self.cohorts: dict[tuple[int, str], list[int]] = {}  # (program_id, year) -> student ids
+        # A TFW or PMSSS student keeps that seat category when they move into year 2,
+        # so progression has to know how each cohort member was admitted.
+        self.admission_type_of: dict[tuple[int, str, int], str] = {}
         self.upload_by: dict[tuple[int, str], dict[str, Any]] = {}
         self.demo_students: list[dict[str, Any]] = []
 
@@ -294,8 +297,9 @@ class SyntheticDataGenerator:
                             registry_status=registry_status,
                         )
                         cohort.append(student_id)
+                        self.admission_type_of[(program["id"], year, student_id)] = "regular"
+                    cohort.extend(self._add_supernumerary(program, year, upload, calendar))
                     self.cohorts[(program["id"], year)] = cohort
-                    self._add_supernumerary(program, year, upload, calendar)
 
         # Progression: first-year cohort moves into year 2 in the next year.
         for index, year in enumerate(later_years):
@@ -313,13 +317,16 @@ class SyntheticDataGenerator:
                     )
                 )
                 for student_id in previous_cohort:
+                    admission_type = self.admission_type_of.get(
+                        (program["id"], previous_year, student_id), "regular"
+                    )
                     if student_id in leavers:
                         self.b.add_enrolment(
                             student_id=student_id,
                             program=program,
                             academic_year=year,
                             year_of_study=2,
-                            admission_type="regular",
+                            admission_type=admission_type,
                             status=self.rng.choice(["dropped", "migrated", "cancelled"]),
                             admitted_on=None,
                             created_at=upload["created_at"],
@@ -331,7 +338,7 @@ class SyntheticDataGenerator:
                         program=program,
                         academic_year=year,
                         year_of_study=2,
-                        admission_type="regular",
+                        admission_type=admission_type,
                         admitted_on=None,
                         created_at=upload["created_at"]
                         + timedelta(seconds=self.rng.randint(0, 3600)),
@@ -375,10 +382,15 @@ class SyntheticDataGenerator:
         year: str,
         upload: dict[str, Any],
         calendar: Any,
-    ) -> None:
-        """Valid supernumerary admissions, always within the configured caps."""
+    ) -> list[int]:
+        """Valid supernumerary admissions, always within the configured caps.
+
+        Returns the student ids, which join the cohort so they progress into year 2 like
+        anyone else instead of silently vanishing.
+        """
+        created: list[int] = []
         if program["mode"] != "regular":
-            return
+            return created
         caps = supernumerary_caps(program["intake"])
         # How often a programme uses a quota at all, and how much of its cap it uses.
         # FN/PIO/OCI admissions are genuinely rare: most institutions have none, so a
@@ -417,6 +429,9 @@ class SyntheticDataGenerator:
                     created_at=upload["created_at"],
                     upload_id=upload["id"],
                 )
+                self.admission_type_of[(program["id"], year, student_id)] = admission_type
+                created.append(student_id)
+        return created
 
     # ---------------------------------------------------------------- scenarios
 

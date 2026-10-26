@@ -190,14 +190,18 @@ def compute_seat_matrix(
     buckets: list[BucketResult] = []
     for admission_type in SUPERNUMERARY_TYPES:
         rule = rules.get(admission_type, {})
+        # A supernumerary seat is consumed in the year the student ENTERS on it, which
+        # the rule file gives as applies_to_year (1 for TFW/FN/PMSSS, 2 for lateral).
+        # Counting a continuing year-2 TFW student again would double-charge the cap.
+        entry_year = int(rule.get("applies_to_year", 1))
         admitted = sum(
             count
-            for (candidate_type, _year), count in counts.items()
-            if candidate_type == admission_type
+            for (candidate_type, year_of_study), count in counts.items()
+            if candidate_type == admission_type and year_of_study == entry_year
         )
         cap = caps.get(admission_type, 0)
         cap_percent = float(rule.get("cap_percent", 0.0))
-        cap_basis = f"{cap_percent:g}% of approved intake"
+        cap_basis = f"{cap_percent:g}% of approved intake (year {entry_year} entrants)"
 
         if admission_type == "lateral" and lateral_adds_vacant_year1():
             cap += vacant_year1

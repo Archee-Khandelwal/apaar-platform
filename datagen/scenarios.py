@@ -269,8 +269,10 @@ def scenario_b_ghost_clusters(gen: SyntheticDataGenerator) -> None:
         upload = gen.upload_by[(institution["id"], year)]
         shared = gen.b.new_phone()
         size = gen.rng.randint(4, 6)
+        member_ids: list[int] = []
         for _ in range(size):
             student_id = gen.b.add_student(guardian_phone=shared)
+            member_ids.append(student_id)
             gen.b.add_enrolment(
                 student_id=student_id,
                 program=program,
@@ -294,6 +296,7 @@ def scenario_b_ghost_clusters(gen: SyntheticDataGenerator) -> None:
                 details={
                     "students": size,
                     "guardian_contacts": 1,
+                    "student_ids": member_ids,
                     "note": (
                         f"{size} students sharing one guardian/warden contact — "
                         "legitimate, must not be flagged"
@@ -309,8 +312,10 @@ def scenario_b_ghost_clusters(gen: SyntheticDataGenerator) -> None:
             continue
         upload = gen.upload_by[(institution["id"], year)]
         shared = gen.b.new_phone()
+        sibling_ids: list[int] = []
         for _ in range(gen.rng.randint(2, 3)):
             student_id = gen.b.add_student(guardian_phone=shared)
+            sibling_ids.append(student_id)
             gen.b.add_enrolment(
                 student_id=student_id,
                 program=program,
@@ -331,7 +336,12 @@ def scenario_b_ghost_clusters(gen: SyntheticDataGenerator) -> None:
                 key=f"{institution['id']}|{year}",
                 institution_id=institution["id"],
                 institution_name=institution["name"],
-                details={"note": "2-3 siblings sharing one guardian contact — must not be flagged"},
+                details={
+                    "students": len(sibling_ids),
+                    "guardian_contacts": 1,
+                    "student_ids": sibling_ids,
+                    "note": "2-3 siblings sharing one guardian contact — must not be flagged",
+                },
             )
         )
 

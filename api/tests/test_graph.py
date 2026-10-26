@@ -367,10 +367,24 @@ def test_all_three_seeded_clusters_are_found_with_no_false_positives() -> None:
                 f"({cluster.student_count} vs {case['details']['students']})"
             )
 
-        # And the sibling / family controls produced none.
-        control_institutions = {case["institution_id"] for case in truth["B_sibling_control"]}
-        false_positives = control_institutions & found_institutions
-        assert not false_positives, f"families flagged as clusters: {sorted(false_positives)}"
+        # And no control family member was swept into a cluster. The check is per
+        # student, not per institution: an institution can legitimately host both an
+        # injected cluster and a normal family.
+        control_students = {
+            student_id
+            for case in truth["B_sibling_control"]
+            for student_id in case["details"].get("student_ids", [])
+        }
+        assert control_students, "control groups must record their members"
+        clustered = {
+            student_id
+            for cluster in found
+            for student_id in (cluster.member_student_ids or [])
+        }
+        false_positives = control_students & clustered
+        assert not false_positives, (
+            f"{len(false_positives)} family-control students were flagged as a cluster"
+        )
 
         # The medium cluster is found too, not just the blatant ones.
         medium = [case for case in truth["B_ghost_cluster"] if case["details"]["band"] == "medium"]

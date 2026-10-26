@@ -133,14 +133,14 @@ Legend: ☐ not started · ◐ in progress · ☑ done
 - [x] Every cluster view writes to the access log
 - [x] Tests + both scenario-B clusters found, no false positives on sibling pairs
 
-## Step 10 — Heuristic detectors  ☐
+## Step 10 — Heuristic detectors  ☑
 
-- [ ] `SEQUENTIAL_APAAR`: per institution-year, runs of ≥ 10 near-consecutive IDs (raw sort inside the service only); evidence = run length + masked first/last
-- [ ] `LATE_ADMISSION`: aggregate per institution (count, % of admissions)
-- [ ] `LAST_MINUTE_BULK`: share of records created within N hours of the deadline over threshold
-- [ ] `PHANTOM_PROGRESSION`: year-2 regulars with no year-1 enrolment (excluding lateral); year-1 students vanishing in year 2 with no `cancelled|migrated|dropped`
-- [ ] `run_all_detectors()` single entry point, **idempotent**, called by reseed and upload confirmation
-- [ ] Tests + scenarios F, G, H, I detected
+- [x] `SEQUENTIAL_APAAR`: per institution-year, runs of ≥ 10 near-consecutive IDs (raw sort inside the service only); evidence = run length + masked first/last
+- [x] `LATE_ADMISSION`: aggregate per institution (count, % of admissions)
+- [x] `LAST_MINUTE_BULK`: share of records created within N hours of the deadline over threshold
+- [x] `PHANTOM_PROGRESSION`: year-2 regulars with no year-1 enrolment (excluding lateral); year-1 students vanishing in year 2 with no `cancelled|migrated|dropped`
+- [x] `run_all_detectors()` single entry point, **idempotent**, called by reseed and upload confirmation
+- [x] Tests + scenarios F, G, H, I detected
 
 ## Step 11 — Risk score, anomaly model, shortlist, evaluation  ☐
 
