@@ -1,0 +1,3263 @@
+{
+  "generated_at": "2026-10-26T18:49:46",
+  "seed": 42,
+  "years": [
+    "2025-26",
+    "2026-27"
+  ],
+  "counts": {
+    "institutions": 40,
+    "programs": 160,
+    "students": 14548,
+    "enrolments": 20867,
+    "uploads": 81,
+    "labelled_cases": 252
+  },
+  "clean_institution": {
+    "id": 40,
+    "name": "Meghdoot Institute of Engineering and Technology"
+  },
+  "demo_students": [
+    {
+      "username": "student_ghost",
+      "password": "demo1234",
+      "student_id": 14386,
+      "label": "Student \u2014 member of a ghost cluster (use this one to dispute)",
+      "apaar_masked": "XXXX-XXXX-9420",
+      "is_minor": false,
+      "institution": "Vaitarna Institute of Engineering and Technology"
+    },
+    {
+      "username": "student_duplicate",
+      "password": "demo1234",
+      "student_id": 12488,
+      "label": "Student \u2014 reported by two institutions (duplicate enrolment victim)",
+      "apaar_masked": "XXXX-XXXX-4755",
+      "is_minor": false,
+      "institution": "Tamravati College of Engineering and Management"
+    },
+    {
+      "username": "student_dual",
+      "password": "demo1234",
+      "student_id": 7106,
+      "label": "Student \u2014 legitimate dual degree (regular + online)",
+      "apaar_masked": "XXXX-XXXX-3425",
+      "is_minor": false,
+      "institution": "Girnarpur College of Engineering"
+    },
+    {
+      "username": "student_minor",
+      "password": "demo1234",
+      "student_id": 5222,
+      "label": "Student \u2014 under 18 (parental consent required)",
+      "apaar_masked": "XXXX-XXXX-3092",
+      "is_minor": true,
+      "institution": "Vindhyashree Institute of Science and Technology"
+    },
+    {
+      "username": "student_fn",
+      "password": "demo1234",
+      "student_id": 9203,
+      "label": "Student \u2014 foreign national, APAAR not applicable",
+      "apaar_masked": "XXXX-XXXX-XXXX",
+      "is_minor": false,
+      "institution": "Dwarkeshwar College of Engineering"
+    },
+    {
+      "username": "student_clean",
+      "password": "demo1234",
+      "student_id": 6934,
+      "label": "Student \u2014 clean record at the model institution",
+      "apaar_masked": "XXXX-XXXX-0825",
+      "is_minor": false,
+      "institution": "Meghdoot Institute of Engineering and Technology"
+    },
+    {
+      "username": "student_pending",
+      "password": "demo1234",
+      "student_id": 2118,
+      "label": "Student \u2014 has a pending verifier request",
+      "apaar_masked": "XXXX-XXXX-3258",
+      "is_minor": false,
+      "institution": "Pampavati Institute of Science and Technology"
+    },
+    {
+      "username": "student_revoked",
+      "password": "demo1234",
+      "student_id": 1011,
+      "label": "Student \u2014 revoked a consent earlier",
+      "apaar_masked": "XXXX-XXXX-6804",
+      "is_minor": false,
+      "institution": "Yamunotri College of Engineering and Management"
+    }
+  ],
+  "scenarios": {
+    "A_excess_intake": [
+      {
+        "scenario": "A_excess_intake",
+        "flag_type": "EXCESS_INTAKE",
+        "key_kind": "program_year",
+        "key": "106|2026-27",
+        "institution_id": 26,
+        "institution_name": "Amaravati Nandan College of Engineering",
+        "details": {
+          "program": "B.Tech Mechanical Engineering",
+          "approved_intake": 120,
+          "expected_excess": 3,
+          "cause": "regular admissions beyond approved intake"
+        }
+      },
+      {
+        "scenario": "A_excess_intake",
+        "flag_type": "EXCESS_INTAKE",
+        "key_kind": "program_year",
+        "key": "70|2026-27",
+        "institution_id": 17,
+        "institution_name": "Godavari Nandan College of Engineering and Management",
+        "details": {
+          "program": "B.Tech Information Technology",
+          "approved_intake": 60,
+          "expected_excess": 12,
+          "cause": "regular admissions beyond approved intake"
+        }
+      },
+      {
+        "scenario": "A_excess_intake",
+        "flag_type": "EXCESS_INTAKE",
+        "key_kind": "program_year",
+        "key": "32|2026-27",
+        "institution_id": 8,
+        "institution_name": "Bhairavkund College of Engineering",
+        "details": {
+          "program": "B.Tech Civil Engineering",
+          "approved_intake": 60,
+          "expected_excess": 25,
+          "cause": "regular admissions beyond approved intake"
+        }
+      },
+      {
+        "scenario": "A_excess_intake",
+        "flag_type": "EXCESS_INTAKE",
+        "key_kind": "program_year",
+        "key": "46|2026-27",
+        "institution_id": 12,
+        "institution_name": "Pampavati Institute of Science and Technology",
+        "details": {
+          "program": "B.Tech Electronics and Communication Engineering",
+          "approved_intake": 60,
+          "expected_excess": 4,
+          "cause": "TFW supernumerary admissions beyond their cap",
+          "tfw_cap": 3
+        }
+      }
+    ],
+    "B_ghost_cluster": [
+      {
+        "scenario": "B_ghost_cluster",
+        "flag_type": "GHOST_CLUSTER",
+        "key_kind": "institution_year",
+        "key": "16|2026-27",
+        "institution_id": 16,
+        "institution_name": "Vaitarna Institute of Engineering and Technology",
+        "details": {
+          "students": 25,
+          "guardian_contacts": 3,
+          "student_ids": [
+            14386,
+            14387,
+            14388,
+            14389,
+            14390,
+            14391,
+            14392,
+            14393,
+            14394,
+            14395,
+            14396,
+            14397,
+            14398,
+            14399,
+            14400,
+            14401,
+            14402,
+            14403,
+            14404,
+            14405,
+            14406,
+            14407,
+            14408,
+            14409,
+            14410
+          ],
+          "program": "B.Tech Civil Engineering"
+        }
+      },
+      {
+        "scenario": "B_ghost_cluster",
+        "flag_type": "GHOST_CLUSTER",
+        "key_kind": "institution_year",
+        "key": "9|2026-27",
+        "institution_id": 9,
+        "institution_name": "Saptagiri Nandan Technical Institute",
+        "details": {
+          "students": 33,
+          "guardian_contacts": 3,
+          "student_ids": [
+            14411,
+            14412,
+            14413,
+            14414,
+            14415,
+            14416,
+            14417,
+            14418,
+            14419,
+            14420,
+            14421,
+            14422,
+            14423,
+            14424,
+            14425,
+            14426,
+            14427,
+            14428,
+            14429,
+            14430,
+            14431,
+            14432,
+            14433,
+            14434,
+            14435,
+            14436,
+            14437,
+            14438,
+            14439,
+            14440,
+            14441,
+            14442,
+            14443
+          ],
+          "program": "B.Tech Computer Science and Engineering"
+        }
+      }
+    ],
+    "B_sibling_control": [
+      {
+        "scenario": "B_sibling_control",
+        "flag_type": "NONE",
+        "key_kind": "institution_year",
+        "key": "7|2026-27",
+        "institution_id": 7,
+        "institution_name": "Mahanadi Nandan Institute of Technology",
+        "details": {
+          "note": "2-3 siblings sharing one guardian contact \u2014 must not be flagged"
+        }
+      },
+      {
+        "scenario": "B_sibling_control",
+        "flag_type": "NONE",
+        "key_kind": "institution_year",
+        "key": "25|2026-27",
+        "institution_id": 25,
+        "institution_name": "Narmadapuri Institute of Technology",
+        "details": {
+          "note": "2-3 siblings sharing one guardian contact \u2014 must not be flagged"
+        }
+      },
+      {
+        "scenario": "B_sibling_control",
+        "flag_type": "NONE",
+        "key_kind": "institution_year",
+        "key": "22|2026-27",
+        "institution_id": 22,
+        "institution_name": "Trivendri Institute of Engineering and Technology",
+        "details": {
+          "note": "2-3 siblings sharing one guardian contact \u2014 must not be flagged"
+        }
+      },
+      {
+        "scenario": "B_sibling_control",
+        "flag_type": "NONE",
+        "key_kind": "institution_year",
+        "key": "21|2026-27",
+        "institution_id": 21,
+        "institution_name": "Udaygiri Technical Institute",
+        "details": {
+          "note": "2-3 siblings sharing one guardian contact \u2014 must not be flagged"
+        }
+      },
+      {
+        "scenario": "B_sibling_control",
+        "flag_type": "NONE",
+        "key_kind": "institution_year",
+        "key": "12|2026-27",
+        "institution_id": 12,
+        "institution_name": "Pampavati Institute of Science and Technology",
+        "details": {
+          "note": "2-3 siblings sharing one guardian contact \u2014 must not be flagged"
+        }
+      },
+      {
+        "scenario": "B_sibling_control",
+        "flag_type": "NONE",
+        "key_kind": "institution_year",
+        "key": "35|2026-27",
+        "institution_id": 35,
+        "institution_name": "Suryagarh College of Engineering and Management",
+        "details": {
+          "note": "2-3 siblings sharing one guardian contact \u2014 must not be flagged"
+        }
+      }
+    ],
+    "C_cross_institution_duplicate": [
+      {
+        "scenario": "C_cross_institution_duplicate",
+        "flag_type": "CROSS_INSTITUTION_DUPLICATE",
+        "key_kind": "student",
+        "key": "12488",
+        "institution_id": 32,
+        "institution_name": "Kolhanpur College of Engineering",
+        "details": {
+          "academic_year": "2026-27",
+          "institutions": [
+            "Kolhanpur College of Engineering",
+            "Tamravati College of Engineering and Management"
+          ],
+          "both_full_time_regular": true
+        }
+      },
+      {
+        "scenario": "C_cross_institution_duplicate",
+        "flag_type": "CROSS_INSTITUTION_DUPLICATE",
+        "key_kind": "student",
+        "key": "9133",
+        "institution_id": 14,
+        "institution_name": "Dwarkeshwar College of Engineering",
+        "details": {
+          "academic_year": "2026-27",
+          "institutions": [
+            "Dwarkeshwar College of Engineering",
+            "Tamravati College of Engineering and Management"
+          ],
+          "both_full_time_regular": true
+        }
+      },
+      {
+        "scenario": "C_cross_institution_duplicate",
+        "flag_type": "CROSS_INSTITUTION_DUPLICATE",
+        "key_kind": "student",
+        "key": "12989",
+        "institution_id": 35,
+        "institution_name": "Suryagarh College of Engineering and Management",
+        "details": {
+          "academic_year": "2026-27",
+          "institutions": [
+            "Suryagarh College of Engineering and Management",
+            "Saptagiri Nandan Technical Institute"
+          ],
+          "both_full_time_regular": true
+        }
+      },
+      {
+        "scenario": "C_cross_institution_duplicate",
+        "flag_type": "CROSS_INSTITUTION_DUPLICATE",
+        "key_kind": "student",
+        "key": "13750",
+        "institution_id": 39,
+        "institution_name": "Kharapur Technical Institute",
+        "details": {
+          "academic_year": "2026-27",
+          "institutions": [
+            "Kharapur Technical Institute",
+            "Yamunotri College of Engineering and Management"
+          ],
+          "both_full_time_regular": true
+        }
+      },
+      {
+        "scenario": "C_cross_institution_duplicate",
+        "flag_type": "CROSS_INSTITUTION_DUPLICATE",
+        "key_kind": "student",
+        "key": "10456",
+        "institution_id": 21,
+        "institution_name": "Udaygiri Technical Institute",
+        "details": {
+          "academic_year": "2026-27",
+          "institutions": [
+            "Udaygiri Technical Institute",
+            "Kanchanpur College of Engineering and Management"
+          ],
+          "both_full_time_regular": true
+        }
+      },
+      {
+        "scenario": "C_cross_institution_duplicate",
+        "flag_type": "CROSS_INSTITUTION_DUPLICATE",
+        "key_kind": "student",
+        "key": "7907",
+        "institution_id": 6,
+        "institution_name": "Maruthvalli Institute of Science and Technology",
+        "details": {
+          "academic_year": "2026-27",
+          "institutions": [
+            "Maruthvalli Institute of Science and Technology",
+            "Chenabpura Institute of Technology"
+          ],
+          "both_full_time_regular": true
+        }
+      },
+      {
+        "scenario": "C_cross_institution_duplicate",
+        "flag_type": "CROSS_INSTITUTION_DUPLICATE",
+        "key_kind": "student",
+        "key": "13433",
+        "institution_id": 37,
+        "institution_name": "Panchvati Institute of Technology",
+        "details": {
+          "academic_year": "2026-27",
+          "institutions": [
+            "Panchvati Institute of Technology",
+            "Yamunotri College of Engineering and Management"
+          ],
+          "both_full_time_regular": true
+        }
+      },
+      {
+        "scenario": "C_cross_institution_duplicate",
+        "flag_type": "CROSS_INSTITUTION_DUPLICATE",
+        "key_kind": "student",
+        "key": "13321",
+        "institution_id": 37,
+        "institution_name": "Panchvati Institute of Technology",
+        "details": {
+          "academic_year": "2026-27",
+          "institutions": [
+            "Panchvati Institute of Technology",
+            "Satpuri Institute of Science and Technology"
+          ],
+          "both_full_time_regular": true
+        }
+      },
+      {
+        "scenario": "C_cross_institution_duplicate",
+        "flag_type": "CROSS_INSTITUTION_DUPLICATE",
+        "key_kind": "student",
+        "key": "8943",
+        "institution_id": 12,
+        "institution_name": "Pampavati Institute of Science and Technology",
+        "details": {
+          "academic_year": "2026-27",
+          "institutions": [
+            "Pampavati Institute of Science and Technology",
+            "Tamravati College of Engineering and Management"
+          ],
+          "both_full_time_regular": true
+        }
+      },
+      {
+        "scenario": "C_cross_institution_duplicate",
+        "flag_type": "CROSS_INSTITUTION_DUPLICATE",
+        "key_kind": "student",
+        "key": "11171",
+        "institution_id": 25,
+        "institution_name": "Narmadapuri Institute of Technology",
+        "details": {
+          "academic_year": "2026-27",
+          "institutions": [
+            "Narmadapuri Institute of Technology",
+            "Trivendri Institute of Engineering and Technology"
+          ],
+          "both_full_time_regular": true
+        }
+      },
+      {
+        "scenario": "C_cross_institution_duplicate",
+        "flag_type": "CROSS_INSTITUTION_DUPLICATE",
+        "key_kind": "student",
+        "key": "13451",
+        "institution_id": 37,
+        "institution_name": "Panchvati Institute of Technology",
+        "details": {
+          "academic_year": "2026-27",
+          "institutions": [
+            "Panchvati Institute of Technology",
+            "Dwarkeshwar College of Engineering"
+          ],
+          "both_full_time_regular": true
+        }
+      },
+      {
+        "scenario": "C_cross_institution_duplicate",
+        "flag_type": "CROSS_INSTITUTION_DUPLICATE",
+        "key_kind": "student",
+        "key": "8699",
+        "institution_id": 11,
+        "institution_name": "Kanchanpur College of Engineering and Management",
+        "details": {
+          "academic_year": "2026-27",
+          "institutions": [
+            "Kanchanpur College of Engineering and Management",
+            "Sindhupuri Institute of Engineering and Technology"
+          ],
+          "both_full_time_regular": true
+        }
+      },
+      {
+        "scenario": "C_cross_institution_duplicate",
+        "flag_type": "CROSS_INSTITUTION_DUPLICATE",
+        "key_kind": "student",
+        "key": "7142",
+        "institution_id": 1,
+        "institution_name": "Rathnapura Institute of Technology",
+        "details": {
+          "academic_year": "2026-27",
+          "institutions": [
+            "Rathnapura Institute of Technology",
+            "Tamravati College of Engineering and Management"
+          ],
+          "both_full_time_regular": true
+        }
+      },
+      {
+        "scenario": "C_cross_institution_duplicate",
+        "flag_type": "CROSS_INSTITUTION_DUPLICATE",
+        "key_kind": "student",
+        "key": "11686",
+        "institution_id": 28,
+        "institution_name": "Charminara Institute of Engineering and Technology",
+        "details": {
+          "academic_year": "2026-27",
+          "institutions": [
+            "Charminara Institute of Engineering and Technology",
+            "Trivendri Institute of Engineering and Technology"
+          ],
+          "both_full_time_regular": true
+        }
+      },
+      {
+        "scenario": "C_cross_institution_duplicate",
+        "flag_type": "CROSS_INSTITUTION_DUPLICATE",
+        "key_kind": "student",
+        "key": "8323",
+        "institution_id": 9,
+        "institution_name": "Saptagiri Nandan Technical Institute",
+        "details": {
+          "academic_year": "2026-27",
+          "institutions": [
+            "Saptagiri Nandan Technical Institute",
+            "Tungabhadri Institute of Technology"
+          ],
+          "both_full_time_regular": true
+        }
+      }
+    ],
+    "D_dual_degree": [
+      {
+        "scenario": "D_dual_degree",
+        "flag_type": "POSSIBLE_DUAL_DEGREE",
+        "key_kind": "student",
+        "key": "7106",
+        "institution_id": 1,
+        "institution_name": "Rathnapura Institute of Technology",
+        "details": {
+          "academic_year": "2026-27",
+          "regular_program": "B.Tech Information Technology",
+          "online_program": "B.Tech Computer Science and Engineering (Online/ODL)",
+          "must_not_be_fraud": true
+        }
+      },
+      {
+        "scenario": "D_dual_degree",
+        "flag_type": "POSSIBLE_DUAL_DEGREE",
+        "key_kind": "student",
+        "key": "10889",
+        "institution_id": 23,
+        "institution_name": "Ratangarh Nandan College of Engineering and Management",
+        "details": {
+          "academic_year": "2026-27",
+          "regular_program": "B.Tech Computer Science and Engineering",
+          "online_program": "MCA General (Online/ODL)",
+          "must_not_be_fraud": true
+        }
+      },
+      {
+        "scenario": "D_dual_degree",
+        "flag_type": "POSSIBLE_DUAL_DEGREE",
+        "key_kind": "student",
+        "key": "9382",
+        "institution_id": 15,
+        "institution_name": "Kaveripura Technical Institute",
+        "details": {
+          "academic_year": "2026-27",
+          "regular_program": "MBA General",
+          "online_program": "MBA General (Online/ODL)",
+          "must_not_be_fraud": true
+        }
+      },
+      {
+        "scenario": "D_dual_degree",
+        "flag_type": "POSSIBLE_DUAL_DEGREE",
+        "key_kind": "student",
+        "key": "10173",
+        "institution_id": 20,
+        "institution_name": "Sahyadri Nandan College of Engineering",
+        "details": {
+          "academic_year": "2026-27",
+          "regular_program": "B.Tech Civil Engineering",
+          "online_program": "MCA General (Online/ODL)",
+          "must_not_be_fraud": true
+        }
+      },
+      {
+        "scenario": "D_dual_degree",
+        "flag_type": "POSSIBLE_DUAL_DEGREE",
+        "key_kind": "student",
+        "key": "12386",
+        "institution_id": 32,
+        "institution_name": "Kolhanpur College of Engineering",
+        "details": {
+          "academic_year": "2026-27",
+          "regular_program": "B.Tech Computer Science and Engineering",
+          "online_program": "B.Tech Computer Science and Engineering (Online/ODL)",
+          "must_not_be_fraud": true
+        }
+      },
+      {
+        "scenario": "D_dual_degree",
+        "flag_type": "POSSIBLE_DUAL_DEGREE",
+        "key_kind": "student",
+        "key": "7884",
+        "institution_id": 6,
+        "institution_name": "Maruthvalli Institute of Science and Technology",
+        "details": {
+          "academic_year": "2026-27",
+          "regular_program": "B.Tech Civil Engineering",
+          "online_program": "MCA General (Online/ODL)",
+          "must_not_be_fraud": true
+        }
+      },
+      {
+        "scenario": "D_dual_degree",
+        "flag_type": "POSSIBLE_DUAL_DEGREE",
+        "key_kind": "student",
+        "key": "13335",
+        "institution_id": 37,
+        "institution_name": "Panchvati Institute of Technology",
+        "details": {
+          "academic_year": "2026-27",
+          "regular_program": "B.Tech Civil Engineering",
+          "online_program": "MCA General (Online/ODL)",
+          "must_not_be_fraud": true
+        }
+      },
+      {
+        "scenario": "D_dual_degree",
+        "flag_type": "POSSIBLE_DUAL_DEGREE",
+        "key_kind": "student",
+        "key": "7181",
+        "institution_id": 1,
+        "institution_name": "Rathnapura Institute of Technology",
+        "details": {
+          "academic_year": "2026-27",
+          "regular_program": "MCA General",
+          "online_program": "MCA General (Online/ODL)",
+          "must_not_be_fraud": true
+        }
+      },
+      {
+        "scenario": "D_dual_degree",
+        "flag_type": "POSSIBLE_DUAL_DEGREE",
+        "key_kind": "student",
+        "key": "10714",
+        "institution_id": 22,
+        "institution_name": "Trivendri Institute of Engineering and Technology",
+        "details": {
+          "academic_year": "2026-27",
+          "regular_program": "MBA General",
+          "online_program": "B.Tech Computer Science and Engineering (Online/ODL)",
+          "must_not_be_fraud": true
+        }
+      },
+      {
+        "scenario": "D_dual_degree",
+        "flag_type": "POSSIBLE_DUAL_DEGREE",
+        "key_kind": "student",
+        "key": "13451",
+        "institution_id": 37,
+        "institution_name": "Panchvati Institute of Technology",
+        "details": {
+          "academic_year": "2026-27",
+          "regular_program": "MCA General",
+          "online_program": "MCA General (Online/ODL)",
+          "must_not_be_fraud": true
+        }
+      }
+    ],
+    "E_apaar_problems": [
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "3392",
+        "institution_id": 20,
+        "institution_name": "Sahyadri Nandan College of Engineering",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "7842",
+        "institution_id": 5,
+        "institution_name": "Yamunotri College of Engineering and Management",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "14402",
+        "institution_id": 16,
+        "institution_name": "Vaitarna Institute of Engineering and Technology",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "5439",
+        "institution_id": 32,
+        "institution_name": "Kolhanpur College of Engineering",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "12404",
+        "institution_id": 32,
+        "institution_name": "Kolhanpur College of Engineering",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "11601",
+        "institution_id": 27,
+        "institution_name": "Kaladgi Technical Institute",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "10394",
+        "institution_id": 21,
+        "institution_name": "Udaygiri Technical Institute",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "3536",
+        "institution_id": 21,
+        "institution_name": "Udaygiri Technical Institute",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "3890",
+        "institution_id": 23,
+        "institution_name": "Ratangarh Nandan College of Engineering and Management",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "3684",
+        "institution_id": 22,
+        "institution_name": "Trivendri Institute of Engineering and Technology",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "10118",
+        "institution_id": 20,
+        "institution_name": "Sahyadri Nandan College of Engineering",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "12568",
+        "institution_id": 33,
+        "institution_name": "Chandrapuri Technical Institute",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "529",
+        "institution_id": 3,
+        "institution_name": "Virajpet Nagar Technical Institute",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "4404",
+        "institution_id": 26,
+        "institution_name": "Amaravati Nandan College of Engineering",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "11349",
+        "institution_id": 26,
+        "institution_name": "Amaravati Nandan College of Engineering",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "12583",
+        "institution_id": 33,
+        "institution_name": "Chandrapuri Technical Institute",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "12159",
+        "institution_id": 30,
+        "institution_name": "Vindhyashree Institute of Science and Technology",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "12087",
+        "institution_id": 30,
+        "institution_name": "Vindhyashree Institute of Science and Technology",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "1089",
+        "institution_id": 5,
+        "institution_name": "Yamunotri College of Engineering and Management",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "3533",
+        "institution_id": 21,
+        "institution_name": "Udaygiri Technical Institute",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "5376",
+        "institution_id": 31,
+        "institution_name": "Chenabpura Institute of Technology",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "4244",
+        "institution_id": 25,
+        "institution_name": "Narmadapuri Institute of Technology",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "9507",
+        "institution_id": 16,
+        "institution_name": "Vaitarna Institute of Engineering and Technology",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "395",
+        "institution_id": 2,
+        "institution_name": "Nilgiriya College of Engineering",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "9101",
+        "institution_id": 13,
+        "institution_name": "Brahmaputri Institute of Technology",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "12288",
+        "institution_id": 31,
+        "institution_name": "Chenabpura Institute of Technology",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "5660",
+        "institution_id": 33,
+        "institution_name": "Chandrapuri Technical Institute",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "3416",
+        "institution_id": 20,
+        "institution_name": "Sahyadri Nandan College of Engineering",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "6601",
+        "institution_id": 38,
+        "institution_name": "Girnarpur College of Engineering",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "1724",
+        "institution_id": 10,
+        "institution_name": "Kundalini Nagar Institute of Engineering and Technology",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "873",
+        "institution_id": 4,
+        "institution_name": "Sindhupuri Institute of Engineering and Technology",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "13730",
+        "institution_id": 39,
+        "institution_name": "Kharapur Technical Institute",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "12889",
+        "institution_id": 34,
+        "institution_name": "Arunvalli Institute of Engineering and Technology",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "8659",
+        "institution_id": 11,
+        "institution_name": "Kanchanpur College of Engineering and Management",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "1825",
+        "institution_id": 11,
+        "institution_name": "Kanchanpur College of Engineering and Management",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "10912",
+        "institution_id": 23,
+        "institution_name": "Ratangarh Nandan College of Engineering and Management",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "6095",
+        "institution_id": 35,
+        "institution_name": "Suryagarh College of Engineering and Management",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "7403",
+        "institution_id": 3,
+        "institution_name": "Virajpet Nagar Technical Institute",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "8183",
+        "institution_id": 8,
+        "institution_name": "Bhairavkund College of Engineering",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "6283",
+        "institution_id": 37,
+        "institution_name": "Panchvati Institute of Technology",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "3427",
+        "institution_id": 20,
+        "institution_name": "Sahyadri Nandan College of Engineering",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "11273",
+        "institution_id": 26,
+        "institution_name": "Amaravati Nandan College of Engineering",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "6488",
+        "institution_id": 38,
+        "institution_name": "Girnarpur College of Engineering",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "7498",
+        "institution_id": 3,
+        "institution_name": "Virajpet Nagar Technical Institute",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "1288",
+        "institution_id": 7,
+        "institution_name": "Mahanadi Nandan Institute of Technology",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "5677",
+        "institution_id": 33,
+        "institution_name": "Chandrapuri Technical Institute",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "6598",
+        "institution_id": 38,
+        "institution_name": "Girnarpur College of Engineering",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "2964",
+        "institution_id": 17,
+        "institution_name": "Godavari Nandan College of Engineering and Management",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "11311",
+        "institution_id": 26,
+        "institution_name": "Amaravati Nandan College of Engineering",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "10033",
+        "institution_id": 19,
+        "institution_name": "Tungabhadri Institute of Technology",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "2262",
+        "institution_id": 13,
+        "institution_name": "Brahmaputri Institute of Technology",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "13117",
+        "institution_id": 35,
+        "institution_name": "Suryagarh College of Engineering and Management",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "9013",
+        "institution_id": 13,
+        "institution_name": "Brahmaputri Institute of Technology",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "11043",
+        "institution_id": 24,
+        "institution_name": "Satpuri Institute of Science and Technology",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "9399",
+        "institution_id": 16,
+        "institution_name": "Vaitarna Institute of Engineering and Technology",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "5529",
+        "institution_id": 32,
+        "institution_name": "Kolhanpur College of Engineering",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "8572",
+        "institution_id": 11,
+        "institution_name": "Kanchanpur College of Engineering and Management",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "1394",
+        "institution_id": 8,
+        "institution_name": "Bhairavkund College of Engineering",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "4890",
+        "institution_id": 28,
+        "institution_name": "Charminara Institute of Engineering and Technology",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "8957",
+        "institution_id": 12,
+        "institution_name": "Pampavati Institute of Science and Technology",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "10020",
+        "institution_id": 19,
+        "institution_name": "Tungabhadri Institute of Technology",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "5324",
+        "institution_id": 31,
+        "institution_name": "Chenabpura Institute of Technology",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "5304",
+        "institution_id": 31,
+        "institution_name": "Chenabpura Institute of Technology",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "6286",
+        "institution_id": 37,
+        "institution_name": "Panchvati Institute of Technology",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "511",
+        "institution_id": 3,
+        "institution_name": "Virajpet Nagar Technical Institute",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "955",
+        "institution_id": 5,
+        "institution_name": "Yamunotri College of Engineering and Management",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "12313",
+        "institution_id": 31,
+        "institution_name": "Chenabpura Institute of Technology",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "10136",
+        "institution_id": 20,
+        "institution_name": "Sahyadri Nandan College of Engineering",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "4997",
+        "institution_id": 29,
+        "institution_name": "Tamravati College of Engineering and Management",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "12718",
+        "institution_id": 33,
+        "institution_name": "Chandrapuri Technical Institute",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "5615",
+        "institution_id": 33,
+        "institution_name": "Chandrapuri Technical Institute",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "12632",
+        "institution_id": 33,
+        "institution_name": "Chandrapuri Technical Institute",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "3409",
+        "institution_id": 20,
+        "institution_name": "Sahyadri Nandan College of Engineering",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "3195",
+        "institution_id": 19,
+        "institution_name": "Tungabhadri Institute of Technology",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "12853",
+        "institution_id": 33,
+        "institution_name": "Chandrapuri Technical Institute",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "13125",
+        "institution_id": 36,
+        "institution_name": "Shivalik Nandan Institute of Science and Technology",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "1574",
+        "institution_id": 9,
+        "institution_name": "Saptagiri Nandan Technical Institute",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "8422",
+        "institution_id": 10,
+        "institution_name": "Kundalini Nagar Institute of Engineering and Technology",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "3628",
+        "institution_id": 21,
+        "institution_name": "Udaygiri Technical Institute",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "9425",
+        "institution_id": 16,
+        "institution_name": "Vaitarna Institute of Engineering and Technology",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "7282",
+        "institution_id": 2,
+        "institution_name": "Nilgiriya College of Engineering",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "387",
+        "institution_id": 2,
+        "institution_name": "Nilgiriya College of Engineering",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "4709",
+        "institution_id": 27,
+        "institution_name": "Kaladgi Technical Institute",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "13256",
+        "institution_id": 36,
+        "institution_name": "Shivalik Nandan Institute of Science and Technology",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "3420",
+        "institution_id": 20,
+        "institution_name": "Sahyadri Nandan College of Engineering",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "3830",
+        "institution_id": 23,
+        "institution_name": "Ratangarh Nandan College of Engineering and Management",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "11805",
+        "institution_id": 28,
+        "institution_name": "Charminara Institute of Engineering and Technology",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "13208",
+        "institution_id": 36,
+        "institution_name": "Shivalik Nandan Institute of Science and Technology",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "12391",
+        "institution_id": 32,
+        "institution_name": "Kolhanpur College of Engineering",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "4832",
+        "institution_id": 28,
+        "institution_name": "Charminara Institute of Engineering and Technology",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "14208",
+        "institution_id": 26,
+        "institution_name": "Amaravati Nandan College of Engineering",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "6222",
+        "institution_id": 36,
+        "institution_name": "Shivalik Nandan Institute of Science and Technology",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "5483",
+        "institution_id": 32,
+        "institution_name": "Kolhanpur College of Engineering",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "3172",
+        "institution_id": 19,
+        "institution_name": "Tungabhadri Institute of Technology",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "7837",
+        "institution_id": 5,
+        "institution_name": "Yamunotri College of Engineering and Management",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "11123",
+        "institution_id": 25,
+        "institution_name": "Narmadapuri Institute of Technology",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "10524",
+        "institution_id": 22,
+        "institution_name": "Trivendri Institute of Engineering and Technology",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "3386",
+        "institution_id": 20,
+        "institution_name": "Sahyadri Nandan College of Engineering",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "2386",
+        "institution_id": 14,
+        "institution_name": "Dwarkeshwar College of Engineering",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "5619",
+        "institution_id": 33,
+        "institution_name": "Chandrapuri Technical Institute",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "11535",
+        "institution_id": 27,
+        "institution_name": "Kaladgi Technical Institute",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "4104",
+        "institution_id": 24,
+        "institution_name": "Satpuri Institute of Science and Technology",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "5819",
+        "institution_id": 33,
+        "institution_name": "Chandrapuri Technical Institute",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "13044",
+        "institution_id": 35,
+        "institution_name": "Suryagarh College of Engineering and Management",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "2518",
+        "institution_id": 15,
+        "institution_name": "Kaveripura Technical Institute",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "3879",
+        "institution_id": 23,
+        "institution_name": "Ratangarh Nandan College of Engineering and Management",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "13480",
+        "institution_id": 38,
+        "institution_name": "Girnarpur College of Engineering",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "14421",
+        "institution_id": 9,
+        "institution_name": "Saptagiri Nandan Technical Institute",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "9985",
+        "institution_id": 19,
+        "institution_name": "Tungabhadri Institute of Technology",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "5968",
+        "institution_id": 34,
+        "institution_name": "Arunvalli Institute of Engineering and Technology",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "8584",
+        "institution_id": 11,
+        "institution_name": "Kanchanpur College of Engineering and Management",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "13619",
+        "institution_id": 38,
+        "institution_name": "Girnarpur College of Engineering",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "11660",
+        "institution_id": 27,
+        "institution_name": "Kaladgi Technical Institute",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "5535",
+        "institution_id": 32,
+        "institution_name": "Kolhanpur College of Engineering",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "7294",
+        "institution_id": 2,
+        "institution_name": "Nilgiriya College of Engineering",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "4051",
+        "institution_id": 24,
+        "institution_name": "Satpuri Institute of Science and Technology",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "5808",
+        "institution_id": 33,
+        "institution_name": "Chandrapuri Technical Institute",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "7582",
+        "institution_id": 4,
+        "institution_name": "Sindhupuri Institute of Engineering and Technology",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "12848",
+        "institution_id": 33,
+        "institution_name": "Chandrapuri Technical Institute",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "10886",
+        "institution_id": 23,
+        "institution_name": "Ratangarh Nandan College of Engineering and Management",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "833",
+        "institution_id": 4,
+        "institution_name": "Sindhupuri Institute of Engineering and Technology",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "2324",
+        "institution_id": 14,
+        "institution_name": "Dwarkeshwar College of Engineering",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "12863",
+        "institution_id": 33,
+        "institution_name": "Chandrapuri Technical Institute",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "14087",
+        "institution_id": 22,
+        "institution_name": "Trivendri Institute of Engineering and Technology",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "4715",
+        "institution_id": 27,
+        "institution_name": "Kaladgi Technical Institute",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "2943",
+        "institution_id": 17,
+        "institution_name": "Godavari Nandan College of Engineering and Management",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "13304",
+        "institution_id": 37,
+        "institution_name": "Panchvati Institute of Technology",
+        "details": {
+          "problem": "invalid_format"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_NOT_FOUND",
+        "key_kind": "student",
+        "key": "4037",
+        "institution_id": 24,
+        "institution_name": "Satpuri Institute of Science and Technology",
+        "details": {
+          "problem": "not_found"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "APAAR_MISMATCH",
+        "key_kind": "student",
+        "key": "8715",
+        "institution_id": 11,
+        "institution_name": "Kanchanpur College of Engineering and Management",
+        "details": {
+          "problem": "mismatch"
+        }
+      },
+      {
+        "scenario": "E_apaar_problems",
+        "flag_type": "INVALID_APAAR",
+        "key_kind": "student",
+        "key": "6419",
+        "institution_id": 37,
+        "institution_name": "Panchvati Institute of Technology",
+        "details": {
+          "problem": "invalid_format"
+        }
+      }
+    ],
+    "F_late_admission": [
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20795",
+        "institution_id": 32,
+        "institution_name": "Kolhanpur College of Engineering",
+        "details": {
+          "admitted_on": "2026-10-05",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20796",
+        "institution_id": 32,
+        "institution_name": "Kolhanpur College of Engineering",
+        "details": {
+          "admitted_on": "2026-10-08",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20797",
+        "institution_id": 32,
+        "institution_name": "Kolhanpur College of Engineering",
+        "details": {
+          "admitted_on": "2026-10-28",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20798",
+        "institution_id": 32,
+        "institution_name": "Kolhanpur College of Engineering",
+        "details": {
+          "admitted_on": "2026-10-08",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20799",
+        "institution_id": 32,
+        "institution_name": "Kolhanpur College of Engineering",
+        "details": {
+          "admitted_on": "2026-10-27",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20800",
+        "institution_id": 32,
+        "institution_name": "Kolhanpur College of Engineering",
+        "details": {
+          "admitted_on": "2026-10-15",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20801",
+        "institution_id": 32,
+        "institution_name": "Kolhanpur College of Engineering",
+        "details": {
+          "admitted_on": "2026-10-30",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20802",
+        "institution_id": 32,
+        "institution_name": "Kolhanpur College of Engineering",
+        "details": {
+          "admitted_on": "2026-10-16",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20803",
+        "institution_id": 32,
+        "institution_name": "Kolhanpur College of Engineering",
+        "details": {
+          "admitted_on": "2026-10-21",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20804",
+        "institution_id": 32,
+        "institution_name": "Kolhanpur College of Engineering",
+        "details": {
+          "admitted_on": "2026-10-25",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20805",
+        "institution_id": 32,
+        "institution_name": "Kolhanpur College of Engineering",
+        "details": {
+          "admitted_on": "2026-10-11",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20806",
+        "institution_id": 32,
+        "institution_name": "Kolhanpur College of Engineering",
+        "details": {
+          "admitted_on": "2026-10-29",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20807",
+        "institution_id": 32,
+        "institution_name": "Kolhanpur College of Engineering",
+        "details": {
+          "admitted_on": "2026-10-19",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20808",
+        "institution_id": 32,
+        "institution_name": "Kolhanpur College of Engineering",
+        "details": {
+          "admitted_on": "2026-10-10",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20809",
+        "institution_id": 32,
+        "institution_name": "Kolhanpur College of Engineering",
+        "details": {
+          "admitted_on": "2026-10-05",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20810",
+        "institution_id": 32,
+        "institution_name": "Kolhanpur College of Engineering",
+        "details": {
+          "admitted_on": "2026-10-09",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20811",
+        "institution_id": 32,
+        "institution_name": "Kolhanpur College of Engineering",
+        "details": {
+          "admitted_on": "2026-10-29",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20812",
+        "institution_id": 32,
+        "institution_name": "Kolhanpur College of Engineering",
+        "details": {
+          "admitted_on": "2026-10-30",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20813",
+        "institution_id": 32,
+        "institution_name": "Kolhanpur College of Engineering",
+        "details": {
+          "admitted_on": "2026-10-24",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20814",
+        "institution_id": 32,
+        "institution_name": "Kolhanpur College of Engineering",
+        "details": {
+          "admitted_on": "2026-10-26",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20815",
+        "institution_id": 30,
+        "institution_name": "Vindhyashree Institute of Science and Technology",
+        "details": {
+          "admitted_on": "2026-10-08",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20816",
+        "institution_id": 30,
+        "institution_name": "Vindhyashree Institute of Science and Technology",
+        "details": {
+          "admitted_on": "2026-10-09",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20817",
+        "institution_id": 30,
+        "institution_name": "Vindhyashree Institute of Science and Technology",
+        "details": {
+          "admitted_on": "2026-10-09",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20818",
+        "institution_id": 30,
+        "institution_name": "Vindhyashree Institute of Science and Technology",
+        "details": {
+          "admitted_on": "2026-10-27",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20819",
+        "institution_id": 30,
+        "institution_name": "Vindhyashree Institute of Science and Technology",
+        "details": {
+          "admitted_on": "2026-10-13",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20820",
+        "institution_id": 30,
+        "institution_name": "Vindhyashree Institute of Science and Technology",
+        "details": {
+          "admitted_on": "2026-10-16",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20821",
+        "institution_id": 30,
+        "institution_name": "Vindhyashree Institute of Science and Technology",
+        "details": {
+          "admitted_on": "2026-10-15",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20822",
+        "institution_id": 30,
+        "institution_name": "Vindhyashree Institute of Science and Technology",
+        "details": {
+          "admitted_on": "2026-10-08",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20823",
+        "institution_id": 30,
+        "institution_name": "Vindhyashree Institute of Science and Technology",
+        "details": {
+          "admitted_on": "2026-10-18",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20824",
+        "institution_id": 30,
+        "institution_name": "Vindhyashree Institute of Science and Technology",
+        "details": {
+          "admitted_on": "2026-10-19",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20825",
+        "institution_id": 30,
+        "institution_name": "Vindhyashree Institute of Science and Technology",
+        "details": {
+          "admitted_on": "2026-10-11",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20826",
+        "institution_id": 30,
+        "institution_name": "Vindhyashree Institute of Science and Technology",
+        "details": {
+          "admitted_on": "2026-10-21",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20827",
+        "institution_id": 30,
+        "institution_name": "Vindhyashree Institute of Science and Technology",
+        "details": {
+          "admitted_on": "2026-10-10",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20828",
+        "institution_id": 30,
+        "institution_name": "Vindhyashree Institute of Science and Technology",
+        "details": {
+          "admitted_on": "2026-10-07",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20829",
+        "institution_id": 30,
+        "institution_name": "Vindhyashree Institute of Science and Technology",
+        "details": {
+          "admitted_on": "2026-10-14",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20830",
+        "institution_id": 30,
+        "institution_name": "Vindhyashree Institute of Science and Technology",
+        "details": {
+          "admitted_on": "2026-10-29",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20831",
+        "institution_id": 30,
+        "institution_name": "Vindhyashree Institute of Science and Technology",
+        "details": {
+          "admitted_on": "2026-10-20",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20832",
+        "institution_id": 30,
+        "institution_name": "Vindhyashree Institute of Science and Technology",
+        "details": {
+          "admitted_on": "2026-10-19",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20833",
+        "institution_id": 30,
+        "institution_name": "Vindhyashree Institute of Science and Technology",
+        "details": {
+          "admitted_on": "2026-10-12",
+          "cutoff": "2026-09-30"
+        }
+      },
+      {
+        "scenario": "F_late_admission",
+        "flag_type": "LATE_ADMISSION",
+        "key_kind": "enrolment",
+        "key": "20834",
+        "institution_id": 30,
+        "institution_name": "Vindhyashree Institute of Science and Technology",
+        "details": {
+          "admitted_on": "2026-10-28",
+          "cutoff": "2026-09-30"
+        }
+      }
+    ],
+    "G_sequential_apaar": [
+      {
+        "scenario": "G_sequential_apaar",
+        "flag_type": "SEQUENTIAL_APAAR",
+        "key_kind": "institution_year",
+        "key": "23|2026-27",
+        "institution_id": 23,
+        "institution_name": "Ratangarh Nandan College of Engineering and Management",
+        "details": {
+          "run_length": 20,
+          "first_masked": "XXXX-XXXX-8618",
+          "last_masked": "XXXX-XXXX-8645",
+          "student_ids": [
+            14501,
+            14502,
+            14503,
+            14504,
+            14505,
+            14506,
+            14507,
+            14508,
+            14509,
+            14510,
+            14511,
+            14512,
+            14513,
+            14514,
+            14515,
+            14516,
+            14517,
+            14518,
+            14519,
+            14520
+          ]
+        }
+      }
+    ],
+    "H_last_minute_bulk": [
+      {
+        "scenario": "H_last_minute_bulk",
+        "flag_type": "LAST_MINUTE_BULK",
+        "key_kind": "institution_year",
+        "key": "8|2026-27",
+        "institution_id": 8,
+        "institution_name": "Bhairavkund College of Engineering",
+        "details": {
+          "share_percent": 60,
+          "window_hours": 6,
+          "records_in_window": 259,
+          "total_records": 432
+        }
+      }
+    ],
+    "I_phantom_progression": [
+      {
+        "scenario": "I_phantom_progression",
+        "flag_type": "PHANTOM_PROGRESSION",
+        "key_kind": "student",
+        "key": "14521",
+        "institution_id": 1,
+        "institution_name": "Rathnapura Institute of Technology",
+        "details": {
+          "kind": "year2_without_year1",
+          "program": "B.Tech Electronics and Communication Engineering"
+        }
+      },
+      {
+        "scenario": "I_phantom_progression",
+        "flag_type": "PHANTOM_PROGRESSION",
+        "key_kind": "student",
+        "key": "14522",
+        "institution_id": 1,
+        "institution_name": "Rathnapura Institute of Technology",
+        "details": {
+          "kind": "year2_without_year1",
+          "program": "B.Tech Electronics and Communication Engineering"
+        }
+      },
+      {
+        "scenario": "I_phantom_progression",
+        "flag_type": "PHANTOM_PROGRESSION",
+        "key_kind": "student",
+        "key": "14523",
+        "institution_id": 1,
+        "institution_name": "Rathnapura Institute of Technology",
+        "details": {
+          "kind": "year2_without_year1",
+          "program": "B.Tech Electronics and Communication Engineering"
+        }
+      },
+      {
+        "scenario": "I_phantom_progression",
+        "flag_type": "PHANTOM_PROGRESSION",
+        "key_kind": "student",
+        "key": "14524",
+        "institution_id": 1,
+        "institution_name": "Rathnapura Institute of Technology",
+        "details": {
+          "kind": "year2_without_year1",
+          "program": "B.Tech Electronics and Communication Engineering"
+        }
+      },
+      {
+        "scenario": "I_phantom_progression",
+        "flag_type": "PHANTOM_PROGRESSION",
+        "key_kind": "student",
+        "key": "14525",
+        "institution_id": 1,
+        "institution_name": "Rathnapura Institute of Technology",
+        "details": {
+          "kind": "year2_without_year1",
+          "program": "B.Tech Electronics and Communication Engineering"
+        }
+      },
+      {
+        "scenario": "I_phantom_progression",
+        "flag_type": "PHANTOM_PROGRESSION",
+        "key_kind": "student",
+        "key": "14526",
+        "institution_id": 1,
+        "institution_name": "Rathnapura Institute of Technology",
+        "details": {
+          "kind": "year2_without_year1",
+          "program": "B.Tech Electronics and Communication Engineering"
+        }
+      },
+      {
+        "scenario": "I_phantom_progression",
+        "flag_type": "PHANTOM_PROGRESSION",
+        "key_kind": "student",
+        "key": "14527",
+        "institution_id": 1,
+        "institution_name": "Rathnapura Institute of Technology",
+        "details": {
+          "kind": "year2_without_year1",
+          "program": "B.Tech Electronics and Communication Engineering"
+        }
+      },
+      {
+        "scenario": "I_phantom_progression",
+        "flag_type": "PHANTOM_PROGRESSION",
+        "key_kind": "student",
+        "key": "14528",
+        "institution_id": 1,
+        "institution_name": "Rathnapura Institute of Technology",
+        "details": {
+          "kind": "year2_without_year1",
+          "program": "B.Tech Electronics and Communication Engineering"
+        }
+      },
+      {
+        "scenario": "I_phantom_progression",
+        "flag_type": "PHANTOM_PROGRESSION",
+        "key_kind": "student",
+        "key": "14529",
+        "institution_id": 1,
+        "institution_name": "Rathnapura Institute of Technology",
+        "details": {
+          "kind": "year2_without_year1",
+          "program": "B.Tech Electronics and Communication Engineering"
+        }
+      },
+      {
+        "scenario": "I_phantom_progression",
+        "flag_type": "PHANTOM_PROGRESSION",
+        "key_kind": "student",
+        "key": "14530",
+        "institution_id": 1,
+        "institution_name": "Rathnapura Institute of Technology",
+        "details": {
+          "kind": "year2_without_year1",
+          "program": "B.Tech Electronics and Communication Engineering"
+        }
+      },
+      {
+        "scenario": "I_phantom_progression",
+        "flag_type": "PHANTOM_PROGRESSION",
+        "key_kind": "student",
+        "key": "14531",
+        "institution_id": 1,
+        "institution_name": "Rathnapura Institute of Technology",
+        "details": {
+          "kind": "year2_without_year1",
+          "program": "B.Tech Electronics and Communication Engineering"
+        }
+      },
+      {
+        "scenario": "I_phantom_progression",
+        "flag_type": "PHANTOM_PROGRESSION",
+        "key_kind": "student",
+        "key": "14532",
+        "institution_id": 1,
+        "institution_name": "Rathnapura Institute of Technology",
+        "details": {
+          "kind": "year2_without_year1",
+          "program": "B.Tech Electronics and Communication Engineering"
+        }
+      },
+      {
+        "scenario": "I_phantom_progression",
+        "flag_type": "PHANTOM_PROGRESSION",
+        "key_kind": "student",
+        "key": "6528",
+        "institution_id": 38,
+        "institution_name": "Girnarpur College of Engineering",
+        "details": {
+          "kind": "vanished_without_status",
+          "previous_year": "2025-26",
+          "removed_rows": 15
+        }
+      },
+      {
+        "scenario": "I_phantom_progression",
+        "flag_type": "PHANTOM_PROGRESSION",
+        "key_kind": "student",
+        "key": "6529",
+        "institution_id": 38,
+        "institution_name": "Girnarpur College of Engineering",
+        "details": {
+          "kind": "vanished_without_status",
+          "previous_year": "2025-26",
+          "removed_rows": 15
+        }
+      },
+      {
+        "scenario": "I_phantom_progression",
+        "flag_type": "PHANTOM_PROGRESSION",
+        "key_kind": "student",
+        "key": "6562",
+        "institution_id": 38,
+        "institution_name": "Girnarpur College of Engineering",
+        "details": {
+          "kind": "vanished_without_status",
+          "previous_year": "2025-26",
+          "removed_rows": 15
+        }
+      },
+      {
+        "scenario": "I_phantom_progression",
+        "flag_type": "PHANTOM_PROGRESSION",
+        "key_kind": "student",
+        "key": "6531",
+        "institution_id": 38,
+        "institution_name": "Girnarpur College of Engineering",
+        "details": {
+          "kind": "vanished_without_status",
+          "previous_year": "2025-26",
+          "removed_rows": 15
+        }
+      },
+      {
+        "scenario": "I_phantom_progression",
+        "flag_type": "PHANTOM_PROGRESSION",
+        "key_kind": "student",
+        "key": "6532",
+        "institution_id": 38,
+        "institution_name": "Girnarpur College of Engineering",
+        "details": {
+          "kind": "vanished_without_status",
+          "previous_year": "2025-26",
+          "removed_rows": 15
+        }
+      },
+      {
+        "scenario": "I_phantom_progression",
+        "flag_type": "PHANTOM_PROGRESSION",
+        "key_kind": "student",
+        "key": "6533",
+        "institution_id": 38,
+        "institution_name": "Girnarpur College of Engineering",
+        "details": {
+          "kind": "vanished_without_status",
+          "previous_year": "2025-26",
+          "removed_rows": 15
+        }
+      },
+      {
+        "scenario": "I_phantom_progression",
+        "flag_type": "PHANTOM_PROGRESSION",
+        "key_kind": "student",
+        "key": "6505",
+        "institution_id": 38,
+        "institution_name": "Girnarpur College of Engineering",
+        "details": {
+          "kind": "vanished_without_status",
+          "previous_year": "2025-26",
+          "removed_rows": 15
+        }
+      },
+      {
+        "scenario": "I_phantom_progression",
+        "flag_type": "PHANTOM_PROGRESSION",
+        "key_kind": "student",
+        "key": "6570",
+        "institution_id": 38,
+        "institution_name": "Girnarpur College of Engineering",
+        "details": {
+          "kind": "vanished_without_status",
+          "previous_year": "2025-26",
+          "removed_rows": 15
+        }
+      },
+      {
+        "scenario": "I_phantom_progression",
+        "flag_type": "PHANTOM_PROGRESSION",
+        "key_kind": "student",
+        "key": "6573",
+        "institution_id": 38,
+        "institution_name": "Girnarpur College of Engineering",
+        "details": {
+          "kind": "vanished_without_status",
+          "previous_year": "2025-26",
+          "removed_rows": 15
+        }
+      },
+      {
+        "scenario": "I_phantom_progression",
+        "flag_type": "PHANTOM_PROGRESSION",
+        "key_kind": "student",
+        "key": "6512",
+        "institution_id": 38,
+        "institution_name": "Girnarpur College of Engineering",
+        "details": {
+          "kind": "vanished_without_status",
+          "previous_year": "2025-26",
+          "removed_rows": 15
+        }
+      },
+      {
+        "scenario": "I_phantom_progression",
+        "flag_type": "PHANTOM_PROGRESSION",
+        "key_kind": "student",
+        "key": "6513",
+        "institution_id": 38,
+        "institution_name": "Girnarpur College of Engineering",
+        "details": {
+          "kind": "vanished_without_status",
+          "previous_year": "2025-26",
+          "removed_rows": 15
+        }
+      },
+      {
+        "scenario": "I_phantom_progression",
+        "flag_type": "PHANTOM_PROGRESSION",
+        "key_kind": "student",
+        "key": "6514",
+        "institution_id": 38,
+        "institution_name": "Girnarpur College of Engineering",
+        "details": {
+          "kind": "vanished_without_status",
+          "previous_year": "2025-26",
+          "removed_rows": 15
+        }
+      },
+      {
+        "scenario": "I_phantom_progression",
+        "flag_type": "PHANTOM_PROGRESSION",
+        "key_kind": "student",
+        "key": "6576",
+        "institution_id": 38,
+        "institution_name": "Girnarpur College of Engineering",
+        "details": {
+          "kind": "vanished_without_status",
+          "previous_year": "2025-26",
+          "removed_rows": 15
+        }
+      },
+      {
+        "scenario": "I_phantom_progression",
+        "flag_type": "PHANTOM_PROGRESSION",
+        "key_kind": "student",
+        "key": "6551",
+        "institution_id": 38,
+        "institution_name": "Girnarpur College of Engineering",
+        "details": {
+          "kind": "vanished_without_status",
+          "previous_year": "2025-26",
+          "removed_rows": 15
+        }
+      },
+      {
+        "scenario": "I_phantom_progression",
+        "flag_type": "PHANTOM_PROGRESSION",
+        "key_kind": "student",
+        "key": "6524",
+        "institution_id": 38,
+        "institution_name": "Girnarpur College of Engineering",
+        "details": {
+          "kind": "vanished_without_status",
+          "previous_year": "2025-26",
+          "removed_rows": 15
+        }
+      }
+    ],
+    "J_identity_duplicate": [
+      {
+        "scenario": "J_identity_duplicate",
+        "flag_type": "IDENTITY_DUPLICATE",
+        "key_kind": "student",
+        "key": "14533",
+        "institution_id": 28,
+        "institution_name": "Charminara Institute of Engineering and Technology",
+        "details": {
+          "pair": [
+            14533,
+            14534
+          ],
+          "same_name_dob_guardian": true,
+          "different_apaar": true
+        }
+      },
+      {
+        "scenario": "J_identity_duplicate",
+        "flag_type": "IDENTITY_DUPLICATE",
+        "key_kind": "student",
+        "key": "14534",
+        "institution_id": 28,
+        "institution_name": "Charminara Institute of Engineering and Technology",
+        "details": {
+          "pair": [
+            14533,
+            14534
+          ],
+          "same_name_dob_guardian": true,
+          "different_apaar": true
+        }
+      },
+      {
+        "scenario": "J_identity_duplicate",
+        "flag_type": "IDENTITY_DUPLICATE",
+        "key_kind": "student",
+        "key": "14535",
+        "institution_id": 25,
+        "institution_name": "Narmadapuri Institute of Technology",
+        "details": {
+          "pair": [
+            14535,
+            14536
+          ],
+          "same_name_dob_guardian": true,
+          "different_apaar": true
+        }
+      },
+      {
+        "scenario": "J_identity_duplicate",
+        "flag_type": "IDENTITY_DUPLICATE",
+        "key_kind": "student",
+        "key": "14536",
+        "institution_id": 25,
+        "institution_name": "Narmadapuri Institute of Technology",
+        "details": {
+          "pair": [
+            14535,
+            14536
+          ],
+          "same_name_dob_guardian": true,
+          "different_apaar": true
+        }
+      },
+      {
+        "scenario": "J_identity_duplicate",
+        "flag_type": "IDENTITY_DUPLICATE",
+        "key_kind": "student",
+        "key": "14537",
+        "institution_id": 37,
+        "institution_name": "Panchvati Institute of Technology",
+        "details": {
+          "pair": [
+            14537,
+            14538
+          ],
+          "same_name_dob_guardian": true,
+          "different_apaar": true
+        }
+      },
+      {
+        "scenario": "J_identity_duplicate",
+        "flag_type": "IDENTITY_DUPLICATE",
+        "key_kind": "student",
+        "key": "14538",
+        "institution_id": 37,
+        "institution_name": "Panchvati Institute of Technology",
+        "details": {
+          "pair": [
+            14537,
+            14538
+          ],
+          "same_name_dob_guardian": true,
+          "different_apaar": true
+        }
+      },
+      {
+        "scenario": "J_identity_duplicate",
+        "flag_type": "IDENTITY_DUPLICATE",
+        "key_kind": "student",
+        "key": "14539",
+        "institution_id": 22,
+        "institution_name": "Trivendri Institute of Engineering and Technology",
+        "details": {
+          "pair": [
+            14539,
+            14540
+          ],
+          "same_name_dob_guardian": true,
+          "different_apaar": true
+        }
+      },
+      {
+        "scenario": "J_identity_duplicate",
+        "flag_type": "IDENTITY_DUPLICATE",
+        "key_kind": "student",
+        "key": "14540",
+        "institution_id": 22,
+        "institution_name": "Trivendri Institute of Engineering and Technology",
+        "details": {
+          "pair": [
+            14539,
+            14540
+          ],
+          "same_name_dob_guardian": true,
+          "different_apaar": true
+        }
+      },
+      {
+        "scenario": "J_identity_duplicate",
+        "flag_type": "IDENTITY_DUPLICATE",
+        "key_kind": "student",
+        "key": "14541",
+        "institution_id": 11,
+        "institution_name": "Kanchanpur College of Engineering and Management",
+        "details": {
+          "pair": [
+            14541,
+            14542
+          ],
+          "same_name_dob_guardian": true,
+          "different_apaar": true
+        }
+      },
+      {
+        "scenario": "J_identity_duplicate",
+        "flag_type": "IDENTITY_DUPLICATE",
+        "key_kind": "student",
+        "key": "14542",
+        "institution_id": 11,
+        "institution_name": "Kanchanpur College of Engineering and Management",
+        "details": {
+          "pair": [
+            14541,
+            14542
+          ],
+          "same_name_dob_guardian": true,
+          "different_apaar": true
+        }
+      },
+      {
+        "scenario": "J_identity_duplicate",
+        "flag_type": "IDENTITY_DUPLICATE",
+        "key_kind": "student",
+        "key": "14543",
+        "institution_id": 4,
+        "institution_name": "Sindhupuri Institute of Engineering and Technology",
+        "details": {
+          "pair": [
+            14543,
+            14544
+          ],
+          "same_name_dob_guardian": true,
+          "different_apaar": true
+        }
+      },
+      {
+        "scenario": "J_identity_duplicate",
+        "flag_type": "IDENTITY_DUPLICATE",
+        "key_kind": "student",
+        "key": "14544",
+        "institution_id": 4,
+        "institution_name": "Sindhupuri Institute of Engineering and Technology",
+        "details": {
+          "pair": [
+            14543,
+            14544
+          ],
+          "same_name_dob_guardian": true,
+          "different_apaar": true
+        }
+      },
+      {
+        "scenario": "J_identity_duplicate",
+        "flag_type": "IDENTITY_DUPLICATE",
+        "key_kind": "student",
+        "key": "14545",
+        "institution_id": 14,
+        "institution_name": "Dwarkeshwar College of Engineering",
+        "details": {
+          "pair": [
+            14545,
+            14546
+          ],
+          "same_name_dob_guardian": true,
+          "different_apaar": true
+        }
+      },
+      {
+        "scenario": "J_identity_duplicate",
+        "flag_type": "IDENTITY_DUPLICATE",
+        "key_kind": "student",
+        "key": "14546",
+        "institution_id": 14,
+        "institution_name": "Dwarkeshwar College of Engineering",
+        "details": {
+          "pair": [
+            14545,
+            14546
+          ],
+          "same_name_dob_guardian": true,
+          "different_apaar": true
+        }
+      },
+      {
+        "scenario": "J_identity_duplicate",
+        "flag_type": "IDENTITY_DUPLICATE",
+        "key_kind": "student",
+        "key": "14547",
+        "institution_id": 31,
+        "institution_name": "Chenabpura Institute of Technology",
+        "details": {
+          "pair": [
+            14547,
+            14548
+          ],
+          "same_name_dob_guardian": true,
+          "different_apaar": true
+        }
+      },
+      {
+        "scenario": "J_identity_duplicate",
+        "flag_type": "IDENTITY_DUPLICATE",
+        "key_kind": "student",
+        "key": "14548",
+        "institution_id": 31,
+        "institution_name": "Chenabpura Institute of Technology",
+        "details": {
+          "pair": [
+            14547,
+            14548
+          ],
+          "same_name_dob_guardian": true,
+          "different_apaar": true
+        }
+      }
+    ]
+  }
+}

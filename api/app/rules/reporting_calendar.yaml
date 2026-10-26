@@ -1,0 +1,26 @@
+# Admission window and reporting deadline per academic year.
+#
+# Kept separate from intake_rules.yaml because calendar dates change far more often
+# than seat rules (Step-0 decision 1 in docs/PLAN.md). Also versioned.
+#
+# Every date is a placeholder for the demo.
+
+calendar_set: CAL_2026_27_v1
+
+years:
+  "2025-26":
+    admission_window_start: 2025-06-01   # VERIFY against the AICTE academic calendar
+    admission_window_end: 2025-09-30     # VERIFY against the AICTE academic calendar
+    lateral_window_end: 2025-10-31       # VERIFY against the AICTE academic calendar
+    reporting_deadline: 2025-11-15T23:59:59  # VERIFY against the AICTE reporting circular
+  "2026-27":
+    admission_window_start: 2026-06-01   # VERIFY against the AICTE academic calendar
+    admission_window_end: 2026-09-30     # VERIFY against the AICTE academic calendar
+    lateral_window_end: 2026-10-31       # VERIFY against the AICTE academic calendar
+    reporting_deadline: 2026-11-15T23:59:59  # VERIFY against the AICTE reporting circular
+
+# Detector thresholds that depend on the calendar.
+thresholds:
+  last_minute_bulk_window_hours: 6       # VERIFY: tuning choice
+  last_minute_bulk_share_percent: 40.0   # VERIFY: tuning choice
+  late_admission_institution_share_percent: 2.0  # VERIFY: tuning choice

@@ -62,26 +62,26 @@ Legend: ☐ not started · ◐ in progress · ☑ done
 - [x] Tests: match, mismatch, not_found, registry-down
 - **Check:** stop the registry → main API reports "source unavailable", does not crash
 
-## Step 5 — Synthetic data generator with fraud scenarios  ☐
+## Step 5 — Synthetic data generator with fraud scenarios  ☑
 
-- [ ] 40 clearly fictional institutions across ~10 states, 3–6 programs each, some online/ODL
-- [ ] Approved intake per program per year with supernumerary caps from `api/app/rules/intake_rules.yaml`
-- [ ] ~15,000 students across `2025-26` and `2026-27`; Faker `en_IN`; realistic gender/category/nationality mix; ~2% FN/OCI with `apaar_status = not_applicable`; some minors
-- [ ] Contacts only as HMAC hashes (same crypto module); raw APAAR/name/DOB → vault; every issued APAAR also inserted into the registry
-- [ ] Labelled scenarios + `datagen/ground_truth.json`:
-  - [ ] A `EXCESS_INTAKE` — 3 institutions over intake after valid supernumerary (one by just 3 seats)
-  - [ ] B `GHOST_CLUSTER` — 2 institutions, clusters of 25–35 students on 2–3 guardian phones
-  - [ ] C `CROSS_INSTITUTION_DUPLICATE` — 15 students, two full-time regular programs, same year
-  - [ ] D `POSSIBLE_DUAL_DEGREE` (legit) — 10 students, one regular + one online
-  - [ ] E `INVALID_APAAR` / `APAAR_NOT_FOUND` / `APAAR_MISMATCH` — ~1% of records
-  - [ ] F `LATE_ADMISSION` — ~40 post-cutoff admissions at 2 institutions
-  - [ ] G `SEQUENTIAL_APAAR` — one institution with a run of 20 near-consecutive IDs
-  - [ ] H `LAST_MINUTE_BULK` — one institution, 60% of records in the final 6 hours
-  - [ ] I `PHANTOM_PROGRESSION` — year-2 regulars with no year-1 record (not lateral) + students vanishing without a status
-  - [ ] J `IDENTITY_DUPLICATE` — 8 people with two APAARs (same name + DOB + guardian phone)
-  - [ ] One clean "model" institution (compliance-certificate demo)
-- [ ] `/samples`: 3 messy Excel files (weird headers, mixed date formats, blank rows, errors); one triggers scenario A
-- [ ] `make seed` / `make reset` wired; deterministic `--seed`
+- [x] 40 clearly fictional institutions across ~10 states, 3–6 programs each, some online/ODL
+- [x] Approved intake per program per year with supernumerary caps from `api/app/rules/intake_rules.yaml`
+- [x] ~15,000 students across `2025-26` and `2026-27`; Faker `en_IN`; realistic gender/category/nationality mix; ~2% FN/OCI with `apaar_status = not_applicable`; some minors
+- [x] Contacts only as HMAC hashes (same crypto module); raw APAAR/name/DOB → vault; every issued APAAR also inserted into the registry
+- [x] Labelled scenarios + `datagen/ground_truth.json`:
+  - [x] A `EXCESS_INTAKE` — 3 institutions over intake after valid supernumerary (one by just 3 seats)
+  - [x] B `GHOST_CLUSTER` — 2 institutions, clusters of 25–35 students on 2–3 guardian phones
+  - [x] C `CROSS_INSTITUTION_DUPLICATE` — 15 students, two full-time regular programs, same year
+  - [x] D `POSSIBLE_DUAL_DEGREE` (legit) — 10 students, one regular + one online
+  - [x] E `INVALID_APAAR` / `APAAR_NOT_FOUND` / `APAAR_MISMATCH` — ~1% of records
+  - [x] F `LATE_ADMISSION` — ~40 post-cutoff admissions at 2 institutions
+  - [x] G `SEQUENTIAL_APAAR` — one institution with a run of 20 near-consecutive IDs
+  - [x] H `LAST_MINUTE_BULK` — one institution, 60% of records in the final 6 hours
+  - [x] I `PHANTOM_PROGRESSION` — year-2 regulars with no year-1 record (not lateral) + students vanishing without a status
+  - [x] J `IDENTITY_DUPLICATE` — 8 people with two APAARs (same name + DOB + guardian phone)
+  - [x] One clean "model" institution (compliance-certificate demo)
+- [x] `/samples`: 3 messy Excel files (weird headers, mixed date formats, blank rows, errors); one triggers scenario A
+- [x] `make seed` / `make reset` wired; deterministic `--seed`
 - **Check:** `make reset` runs; spot-check `ground_truth.json` counts
 
 ## Step 6 — Upload pipeline & validation  ☐

@@ -1,0 +1,59 @@
+# Approved intake vs supernumerary seats.
+#
+# EVERY number in this file is a placeholder that must be checked against the real
+# handbook before this prototype is used for anything but a demo. Nothing here is
+# hardcoded in Python — api/app/services/rules.py is the only reader.
+#
+# rule_set is versioned: flags record which rule set produced them, so a cap change
+# does not silently rewrite history.
+
+rule_set: APH_2026_27_v1
+description: >
+  Seat-matrix rules for AICTE-approved technical institutions, academic year 2026-27.
+  Supernumerary categories sit OUTSIDE approved intake, each with its own cap.
+
+# Admission types that are counted against approved intake.
+counts_within_intake:
+  - regular  # VERIFY against AICTE Approval Process Handbook 2026-27
+
+# Supernumerary categories: outside approved intake, each capped.
+# cap_percent is a percentage of the programme's approved intake for the year.
+supernumerary:
+  tfw:
+    label: Tuition Fee Waiver
+    cap_percent: 5.0          # VERIFY against AICTE Approval Process Handbook 2026-27
+    applies_to_year: 1
+    notes: TFW seats are supernumerary and limited to a share of approved intake.
+  lateral:
+    label: Lateral entry (second year)
+    cap_percent: 10.0         # VERIFY against AICTE Approval Process Handbook 2026-27
+    applies_to_year: 2
+    add_vacant_year1_seats: true
+    notes: >
+      Lateral entrants join in year 2 and must never be counted against year-1 intake.
+      The cap is a share of approved intake PLUS seats left vacant in year 1.
+  fn_pio_oci:
+    label: Foreign national / PIO / OCI
+    cap_percent: 15.0         # VERIFY against AICTE Approval Process Handbook 2026-27
+    applies_to_year: 1
+    notes: Supernumerary quota for foreign nationals, PIO and OCI candidates.
+  pmsss:
+    label: PM Special Scholarship Scheme (J&K / Ladakh)
+    cap_percent: 5.0          # VERIFY against AICTE Approval Process Handbook 2026-27
+    applies_to_year: 1
+    notes: PMSSS seats are supernumerary.
+  other_supernumerary:
+    label: Other approved supernumerary
+    cap_percent: 2.0          # VERIFY against AICTE Approval Process Handbook 2026-27
+    applies_to_year: 1
+    notes: Catch-all for other approved supernumerary categories.
+
+# Rounding of a percentage cap to whole seats.
+cap_rounding: floor           # VERIFY against AICTE Approval Process Handbook 2026-27
+
+# Severity of an EXCESS_INTAKE flag, by excess seats as a share of approved intake.
+excess_severity:
+  low_max_percent: 1.0        # VERIFY: tuning choice, not a handbook rule
+  medium_max_percent: 5.0     # VERIFY: tuning choice, not a handbook rule
+  high_max_percent: 15.0      # VERIFY: tuning choice, not a handbook rule
+  # above high_max_percent -> critical
