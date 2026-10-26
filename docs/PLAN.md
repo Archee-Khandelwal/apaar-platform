@@ -86,6 +86,14 @@ Legend: ☐ not started · ◐ in progress · ☑ done
 
 ## Step 6 — Upload pipeline & validation  ☐
 
+> **Added after Step 5 review:** re-uploading the same file or overlapping rows must not
+> create duplicate enrolments or inflate intake counts. Rows that already exist for that
+> institution / programme / academic year are reported as `already_reported` in the
+> quality report, and a test uploads `sample_1` twice and asserts the programme is still
+> exactly 25 seats over intake, not 50.
+> **Also:** `make eval` scores the seeded data only and must always run from a fresh
+> `make reset`, so demo uploads never change the published numbers (noted in the README).
+
 - [ ] `POST /institution/uploads` (multipart Excel/CSV, pandas/openpyxl, skip blank rows)
 - [ ] Column mapping with rapidfuzz + synonym dictionary, confidence per column, state `pending_mapping`
 - [ ] `POST /institution/uploads/{id}/confirm-mapping` → runs validation

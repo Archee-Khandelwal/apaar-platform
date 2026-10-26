@@ -159,18 +159,41 @@ def test_apaar_is_masked_in_the_main_table_and_raw_only_in_the_vault(seeded) -> 
     assert "*" in student.name_masked
 
 
-def test_guardian_phone_hashes_match_the_shared_contact_in_a_ghost_cluster(seeded) -> None:
+def test_ghost_clusters_share_a_handful_of_guardian_contacts(seeded) -> None:
     db, ground_truth = seeded
     cases = ground_truth["scenarios"].get("B_ghost_cluster", [])
     if not cases:
         pytest.skip("no ghost cluster injected in this small run")
-    member_ids = cases[0]["details"]["student_ids"]
-    hashes = {
-        db.get(Student, student_id).guardian_phone_hash for student_id in member_ids
-    }
-    # 25-35 students sharing only 2-3 guardian contacts.
-    assert 1 <= len(hashes) <= 3
-    assert len(member_ids) >= 25
+
+    for case in cases:
+        member_ids = case["details"]["student_ids"]
+        hashes = {db.get(Student, student_id).guardian_phone_hash for student_id in member_ids}
+        assert len(hashes) == case["details"]["guardian_contacts"]
+        assert len(member_ids) == case["details"]["students"]
+
+    bands = {case["details"]["band"] for case in cases}
+    assert "large" in bands
+    assert "medium" in bands, "a subtler 8-10 student cluster must be injected too"
+
+    large = [case for case in cases if case["details"]["band"] == "large"]
+    medium = [case for case in cases if case["details"]["band"] == "medium"]
+    assert all(25 <= case["details"]["students"] <= 35 for case in large)
+    assert all(8 <= case["details"]["students"] <= 10 for case in medium)
+    # The medium cluster's students-per-contact ratio is deliberately family-sized, so
+    # a ratio-only detector would miss it: size has to count too.
+    assert all(case["details"]["students_per_contact"] < 4 for case in medium)
+    # Clusters are at different institutions.
+    assert len({case["institution_id"] for case in cases}) == len(cases)
+
+
+def test_family_controls_are_smaller_than_the_cluster_threshold(seeded) -> None:
+    """4-6 students on one contact must stay below the ghost-cluster size threshold."""
+    _, ground_truth = seeded
+    controls = ground_truth["scenarios"].get("B_sibling_control", [])
+    assert controls
+    for case in controls:
+        assert case["flag_type"] == "NONE"
+        assert case["details"].get("students", 2) <= 6
 
 
 # ------------------------------------------------------------------ domain rules

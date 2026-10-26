@@ -168,11 +168,20 @@ def scenario_b_ghost_clusters(gen: SyntheticDataGenerator) -> None:
     candidates = [
         inst for inst in _eligible_institutions(gen) if _regular_programs(gen, inst["id"])
     ]
-    for institution in _sample(gen, candidates, 2):
+    # Two blatant clusters plus one deliberately subtler cluster, so evaluation shows
+    # the detector catches a medium case and not only the obvious ones.
+    cluster_specs: list[tuple[int, int, int, str]] = [
+        (25, 35, 2, "large"),
+        (25, 35, 3, "large"),
+        (8, 10, 3, "medium"),
+    ]
+    for institution, (size_min, size_max, contacts, band) in zip(
+        _sample(gen, candidates, len(cluster_specs)), cluster_specs
+    ):
         program = gen.rng.choice(_regular_programs(gen, institution["id"]))
         upload = gen.upload_by[(institution["id"], year)]
-        size = gen.rng.randint(25, 35)
-        guardian_phones = [gen.b.new_phone() for _ in range(gen.rng.randint(2, 3))]
+        size = gen.rng.randint(size_min, size_max)
+        guardian_phones = [gen.b.new_phone() for _ in range(contacts)]
         member_ids: list[int] = []
         for index in range(size):
             student_id = gen.b.add_student(
@@ -201,8 +210,10 @@ def scenario_b_ghost_clusters(gen: SyntheticDataGenerator) -> None:
                 institution_id=institution["id"],
                 institution_name=institution["name"],
                 details={
+                    "band": band,
                     "students": size,
                     "guardian_contacts": len(guardian_phones),
+                    "students_per_contact": round(size / len(guardian_phones), 1),
                     "student_ids": member_ids,
                     "program": f"{program['course']} {program['branch']}",
                 },
