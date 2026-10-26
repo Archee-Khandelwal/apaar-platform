@@ -151,13 +151,19 @@ def detect_sequential_apaar(db: Session, *, academic_year: str | None = None) ->
 
 
 def detect_late_admissions(db: Session, *, academic_year: str | None = None) -> dict[str, int]:
-    """Aggregate per institution: how many admissions fell after the cutoff, and what share."""
+    """Flag each post-cutoff admission, and aggregate the share per institution.
+
+    Uploads raise the per-row flag as the data arrives; this covers seeded data and any
+    row whose admission date was corrected later. Both use the same dedupe key, so a row
+    is never flagged twice.
+    """
     years = [academic_year] if academic_year else list(known_academic_years())
     thresholds = calendar_thresholds()
     share_threshold = thresholds.get("late_admission_institution_share_percent", 2.0)
 
     created = 0
     updated = 0
+    rows_created = 0
     keep: set[str] = set()
 
     for year in years:
@@ -166,6 +172,55 @@ def detect_late_admissions(db: Session, *, academic_year: str | None = None) -> 
         except KeyError:  # pragma: no cover - a year without a calendar entry
             continue
 
+        # --- per-enrolment flags -------------------------------------------------
+        late_enrolments = db.execute(
+            select(Enrolment)
+            .where(
+                Enrolment.academic_year == year,
+                Enrolment.status.in_(ACTIVE_ENROLMENT_STATUSES),
+                Enrolment.admitted_on.is_not(None),
+            )
+        ).scalars()
+        for enrolment in late_enrolments:
+            cutoff = (
+                calendar.lateral_window_end
+                if enrolment.admission_type == "lateral"
+                else calendar.admission_window_end
+            )
+            if enrolment.admitted_on is None or enrolment.admitted_on <= cutoff:
+                continue
+            dedupe_key = f"enrolment:{enrolment.id}:LATE_ADMISSION"
+            keep.add(dedupe_key)
+            student = db.get(Student, enrolment.student_id)
+            _flag, was_created = upsert_flag(
+                db,
+                type="LATE_ADMISSION",
+                dedupe_key=dedupe_key,
+                severity="medium",
+                title="Admission recorded after the cutoff date",
+                explanation=(
+                    f"{student.apaar_masked if student else 'This student'} was admitted on "
+                    f"{enrolment.admitted_on.isoformat()}, after the {year} "
+                    f"{'lateral-entry' if enrolment.admission_type == 'lateral' else 'admission'} "
+                    f"cutoff of {cutoff.isoformat()}. Admissions after the cutoff need specific "
+                    "approval."
+                ),
+                evidence={
+                    "admitted_on": enrolment.admitted_on.isoformat(),
+                    "cutoff": cutoff.isoformat(),
+                    "admission_type": enrolment.admission_type,
+                    "academic_year": year,
+                    "apaar_masked": student.apaar_masked if student else None,
+                },
+                institution_id=enrolment.institution_id,
+                student_id=enrolment.student_id,
+                enrolment_id=enrolment.id,
+                academic_year=year,
+            )
+            rows_created += int(was_created)
+            updated += int(not was_created)
+
+        # --- per-institution aggregate -------------------------------------------
         rows = db.execute(
             select(
                 Enrolment.institution_id,
@@ -244,28 +299,13 @@ def detect_late_admissions(db: Session, *, academic_year: str | None = None) -> 
             created += int(was_created)
             updated += int(not was_created)
 
-    closed = resolve_stale_flags(
-        db,
-        type="LATE_ADMISSION",
-        keep_keys=keep | _per_enrolment_late_keys(db),
-    )
+    closed = resolve_stale_flags(db, type="LATE_ADMISSION", keep_keys=keep)
     db.flush()
     return {
+        "late_admission_rows": rows_created,
         "late_admission_institutions": created,
         "late_admission_updated": updated,
         "late_admission_closed": closed,
-    }
-
-
-def _per_enrolment_late_keys(db: Session) -> set[str]:
-    """Per-row LATE_ADMISSION flags raised during upload validation must survive."""
-    from app.models.core import Flag
-
-    return {
-        flag.dedupe_key
-        for flag in db.execute(
-            select(Flag).where(Flag.type == "LATE_ADMISSION", Flag.enrolment_id.is_not(None))
-        ).scalars()
     }
 
 

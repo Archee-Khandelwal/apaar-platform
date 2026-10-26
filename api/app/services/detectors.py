@@ -12,6 +12,7 @@ Detectors are added here as each step lands:
   Step 9  ghost-student graph (GHOST_CLUSTER)
   Step 10 heuristics (SEQUENTIAL_APAAR, LATE_ADMISSION, LAST_MINUTE_BULK,
           PHANTOM_PROGRESSION, INVALID_APAAR, APAAR_NOT_FOUND, APAAR_MISMATCH)
+  Step 11 statistical anomaly + risk score (STATISTICAL_ANOMALY)
 """
 from __future__ import annotations
 
@@ -24,6 +25,7 @@ from sqlalchemy.orm import Session
 from app.services.duplicates import run_duplicate_detection
 from app.services.graph import detect_ghost_clusters
 from app.services.heuristics import run_heuristics
+from app.services.risk import run_risk_scoring
 from app.services.intake import run_intake_compliance
 
 logger = logging.getLogger("apaar.detectors")
@@ -47,6 +49,11 @@ def run_all_detectors(
     summary.update(run_duplicate_detection(db, academic_year=academic_year))
     summary.update(detect_ghost_clusters(db, academic_year=academic_year))
     summary.update(run_heuristics(db, academic_year=academic_year))
+
+    # Risk scoring runs last: it weighs the flags every detector above produced.
+    from app.core.config import settings
+
+    summary.update(run_risk_scoring(db, academic_year=academic_year or settings.current_academic_year))
 
     if commit:
         db.commit()

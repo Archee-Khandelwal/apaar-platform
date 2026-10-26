@@ -195,3 +195,41 @@ class ClusterDetailOut(BaseModel):
     nodes: list[dict[str, Any]] = Field(default_factory=list)
     edges: list[dict[str, Any]] = Field(default_factory=list)
     access_log_id: int | None = None
+
+
+class RiskRowOut(BaseModel):
+    institution_id: int
+    name: str
+    state: str
+    risk_score: float
+    band: str
+    top_reasons: list[str] = Field(default_factory=list)
+    components: dict[str, float] = Field(default_factory=dict)
+    open_flags: Suppressible = 0
+
+
+class RiskPage(BaseModel):
+    items: list[RiskRowOut]
+    page: int
+    page_size: int
+    total: int
+    total_pages: int
+    sort: str | None = None
+
+
+class ShortlistRowOut(BaseModel):
+    rank: int
+    institution_id: int
+    name: str
+    state: str
+    risk_score: float
+    band: str
+    reasons: list[str] = Field(default_factory=list)
+    suggested_checks: list[str] = Field(default_factory=list)
+
+
+class ShortlistOut(BaseModel):
+    generated_at: datetime
+    academic_year: str
+    items: list[ShortlistRowOut]
+    csv_url: str

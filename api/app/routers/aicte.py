@@ -8,24 +8,34 @@ from __future__ import annotations
 
 from typing import Annotated, Any
 
+import csv
+import io
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import PlainTextResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.access_log import log_access
+from app.core.config import settings
 from app.core.db import get_db
 from app.core.errors import raise_not_found
 from app.core.security import CurrentUser, require_role, suppress_small_counts
-from app.models.core import Cluster, Flag, Institution
+from app.models.core import Cluster, Flag, Institution, InstitutionRisk
 from app.schemas.common import PageParams, page_params, paginate
 from app.schemas.institution import (
     ClusterDetailOut,
     ClusterPage,
     ClusterSummaryOut,
+    RiskPage,
+    RiskRowOut,
     SeatMatrixOut,
+    ShortlistOut,
 )
 from app.services.graph import ATTRIBUTE_LABELS
 from app.services.intake import institution_seat_matrix
+from app.services.risk import inspection_shortlist
 
 router = APIRouter(prefix="/aicte", tags=["aicte"])
 
@@ -180,4 +190,98 @@ def normal_comparison(
         }},
         nodes=graph.get("nodes", []),
         edges=graph.get("edges", []),
+    )
+
+
+# --------------------------------------------------------------------------- risk
+
+
+@router.get("/risk", response_model=RiskPage)
+def risk_leaderboard(
+    state: Annotated[str | None, Query()] = None,
+    band: Annotated[str | None, Query(pattern="^(low|medium|high|critical)$")] = None,
+    params: PageParams = Depends(page_params),
+    user: CurrentUser = Depends(require_role("aicte_viewer", "aicte_officer")),
+    db: Session = Depends(get_db),
+) -> RiskPage:
+    """Institutions ranked by risk, each with the top three reasons in plain English."""
+    statement = (
+        select(InstitutionRisk, Institution)
+        .join(Institution, Institution.id == InstitutionRisk.institution_id)
+        .order_by(InstitutionRisk.score.desc(), Institution.name.asc())
+    )
+    if state:
+        statement = statement.where(Institution.state == state)
+    if band:
+        statement = statement.where(InstitutionRisk.band == band)
+
+    rows = list(db.execute(statement).all())
+    total = len(rows)
+    page_rows = rows[params.offset : params.offset + params.page_size]
+
+    items = [
+        {
+            "institution_id": institution.id,
+            "name": institution.name,
+            "state": institution.state,
+            "risk_score": risk.score,
+            "band": risk.band,
+            "top_reasons": risk.reasons or [],
+            "components": {"flags": risk.flag_component, "anomaly": risk.anomaly_component},
+            "open_flags": (risk.features or {}).get("open_flags", 0),
+        }
+        for risk, institution in page_rows
+    ]
+    payload = paginate(
+        items, total, PageParams(page=params.page, page_size=params.page_size, sort="-risk_score")
+    )
+    return RiskPage(**suppress_small_counts(payload, user.role))
+
+
+@router.get("/inspection-shortlist", response_model=ShortlistOut)
+def shortlist(
+    limit: Annotated[int, Query(ge=1, le=50)] = 10,
+    state: Annotated[str | None, Query()] = None,
+    user: CurrentUser = Depends(require_role("aicte_viewer", "aicte_officer")),
+    db: Session = Depends(get_db),
+) -> ShortlistOut:
+    """Recommended for physical inspection, with the reason and what to check on site."""
+    items = inspection_shortlist(db, limit=limit if state is None else 50)
+    if state:
+        items = [item for item in items if item["state"] == state][:limit]
+        for rank, item in enumerate(items, start=1):
+            item["rank"] = rank
+    return ShortlistOut(
+        generated_at=datetime.now(),
+        academic_year=settings.current_academic_year,
+        items=items,
+        csv_url="/aicte/inspection-shortlist.csv",
+    )
+
+
+@router.get("/inspection-shortlist.csv", response_class=PlainTextResponse)
+def shortlist_csv(
+    limit: Annotated[int, Query(ge=1, le=50)] = 10,
+    user: CurrentUser = Depends(require_role("aicte_viewer", "aicte_officer")),
+    db: Session = Depends(get_db),
+) -> PlainTextResponse:
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(["rank", "institution_id", "name", "state", "risk_score", "band", "reasons"])
+    for item in inspection_shortlist(db, limit=limit):
+        writer.writerow(
+            [
+                item["rank"],
+                item["institution_id"],
+                item["name"],
+                item["state"],
+                item["risk_score"],
+                item["band"],
+                " | ".join(item["reasons"]),
+            ]
+        )
+    return PlainTextResponse(
+        content=buffer.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="inspection_shortlist.csv"'},
     )

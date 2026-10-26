@@ -142,13 +142,13 @@ Legend: ☐ not started · ◐ in progress · ☑ done
 - [x] `run_all_detectors()` single entry point, **idempotent**, called by reseed and upload confirmation
 - [x] Tests + scenarios F, G, H, I detected
 
-## Step 11 — Risk score, anomaly model, shortlist, evaluation  ☐
+## Step 11 — Risk score, anomaly model, shortlist, evaluation  ☑
 
-- [ ] IsolationForest per institution-year on: fill ratio, % missing/invalid APAAR, % late admissions, YoY growth, distance of category/gender mix from state average, % records created in the last 6 hours → `STATISTICAL_ANOMALY` with top contributing features vs state median as explanation
-- [ ] Risk score 0–100 per institution: weighted open flags (type × severity) + anomaly score; weights in a config dict; **always** top 3 reasons in plain English
-- [ ] `GET /aicte/risk`, `GET /aicte/inspection-shortlist?limit=10` (+ CSV)
-- [ ] `datagen/evaluate.py`: precision/recall/F1 per scenario type vs `ground_truth.json` + summary table → `docs/EVALUATION.md`; report misses honestly, don't tune on the eval
-- [ ] `make eval`
+- [x] IsolationForest per institution-year on: fill ratio, % missing/invalid APAAR, % late admissions, YoY growth, distance of category/gender mix from state average, % records created in the last 6 hours → `STATISTICAL_ANOMALY` with top contributing features vs state median as explanation
+- [x] Risk score 0–100 per institution: weighted open flags (type × severity) + anomaly score; weights in a config dict; **always** top 3 reasons in plain English
+- [x] `GET /aicte/risk`, `GET /aicte/inspection-shortlist?limit=10` (+ CSV)
+- [x] `datagen/evaluate.py`: precision/recall/F1 per scenario type vs `ground_truth.json` + summary table → `docs/EVALUATION.md`; report misses honestly, don't tune on the eval
+- [x] `make eval`
 - **Check:** `make reset && make eval` — record the numbers for the pitch
 
 ## Step 12 — Flags, cases, reveal, AICTE APIs  ☐
