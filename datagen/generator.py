@@ -45,7 +45,7 @@ GROUND_TRUTH_PATH = Path(__file__).resolve().parent / "ground_truth.json"
 DEFAULT_YEARS = ("2025-26", "2026-27")
 # Share of the student target allocated to base year-1 cohorts (the rest is
 # supernumerary admissions, lateral entrants and the injected scenarios).
-BASE_COHORT_SHARE = 0.845
+BASE_COHORT_SHARE = 0.885
 
 # Tables wiped by a reseed, children first.
 WIPE_ORDER = (
@@ -363,9 +363,9 @@ class SyntheticDataGenerator:
         and ~1% carry a registry problem (scenario E).
         """
         roll = self.rng.random()
-        if roll < 0.02:
+        if roll < 0.012:
             return self.rng.choice(("fn", "oci")), "not_applicable", "skipped"
-        if roll < 0.035:
+        if roll < 0.027:
             return "nri", "pending", "skipped"
         return "indian", "provided", "match"
 
@@ -380,11 +380,22 @@ class SyntheticDataGenerator:
         if program["mode"] != "regular":
             return
         caps = supernumerary_caps(program["intake"])
+        # How often a programme uses a quota at all, and how much of its cap it uses.
+        # FN/PIO/OCI admissions are genuinely rare: most institutions have none, so a
+        # 2% FN/OCI population overall comes mostly from the identity mix, not here.
+        usage = {
+            "tfw": (0.65, 0.5),
+            "fn_pio_oci": (0.12, 0.2),
+            "pmsss": (0.45, 0.5),
+        }
         for admission_type in ("tfw", "fn_pio_oci", "pmsss"):
             cap = caps.get(admission_type, 0)
-            if cap <= 0 or self.rng.random() < 0.35:
+            probability, cap_share = usage[admission_type]
+            if cap <= 0 or self.rng.random() > probability:
                 continue
-            count = self.rng.randint(1, max(cap // 2, 1))
+            # Always within the configured cap: only scenario A injects a breach.
+            ceiling = max(int(cap * cap_share), 1)
+            count = self.rng.randint(1, ceiling)
             for _ in range(count):
                 if admission_type == "fn_pio_oci":
                     student_id = self.b.add_student(

@@ -209,6 +209,48 @@ def scenario_b_ghost_clusters(gen: SyntheticDataGenerator) -> None:
             )
         )
 
+    # Larger-but-legitimate groups: an extended family, or students who gave a shared
+    # hostel / warden contact. 4-6 students on one contact sits between normal siblings
+    # and a ghost cluster, so the detector's threshold has to be a real decision rather
+    # than a trivially separable one. These must NOT be flagged either.
+    for institution in _sample(gen, candidates, 3):
+        program = gen.rng.choice(_regular_programs(gen, institution["id"]))
+        upload = gen.upload_by[(institution["id"], year)]
+        shared = gen.b.new_phone()
+        size = gen.rng.randint(4, 6)
+        for _ in range(size):
+            student_id = gen.b.add_student(guardian_phone=shared)
+            gen.b.add_enrolment(
+                student_id=student_id,
+                program=program,
+                academic_year=year,
+                year_of_study=1,
+                admission_type="regular",
+                admitted_on=gen.b.random_date_in(
+                    calendar.admission_window_start, calendar.admission_window_end
+                ),
+                created_at=upload["created_at"],
+                upload_id=upload["id"],
+            )
+        gen.b.label(
+            GroundTruthCase(
+                scenario="B_sibling_control",
+                flag_type="NONE",
+                key_kind="institution_year",
+                key=f"{institution['id']}|{year}",
+                institution_id=institution["id"],
+                institution_name=institution["name"],
+                details={
+                    "students": size,
+                    "guardian_contacts": 1,
+                    "note": (
+                        f"{size} students sharing one guardian/warden contact — "
+                        "legitimate, must not be flagged"
+                    ),
+                },
+            )
+        )
+
     # Normal sibling pairs — these must NOT be flagged (false-positive control).
     for institution in _sample(gen, candidates, 6):
         program = gen.rng.choice(_regular_programs(gen, institution["id"]))

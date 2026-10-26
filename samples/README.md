@@ -3,8 +3,8 @@
 Deliberately messy files for the live demo. Column headers do not match our
 canonical field names on purpose — the mapping screen has to work them out.
 
-- `sample_1_excess_intake.xlsx` — 70 clean-ish rows, two blank rows and a stray
-  `TOTAL = 70` line. Uploading this as **Amaravati Nandan College of Engineering** pushes B.Tech Mechanical Engineering past its approved intake (120 seats) and raises EXCESS_INTAKE.
+- `sample_1_excess_intake.xlsx` — 70 clean-ish rows, two blank rows and a
+  stray `TOTAL = 70` line. Upload it as any institution to push a programme past its approved intake.
 - `sample_2_dirty_errors.xlsx` — short / non-numeric / missing APAAR IDs, an
   impossible date (31/02/2006), a post-cutoff admission, a missing name, a row
   claiming no APAAR while being Indian, and a duplicate row inside the file.

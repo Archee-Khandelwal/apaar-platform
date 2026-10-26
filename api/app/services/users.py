@@ -84,11 +84,15 @@ def ensure_base_demo_users(db: Session) -> list[User]:
     return [upsert_user(db, account) for account in BASE_ACCOUNTS]
 
 
-def _slug(name: str) -> str:
-    words = [word for word in name.replace("-", " ").split() if word]
-    skip = {"of", "and", "the", "for"}
-    initials = "".join(word[0] for word in words if word.lower() not in skip)[:6]
-    return initials.lower() or "inst"
+def _slug(name: str, institution_id: int) -> str:
+    """Login stem for an institution account.
+
+    Deliberately the invented first word plus the institution id, not initials:
+    initials of made-up names can collide with real institute acronyms, which
+    CLAUDE.md section 5 rule 13 rules out.
+    """
+    first = next((word for word in name.replace("-", " ").split() if word), "inst")
+    return f"{''.join(ch for ch in first.lower() if ch.isalnum())[:14]}{institution_id}"
 
 
 def ensure_institution_users(db: Session) -> list[User]:
@@ -104,7 +108,7 @@ def ensure_institution_users(db: Session) -> list[User]:
         if existing is not None:
             created.append(existing)
             continue
-        base = f"{_slug(institution.name)}_admin"
+        base = f"{_slug(institution.name, institution.id)}_admin"
         username = base
         suffix = 2
         while username in used:

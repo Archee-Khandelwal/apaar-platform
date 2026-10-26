@@ -52,7 +52,15 @@ def _mixed_date(value: date, rng: random.Random) -> str:
     )
 
 
-def _row(rng: random.Random, names: list[str], calendar, *, index: int) -> dict[str, str]:
+def _row(
+    rng: random.Random,
+    names: list[str],
+    calendar,
+    *,
+    index: int,
+    course: str = "B.Tech",
+    branch: str = "CSE",
+) -> dict[str, str]:
     dob = date(rng.randint(2004, 2008), rng.randint(1, 12), rng.randint(1, 28))
     admitted = calendar.admission_window_start + timedelta(
         days=rng.randint(0, (calendar.admission_window_end - calendar.admission_window_start).days)
@@ -67,8 +75,8 @@ def _row(rng: random.Random, names: list[str], calendar, *, index: int) -> dict[
         MESSY_HEADERS["phone"]: f"+91 {rng.randint(70000, 99999)} {rng.randint(10000, 99999)}",
         MESSY_HEADERS["email"]: f"student{index}@example.invalid",
         MESSY_HEADERS["guardian_phone"]: f"0{rng.randint(7000000000, 9999999999)}",
-        MESSY_HEADERS["course"]: "B.Tech",
-        MESSY_HEADERS["branch"]: "CSE",
+        MESSY_HEADERS["course"]: course,
+        MESSY_HEADERS["branch"]: branch,
         MESSY_HEADERS["academic_year"]: rng.choice(["2026-27", "2026-2027"]),
         MESSY_HEADERS["year_of_study"]: "1",
         MESSY_HEADERS["admission_type"]: rng.choice(["Regular", "regular", "REGULAR"]),
@@ -77,12 +85,85 @@ def _row(rng: random.Random, names: list[str], calendar, *, index: int) -> dict[
     }
 
 
-def _ground_truth_excess_case() -> dict | None:
-    if not GROUND_TRUTH_PATH.exists():
+def _excess_target() -> dict | None:
+    """Pick a real programme that this upload will actually push past its intake.
+
+    Looks for a programme sitting 10-60 seats under its approved intake for the current
+    year, so the demo story is "upload -> EXCESS_INTAKE appears", not "excess was
+    already there". Returns None if the database has not been seeded yet.
+    """
+    try:
+        from sqlalchemy import func, select
+
+        from app.core.db import SessionLocal
+        from app.models.core import ApprovedIntake, Enrolment, Institution, Program, User
+    except ImportError:  # pragma: no cover - defensive
         return None
-    data = json.loads(GROUND_TRUTH_PATH.read_text())
-    cases = data.get("scenarios", {}).get("A_excess_intake", [])
-    return cases[0] if cases else None
+
+    clean_id = None
+    if GROUND_TRUTH_PATH.exists():
+        data = json.loads(GROUND_TRUTH_PATH.read_text())
+        clean_id = (data.get("clean_institution") or {}).get("id")
+
+    db = SessionLocal()
+    try:
+        admitted = {
+            (program_id, year): count
+            for program_id, year, count in db.execute(
+                select(Enrolment.program_id, Enrolment.academic_year, func.count())
+                .where(
+                    Enrolment.admission_type == "regular",
+                    Enrolment.year_of_study == 1,
+                    Enrolment.status.in_(("admitted", "completed")),
+                )
+                .group_by(Enrolment.program_id, Enrolment.academic_year)
+            ).all()
+        }
+        rows = db.execute(
+            select(Program, ApprovedIntake, Institution)
+            .join(ApprovedIntake, ApprovedIntake.program_id == Program.id)
+            .join(Institution, Institution.id == Program.institution_id)
+            .where(
+                ApprovedIntake.academic_year == YEAR,
+                Program.mode == "regular",
+                Program.course == "B.Tech",
+            )
+            .order_by(Program.id)
+        ).all()
+
+        best: dict | None = None
+        for program, intake_row, institution in rows:
+            if clean_id is not None and institution.id == clean_id:
+                continue
+            headroom = intake_row.intake - admitted.get((program.id, YEAR), 0)
+            if not 10 <= headroom <= 60:
+                continue
+            # Prefer a larger programme: a 120-seat course makes a better demo than a 30.
+            better = best is None or (intake_row.intake, -headroom) > (
+                best["approved_intake"],
+                -best["headroom"],
+            )
+            if better:
+                best = {
+                    "institution_id": institution.id,
+                    "institution_name": institution.name,
+                    "program_id": program.id,
+                    "course": program.course,
+                    "branch": program.branch,
+                    "approved_intake": intake_row.intake,
+                    "admitted": admitted.get((program.id, YEAR), 0),
+                    "headroom": headroom,
+                }
+        if best is not None:
+            login = db.execute(
+                select(User.username).where(
+                    User.role == "institution", User.institution_id == best["institution_id"]
+                )
+            ).scalar_one_or_none()
+            best["institution_login"] = login or "the institution account"
+        return best
+    finally:
+        db.close()
 
 
 def write_samples(*, seed: int = 42) -> list[Path]:
@@ -98,12 +179,23 @@ def write_samples(*, seed: int = 42) -> list[Path]:
     written: list[Path] = []
 
     # ---------------------------------------------------------------- 1. excess intake
-    case = _ground_truth_excess_case()
-    rows = [_row(rng, names, calendar, index=i) for i in range(70)]
+    target = _excess_target()
+    excess_by = 25
+    if target:
+        row_count = target["headroom"] + excess_by
+        course, branch = target["course"], target["branch"]
+    else:
+        row_count, course, branch = 70, "B.Tech", "CSE"
+    rows = [
+        _row(rng, names, calendar, index=i, course=course, branch=branch)
+        for i in range(row_count)
+    ]
     # Blank rows and a stray total line in the middle of the sheet.
     rows.insert(12, {key: "" for key in rows[0]})
     rows.insert(40, {key: "" for key in rows[0]})
-    rows.append({**{key: "" for key in rows[0]}, MESSY_HEADERS["student_name"]: "TOTAL = 70"})
+    rows.append(
+        {**{key: "" for key in rows[0]}, MESSY_HEADERS["student_name"]: f"TOTAL = {row_count}"}
+    )
     frame = pd.DataFrame(rows)
     path = SAMPLES_DIR / "sample_1_excess_intake.xlsx"
     with pd.ExcelWriter(path, engine="openpyxl") as writer:
@@ -146,19 +238,22 @@ def write_samples(*, seed: int = 42) -> list[Path]:
 
     # ---------------------------------------------------------------- README for the demo
     readme = SAMPLES_DIR / "README.md"
-    excess_hint = (
-        f"Uploading this as **{case['institution_name']}** pushes "
-        f"{case['details'].get('program', 'a programme')} past its approved intake "
-        f"({case['details'].get('approved_intake')} seats) and raises EXCESS_INTAKE."
-        if case
-        else "Uploading this as any institution pushes a programme past its approved intake."
-    )
+    if target:
+        excess_hint = (
+            f"Upload it as **{target['institution_name']}** "
+            f"(`{target['institution_login']}`): {target['course']} {target['branch']} has "
+            f"{target['admitted']} of {target['approved_intake']} approved seats filled, so "
+            f"{target['headroom'] + excess_by} more rows push it {excess_by} seats past intake "
+            f"and raise EXCESS_INTAKE."
+        )
+    else:
+        excess_hint = "Upload it as any institution to push a programme past its approved intake."
     readme.write_text(
         "# Sample uploads (all synthetic)\n\n"
         "Deliberately messy files for the live demo. Column headers do not match our\n"
         "canonical field names on purpose — the mapping screen has to work them out.\n\n"
-        f"- `sample_1_excess_intake.xlsx` — 70 clean-ish rows, two blank rows and a stray\n"
-        f"  `TOTAL = 70` line. {excess_hint}\n"
+        f"- `sample_1_excess_intake.xlsx` — {row_count} clean-ish rows, two blank rows and a\n"
+        f"  stray `TOTAL = {row_count}` line. {excess_hint}\n"
         "- `sample_2_dirty_errors.xlsx` — short / non-numeric / missing APAAR IDs, an\n"
         "  impossible date (31/02/2006), a post-cutoff admission, a missing name, a row\n"
         "  claiming no APAAR while being Indian, and a duplicate row inside the file.\n"
