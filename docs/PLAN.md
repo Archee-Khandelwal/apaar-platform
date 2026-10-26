@@ -40,15 +40,15 @@ Legend: ☐ not started · ◐ in progress · ☑ done
 - [x] Tests: keyed + deterministic hashing, masking, vault round-trip, valid chain passes, tampered row detected
 - **Check:** `make test` passes · **Gate:** frontend (Step 14) can start after this
 
-## Step 3 — Auth, RBAC, tenant isolation  ☐
+## Step 3 — Auth, RBAC, tenant isolation  ☑
 
-- [ ] `users` table (role, optional `institution_id` / `student_id`), bcrypt via passlib
-- [ ] `POST /auth/login` → JWT with `user_id`, `role`, `institution_id`, `student_id`; `GET /auth/me`
-- [ ] `GET /auth/demo-users` (demo-mode only) for the one-click role switcher
-- [ ] `app/core/security.py`: `get_current_user`, `require_role(*roles)` — on **every** route except login/health/public token check
-- [ ] Tenant-scope helper/dependency so routers cannot forget to filter by the JWT's `institution_id`
-- [ ] `suppress_small_counts(dict, role)` → `"<5"` for `aicte_viewer`
-- [ ] Tests: wrong role → 403; institution user passing another institution's id in the URL still cannot read it; suppression works
+- [x] `users` table (role, optional `institution_id` / `student_id`), bcrypt via passlib
+- [x] `POST /auth/login` → JWT with `user_id`, `role`, `institution_id`, `student_id`; `GET /auth/me`
+- [x] `GET /auth/demo-users` (demo-mode only) for the one-click role switcher
+- [x] `app/core/security.py`: `get_current_user`, `require_role(*roles)` — on **every** route except login/health/public token check
+- [x] Tenant-scope helper/dependency so routers cannot forget to filter by the JWT's `institution_id`
+- [x] `suppress_small_counts(dict, role)` → `"<5"` for `aicte_viewer`
+- [x] Tests: wrong role → 403; institution user passing another institution's id in the URL still cannot read it; suppression works
 - **Check:** manual 403 with an institution token on an AICTE route
 
 ## Step 4 — Mock APAAR registry  ☐

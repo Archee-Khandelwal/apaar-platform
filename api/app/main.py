@@ -9,6 +9,8 @@ from sqlalchemy import text
 
 from app.core.config import settings
 from app.core.db import engine, init_db
+from app.core.errors import install_error_handlers
+from app.routers import auth as auth_router
 
 logger = logging.getLogger("apaar.api")
 
@@ -20,6 +22,8 @@ app = FastAPI(
         "Prototype — all data is synthetic."
     ),
 )
+
+install_error_handlers(app)
 
 app.add_middleware(
     CORSMiddleware,
@@ -39,6 +43,9 @@ def on_startup() -> None:
             ", ".join(missing),
         )
     init_db()
+
+
+app.include_router(auth_router.router)
 
 
 @app.get("/health", tags=["meta"])

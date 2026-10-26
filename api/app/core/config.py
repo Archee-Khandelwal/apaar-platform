@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     consent_request_ttl_hours: int = 72
     verify_token_ttl_minutes: int = 15
     registry_timeout_seconds: float = 3.0
+    bcrypt_rounds: int = 12  # lowered in tests for speed
     log_level: str = "info"
 
     app_name: str = "APAAR Student Data & Verification Platform"
