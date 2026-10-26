@@ -8,6 +8,10 @@ from pydantic import BaseModel, Field
 
 T = TypeVar("T")
 
+# A count that small-count suppression may replace with the string "<5" for
+# aicte_viewer (docs/API_CONTRACT.md section 0.3).
+Suppressible = int | str
+
 DEFAULT_PAGE_SIZE = 25
 MAX_PAGE_SIZE = 200
 

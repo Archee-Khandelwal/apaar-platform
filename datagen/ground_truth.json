@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-26T22:48:08",
+  "generated_at": "2026-10-26T22:53:43",
   "seed": 42,
   "years": [
     "2025-26",
@@ -163,7 +163,8 @@
           "band": "large",
           "students": 26,
           "guardian_contacts": 2,
-          "students_per_contact": 13.0,
+          "shared_contacts": 3,
+          "students_per_contact": 8.7,
           "student_ids": [
             14617,
             14618,
@@ -206,7 +207,8 @@
           "band": "large",
           "students": 33,
           "guardian_contacts": 3,
-          "students_per_contact": 11.0,
+          "shared_contacts": 4,
+          "students_per_contact": 8.2,
           "student_ids": [
             14643,
             14644,
@@ -256,7 +258,8 @@
           "band": "medium",
           "students": 8,
           "guardian_contacts": 3,
-          "students_per_contact": 2.7,
+          "shared_contacts": 4,
+          "students_per_contact": 2.0,
           "student_ids": [
             14676,
             14677,

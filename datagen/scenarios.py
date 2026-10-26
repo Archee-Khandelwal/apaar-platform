@@ -214,10 +214,15 @@ def scenario_b_ghost_clusters(gen: SyntheticDataGenerator) -> None:
         upload = gen.upload_by[(institution["id"], year)]
         size = gen.rng.randint(size_min, size_max)
         guardian_phones = [gen.b.new_phone() for _ in range(contacts)]
+        # Fabricated rows are typically entered by one person, who also reuses a single
+        # contact email. That shared email is what links the guardian-phone groups into
+        # one component rather than two or three unconnected stars.
+        shared_email = f"admissions.cell{institution['id']}@example.invalid"
         member_ids: list[int] = []
         for index in range(size):
             student_id = gen.b.add_student(
-                guardian_phone=guardian_phones[index % len(guardian_phones)]
+                guardian_phone=guardian_phones[index % len(guardian_phones)],
+                email=shared_email,
             )
             gen.b.add_enrolment(
                 student_id=student_id,
@@ -245,7 +250,8 @@ def scenario_b_ghost_clusters(gen: SyntheticDataGenerator) -> None:
                     "band": band,
                     "students": size,
                     "guardian_contacts": len(guardian_phones),
-                    "students_per_contact": round(size / len(guardian_phones), 1),
+                    "shared_contacts": contacts + 1,  # guardian phones + the shared email
+                    "students_per_contact": round(size / (contacts + 1), 1),
                     "student_ids": member_ids,
                     "program": f"{program['course']} {program['branch']}",
                 },

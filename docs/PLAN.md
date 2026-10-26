@@ -124,14 +124,14 @@ Legend: ☐ not started · ◐ in progress · ☑ done
 - [x] Evidence JSON: masked APAARs, institution ids, programs, years, classification reason
 - [x] Tests + scenarios C, D, J classified correctly (**D must not be flagged as fraud**)
 
-## Step 9 — Ghost-student graph detector (headline)  ☐
+## Step 9 — Ghost-student graph detector (headline)  ☑
 
-- [ ] networkx graph: student nodes + attribute nodes (`guardian_phone_hash`, `phone_hash`, `email_hash`), edges student→attribute
-- [ ] Connected components; `GHOST_CLUSTER` on abnormal density (configurable, e.g. ≥ 8 students sharing ≤ 3 guardian contacts, or one contact across institutions); normal siblings (2–3) ignored
-- [ ] Cluster score (size, attribute-to-student ratio, institutions involved) drives severity
-- [ ] `GET /aicte/graph/clusters` (masked summaries) and `GET /aicte/graph/clusters/{id}` (Cytoscape JSON, labels masked, attributes as "Guardian contact #1")
-- [ ] Every cluster view writes to the access log
-- [ ] Tests + both scenario-B clusters found, no false positives on sibling pairs
+- [x] networkx graph: student nodes + attribute nodes (`guardian_phone_hash`, `phone_hash`, `email_hash`), edges student→attribute
+- [x] Connected components; `GHOST_CLUSTER` on abnormal density (configurable, e.g. ≥ 8 students sharing ≤ 3 guardian contacts, or one contact across institutions); normal siblings (2–3) ignored
+- [x] Cluster score (size, attribute-to-student ratio, institutions involved) drives severity
+- [x] `GET /aicte/graph/clusters` (masked summaries) and `GET /aicte/graph/clusters/{id}` (Cytoscape JSON, labels masked, attributes as "Guardian contact #1")
+- [x] Every cluster view writes to the access log
+- [x] Tests + both scenario-B clusters found, no false positives on sibling pairs
 
 ## Step 10 — Heuristic detectors  ☐
 

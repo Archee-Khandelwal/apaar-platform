@@ -9,6 +9,7 @@ Detectors are added here as each step lands:
   Step 7  intake compliance (EXCESS_INTAKE)
   Step 8  duplicates (CROSS_INSTITUTION_DUPLICATE, POSSIBLE_DUAL_DEGREE,
           IDENTITY_DUPLICATE)
+  Step 9  ghost-student graph (GHOST_CLUSTER)
 """
 from __future__ import annotations
 
@@ -19,6 +20,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.services.duplicates import run_duplicate_detection
+from app.services.graph import detect_ghost_clusters
 from app.services.intake import run_intake_compliance
 
 logger = logging.getLogger("apaar.detectors")
@@ -40,6 +42,7 @@ def run_all_detectors(
     )
 
     summary.update(run_duplicate_detection(db, academic_year=academic_year))
+    summary.update(detect_ghost_clusters(db, academic_year=academic_year))
 
     if commit:
         db.commit()

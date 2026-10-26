@@ -7,6 +7,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from app.models.enums import ADMISSION_TYPES, APAAR_STATUSES, NATIONALITY_STATUSES
+from app.schemas.common import Suppressible
 
 
 class ProgramOut(BaseModel):
@@ -158,3 +159,39 @@ class SeatMatrixOut(BaseModel):
     rule_set: str
     programs: list[ProgramSeatMatrixOut]
     totals: SeatMatrixTotals
+
+
+class ClusterSummaryOut(BaseModel):
+    cluster_id: int
+    score: float
+    severity: str
+    kind: str
+    student_count: Suppressible
+    shared_attributes: dict[str, Suppressible] = Field(default_factory=dict)
+    institutions: list[dict[str, Any]] = Field(default_factory=list)
+    academic_year: str | None = None
+    summary: str
+    flag_id: int | None = None
+    created_at: datetime
+
+
+class ClusterPage(BaseModel):
+    items: list[ClusterSummaryOut]
+    page: int
+    page_size: int
+    total: int
+    total_pages: int
+    sort: str | None = None
+
+
+class ClusterDetailOut(BaseModel):
+    cluster_id: int
+    score: float
+    severity: str
+    kind: str
+    summary: str
+    metrics: dict[str, Any] = Field(default_factory=dict)
+    legend: dict[str, str] = Field(default_factory=dict)
+    nodes: list[dict[str, Any]] = Field(default_factory=list)
+    edges: list[dict[str, Any]] = Field(default_factory=list)
+    access_log_id: int | None = None
