@@ -201,24 +201,24 @@ Legend: ☐ not started · ◐ in progress · ☑ done
 - [x] Students list (masked) + status update (cancel/migrate/drop with reason)
 - [x] Upload history, compliance certificate download (disabled with a reason when ineligible), template download
 
-## Step 16 — AICTE dashboard  ☐
+## Step 16 — AICTE dashboard  ☑
 
-- [ ] National overview: StatCards, state-wise Recharts bar, flags by type/severity, total excess seats; `"<5"` rendered gracefully for viewers
-- [ ] Flag queue: DataTable + filters, `ExplanationPanel` drawer, actions (review, escalate, dismiss, assign, note)
-- [ ] Institution drill-down: profile, risk gauge + top 3 reasons, seat matrix, flags, upload timeline
-- [ ] Risk leaderboard + inspection shortlist (top 10 with reasons, exportable)
-- [ ] Non-reporting page with "send reminder"
-- [ ] Reports page: trends charts + CSV export
-- [ ] Reveal: `RevealButton` (officer only) → reason modal → details + toast "This access has been logged"
+- [x] National overview: StatCards, state-wise Recharts bar, flags by type/severity, total excess seats; `"<5"` rendered gracefully for viewers
+- [x] Flag queue: DataTable + filters, `ExplanationPanel` drawer, actions (review, escalate, dismiss, assign, note)
+- [x] Institution drill-down: profile, risk gauge + top 3 reasons, seat matrix, flags, upload timeline
+- [x] Risk leaderboard + inspection shortlist (top 10 with reasons, exportable)
+- [x] Non-reporting page with "send reminder"
+- [x] Reports page: trends charts + CSV export
+- [x] Reveal: `RevealButton` (officer only) → reason modal → details + toast "This access has been logged"
 
-## Step 17 — Ghost-cluster graph view (most important screen)  ☐
+## Step 17 — Ghost-cluster graph view (most important screen)  ☑
 
-- [ ] Clusters list: cards with score, students, shared contacts, institutions, severity
-- [ ] Cluster detail with react-cytoscapejs: students as circles coloured by institution, shared contacts as larger accent diamonds, edges labelled by attribute type, cose force-directed layout with load animation
-- [ ] Hover tooltips (masked); click a student → side panel (masked, `RevealButton` for officers)
-- [ ] Legend + plain-English summary ("32 students at Institute X share only 3 guardian contacts — typical families share 1 contact per 1–3 students")
-- [ ] "Compare with a normal cluster" toggle (side-by-side healthy sibling cluster)
-- [ ] Smooth at ~100 nodes
+- [x] Clusters list: cards with score, students, shared contacts, institutions, severity
+- [x] Cluster detail with react-cytoscapejs: students as circles coloured by institution, shared contacts as larger accent diamonds, edges labelled by attribute type, cose force-directed layout with load animation
+- [x] Hover tooltips (masked); click a student → side panel (masked, `RevealButton` for officers)
+- [x] Legend + plain-English summary ("32 students at Institute X share only 3 guardian contacts — typical families share 1 contact per 1–3 students")
+- [x] "Compare with a normal cluster" toggle (side-by-side healthy sibling cluster)
+- [x] Smooth at ~100 nodes
 
 ## Step 18 — Student & verifier portals  ☐
 
