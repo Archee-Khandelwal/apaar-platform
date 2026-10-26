@@ -78,6 +78,10 @@ class DataBuilder:
         self.raw: list[RawIdentity] = []
         self.cases: list[GroundTruthCase] = []
 
+        # When set, every generated contact is written in a random real-world format
+        # before hashing (spaces, +91 prefixes, uppercase emails). The normalised value
+        # must be identical, which is what the robustness run checks.
+        self.vary_contact_formats = False
         self._next_ids: dict[str, int] = {}
         self._used_apaar: set[str] = set()
         self._used_phone: set[str] = set()
@@ -111,6 +115,27 @@ class DataBuilder:
             self._used_apaar.add(str(value))
             value += self.rng.choice([gap, gap, gap + 1])
         return run
+
+    def format_phone(self, phone: str) -> str:
+        """Write the same number the way a college spreadsheet might."""
+        if not self.vary_contact_formats:
+            return phone
+        return self.rng.choice(
+            [
+                phone,
+                f"+91 {phone[:5]} {phone[5:]}",
+                f"+91-{phone}",
+                f"0{phone}",
+                f"{phone[:3]} {phone[3:6]} {phone[6:]}",
+                f" {phone} ",
+                f"91{phone}",
+            ]
+        )
+
+    def format_email(self, email: str) -> str:
+        if not self.vary_contact_formats:
+            return email
+        return self.rng.choice([email, email.upper(), email.capitalize(), f"  {email} "])
 
     def new_phone(self) -> str:
         while True:
@@ -194,9 +219,11 @@ class DataBuilder:
         if apaar_status == "provided" and apaar is None:
             apaar = self.new_apaar()
 
-        guardian_phone = guardian_phone or self.new_phone()
-        phone = phone or self.new_phone()
-        email = email or f"{name.split()[0].lower()}.{student_id}@example.invalid"
+        guardian_phone = self.format_phone(guardian_phone or self.new_phone())
+        phone = self.format_phone(phone or self.new_phone())
+        email = self.format_email(
+            email or f"{name.split()[0].lower()}.{student_id}@example.invalid"
+        )
 
         self.students.append(
             {

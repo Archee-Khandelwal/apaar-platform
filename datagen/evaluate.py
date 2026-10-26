@@ -29,6 +29,7 @@ from datagen.generator import GROUND_TRUTH_PATH
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DB = REPO_ROOT / "apaar.db"
 REPORT_PATH = REPO_ROOT / "docs" / "EVALUATION.md"
+ROBUST_REPORT_PATH = REPO_ROOT / "docs" / "EVALUATION_ROBUST.md"
 
 # How each scenario's ground-truth key is matched against produced flags.
 # key_kind -> how to build the same key from a Flag.
@@ -73,6 +74,60 @@ SCENARIOS: dict[str, dict[str, Any]] = {
 }
 
 
+# Diagnoses for the robustness run, written after reading the results and NOT acted on
+# by changing any detector threshold. Each one names the rule that caused the miss and
+# what a fix would be, so the gap is on the record rather than quietly tuned away.
+ROBUST_DIAGNOSES: dict[str, list[str]] = {
+    "B_ghost_cluster": [
+        "**6 students on 4 contacts (ratio 1.5) and 9 students on 5 contacts (ratio 1.8) "
+        "were missed.** The rule needs at least 8 students AND at least 2.0 students per "
+        "shared contact. The 6-student group fails both tests and is genuinely "
+        "indistinguishable from an extended family by contact data alone. The 9-student "
+        "group fails the ratio test by 0.2, which is the honest cost of a threshold that "
+        "keeps 4-7 student families out of the queue.",
+        "**A cross-institution cluster counts as one miss for a measurement reason, not a "
+        "detection failure.** The 16-student cluster spanning two institutions was found, "
+        "but the GHOST_CLUSTER flag carries a single institution_id, so it only matches "
+        "the ground-truth key for one of the two. An officer filtering flags by the other "
+        "institution would not see it. The fix is in flag attribution (raise or index the "
+        "flag for every institution involved), not in the detector; it is left as a known "
+        "gap rather than changed while this set is being scored.",
+    ],
+    "G_sequential_apaar": [
+        "**A run of 16 IDs with gaps of up to 4 was missed.** The detector continues a run "
+        "only while consecutive gaps are 3 or less, so a fabricator who leaves gaps of 4 "
+        "breaks the run into fragments below the 10-ID minimum. This is a real evasion "
+        "path. A density measure over a sliding window (how many of an institution's IDs "
+        "fall inside a narrow numeric band) would not have this cliff.",
+    ],
+    "J_identity_duplicate": [
+        "**The biggest gap in this run: 6 of 12 records missed.** Identity matching uses an "
+        "exact HMAC of the normalised name, so it survives case and whitespace changes "
+        "(both caught, 2/2 each) but fails on a doubled letter, a reordered name and an "
+        "initial-only surname (0/2 each). The registry client already uses rapidfuzz at a "
+        "90% threshold; identity matching does not. The fix is to block candidates on "
+        "DOB + guardian phone and then compare decrypted names with rapidfuzz inside the "
+        "service, which keeps the privacy property intact.",
+    ],
+    "H_last_minute_bulk": [
+        "**One unlabelled flag at 100% share.** A small institution whose single upload "
+        "happened to land inside the 6-hour window trips the rule, because there is no "
+        "minimum record count. On real data this would be a steady source of false "
+        "positives for small colleges; the rule needs a floor on records, like the "
+        "supernumerary signal already has.",
+    ],
+    "I_phantom_progression": [
+        "**Five unlabelled flags, all correct by the rule.** They are students whom the "
+        "perturbed dual-degree scenario enrolled directly into year 2 of an online "
+        "programme with no year-1 record. The rule flags exactly that shape, so these are "
+        "true positives with no injected label — but they also show the real-world blind "
+        "spot: a legitimate transfer or direct second-year entry looks identical to a "
+        "phantom. Production would need a transfer/direct-entry marker in the upload "
+        "template before this rule could be trusted at row level.",
+    ],
+}
+
+
 @dataclass
 class ScenarioScore:
     scenario: str
@@ -81,6 +136,8 @@ class ScenarioScore:
     expected: set[str]
     predicted: set[str]
     notes: list[str] = field(default_factory=list)
+    # key -> the perturbation applied to that case (robustness run only)
+    perturbations: dict[str, str] = field(default_factory=dict)
 
     @property
     def true_positives(self) -> set[str]:
@@ -195,9 +252,39 @@ def score(db: Session, ground_truth: dict[str, Any]) -> list[ScenarioScore]:
                 expected=expected,
                 predicted=predicted,
                 notes=notes,
+                perturbations={
+                    case["key"]: case["details"]["perturbation"]
+                    for case in cases
+                    if case.get("details", {}).get("perturbation")
+                },
             )
         )
     return scores
+
+
+def control_checks(db: Session, ground_truth: dict[str, Any]) -> list[dict[str, Any]]:
+    """Negative controls: labelled cases that must produce no flag at all."""
+    scenarios = ground_truth.get("scenarios", {})
+    results: list[dict[str, Any]] = []
+
+    on_time = scenarios.get("F_on_time_control", [])
+    if on_time:
+        expected_clean = {case["key"] for case in on_time}
+        flagged = {
+            str(flag.enrolment_id)
+            for flag in db.execute(
+                select(Flag).where(Flag.type == "LATE_ADMISSION", Flag.enrolment_id.is_not(None))
+            ).scalars()
+        }
+        wrong = sorted(expected_clean & flagged)
+        results.append(
+            {
+                "check": "Admissions exactly on the cutoff date not flagged as late",
+                "cases": len(expected_clean),
+                "violations": wrong,
+            }
+        )
+    return results
 
 
 def misclassification_checks(db: Session, ground_truth: dict[str, Any]) -> dict[str, Any]:
@@ -266,12 +353,17 @@ def unlabelled_flags(db: Session, scores: list[ScenarioScore]) -> dict[str, int]
 
 
 def print_report(
-    scores: list[ScenarioScore], checks: dict[str, Any], extra: dict[str, int], counts: dict[str, Any]
+    scores: list[ScenarioScore],
+    checks: dict[str, Any],
+    extra: dict[str, int],
+    counts: dict[str, Any],
+    *,
+    ground_truth_name: str = "datagen/ground_truth.json",
 ) -> None:
     width = 46
     print()
     print("=" * 92)
-    print("DETECTION EVALUATION against datagen/ground_truth.json")
+    print(f"DETECTION EVALUATION against {ground_truth_name}")
     print("=" * 92)
     print(
         f"{'Scenario':<{width}}{'Exp':>5}{'TP':>5}{'FP':>5}{'FN':>5}"
@@ -344,9 +436,14 @@ def print_report(
             print(f"  {flag_type:<32} {count}")
 
     print()
-    print("NOTE: the generator and the detectors were built against the same definitions,")
-    print("so these scores show the rules are implemented and have not regressed - not")
-    print("accuracy on real institutional data. See docs/EVALUATION.md for the full caveat.")
+    if "robust" in ground_truth_name:
+        print("NOTE: this is the perturbed dataset the detectors were NOT tuned on. Every")
+        print("miss is diagnosed in docs/EVALUATION_ROBUST.md; no threshold was changed")
+        print("after seeing these results.")
+    else:
+        print("NOTE: the generator and the detectors were built against the same definitions,")
+        print("so these scores show the rules are implemented and have not regressed - not")
+        print("accuracy on real institutional data. See docs/EVALUATION.md for the full caveat.")
     print()
     print(
         f"Dataset: {counts.get('institutions')} institutions, {counts.get('students')} students, "
@@ -362,6 +459,8 @@ def write_markdown(
     checks: dict[str, Any],
     extra: dict[str, int],
     ground_truth: dict[str, Any],
+    *,
+    robust: bool = False,
 ) -> None:
     total_tp = sum(len(item.true_positives) for item in scores)
     total_fp = sum(len(item.false_positives) for item in scores)
@@ -375,11 +474,33 @@ def write_markdown(
     )
     counts = ground_truth.get("counts", {})
 
+    title = (
+        "# EVALUATION_ROBUST.md — accuracy on a perturbed dataset"
+        if robust
+        else "# EVALUATION.md — detection accuracy"
+    )
+    intro = (
+        [
+            "Generated by `make eval-robust`. This is a **second dataset** with a different",
+            "seed, contacts written in varied formats, and deliberately perturbed cases the",
+            "detectors were never built or tuned against: cluster sizes from 6 to 40 students",
+            "on 3-6 contacts (including one split across two institutions), names with typos,",
+            "reorderings and initials, dual degrees in other programme combinations,",
+            "admissions one day past the cutoff, and an intake breach of a single seat.",
+            "",
+            "**No detector threshold was changed after seeing these results.** Every miss is",
+            "diagnosed below with the rule that caused it and what a fix would be.",
+        ]
+        if robust
+        else [
+            "Generated by `make eval` (`datagen/evaluate.py`), which scores the flags in the",
+            "database against the labelled cases in `datagen/ground_truth.json`.",
+        ]
+    )
     lines: list[str] = [
-        "# EVALUATION.md — detection accuracy",
+        title,
         "",
-        "Generated by `make eval` (`datagen/evaluate.py`), which scores the flags in the",
-        "database against the labelled cases in `datagen/ground_truth.json`.",
+        *intro,
         "",
         f"- Generated: {datetime.now().replace(microsecond=0).isoformat()}",
         f"- Seed: `{ground_truth.get('seed')}`",
@@ -387,8 +508,16 @@ def write_markdown(
         f"{counts.get('students')} students, {counts.get('enrolments')} enrolments",
         f"- Labelled cases: {counts.get('labelled_cases')}",
         "",
-        "> Run `make reset && make eval`. The numbers describe the seeded data only — a demo",
-        "> upload adds real enrolments and real flags that no ground-truth file knows about.",
+        (
+            "> Run `make eval-robust`. It builds its own database, so the demo data and the"
+            if robust
+            else "> Run `make reset && make eval`. The numbers describe the seeded data only — a demo"
+        ),
+        (
+            "> headline numbers in EVALUATION.md are untouched."
+            if robust
+            else "> upload adds real enrolments and real flags that no ground-truth file knows about."
+        ),
         "",
         "## Per-scenario results",
         "",
@@ -422,6 +551,47 @@ def write_markdown(
         f"({checks['clean_institution'].get('name', 'n/a')}) | {len(clean_flags)}"
         + (f" ({[f['type'] for f in clean_flags]})" if clean_flags else " — none") + " |",
     ]
+
+    controls = checks.get("controls") or []
+    if controls:
+        lines += ["", "## Negative controls", "", "| Control | Cases | Violations |", "|---|---:|---|"]
+        for control in controls:
+            lines.append(
+                f"| {control['check']} | {control['cases']} | "
+                + (f"{len(control['violations'])} ({control['violations']})" if control["violations"] else "0 — none")
+                + " |"
+            )
+
+    if robust:
+        lines += ["", "## Why each miss happened", ""]
+        any_diagnosis = False
+        for item in scores:
+            diagnoses = ROBUST_DIAGNOSES.get(item.scenario)
+            if not diagnoses:
+                continue
+            if not (item.false_negatives or item.false_positives):
+                continue
+            any_diagnosis = True
+            lines.append(f"### {item.label}")
+            lines.append("")
+            lines.append(
+                f"Precision {item.precision:.3f}, recall {item.recall:.3f} "
+                f"({len(item.false_negatives)} missed, {len(item.false_positives)} unlabelled)."
+            )
+            lines.append("")
+            for diagnosis in diagnoses:
+                lines.append(f"- {diagnosis}")
+            lines.append("")
+        if not any_diagnosis:
+            lines.append("- Nothing was missed on this run.")
+
+        perturbed = [item for item in scores if item.perturbations]
+        if perturbed:
+            lines += ["", "## Result per perturbation", "", "| Scenario | Perturbation | Caught |", "|---|---|---|"]
+            for item in perturbed:
+                for key, perturbation in sorted(item.perturbations.items()):
+                    caught = "yes" if key in item.predicted else "**no**"
+                    lines.append(f"| {item.label} | {perturbation} | {caught} |")
 
     misses = [item for item in scores if item.false_negatives]
     lines += ["", "## Misses and extra flags", ""]
@@ -503,8 +673,22 @@ def main() -> int:
     parser = argparse.ArgumentParser(prog="datagen.evaluate", description="Score detections")
     parser.add_argument("--database", default=str(DEFAULT_DB))
     parser.add_argument("--ground-truth", default=str(GROUND_TRUTH_PATH))
+    parser.add_argument("--output", default=None, help="markdown report path")
+    parser.add_argument("--robust", action="store_true", help="score the robustness dataset")
     parser.add_argument("--json", action="store_true", help="print machine-readable JSON")
     args = parser.parse_args()
+
+    global REPORT_PATH
+    if args.robust:
+        from datagen.robust import GROUND_TRUTH_ROBUST, ROBUST_DB
+
+        if args.database == str(DEFAULT_DB):
+            args.database = str(ROBUST_DB)
+        if args.ground_truth == str(GROUND_TRUTH_PATH):
+            args.ground_truth = str(GROUND_TRUTH_ROBUST)
+        REPORT_PATH = ROBUST_REPORT_PATH
+    if args.output:
+        REPORT_PATH = Path(args.output)
 
     truth_path = Path(args.ground_truth)
     if not truth_path.exists():
@@ -521,6 +705,7 @@ def main() -> int:
     try:
         scores = score(db, ground_truth)
         checks = misclassification_checks(db, ground_truth)
+        checks["controls"] = control_checks(db, ground_truth)
         extra = unlabelled_flags(db, scores)
     finally:
         db.close()
@@ -528,7 +713,7 @@ def main() -> int:
     counts = dict(ground_truth.get("counts", {}))
     counts["seed"] = ground_truth.get("seed")
 
-    write_markdown(scores, checks, extra, ground_truth)
+    write_markdown(scores, checks, extra, ground_truth, robust=args.robust)
     if args.json:
         print(
             json.dumps(
@@ -541,7 +726,13 @@ def main() -> int:
             )
         )
     else:
-        print_report(scores, checks, extra, counts)
+        print_report(
+            scores,
+            checks,
+            extra,
+            counts,
+            ground_truth_name=str(Path(args.ground_truth).relative_to(REPO_ROOT)),
+        )
     return 0
 
 

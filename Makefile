@@ -9,7 +9,7 @@ PYTEST := $(VENV)/bin/pytest
 UVICORN := $(VENV)/bin/uvicorn
 export PYTHONPATH := api:.
 
-.PHONY: help setup keys dev dev-api dev-registry dev-web test seed reset eval clean
+.PHONY: help setup keys dev dev-api dev-registry dev-web test seed reset eval eval-robust clean
 
 help:
 	@echo "make setup   - create venv, install python + node dependencies"
@@ -19,6 +19,7 @@ help:
 	@echo "make seed    - generate synthetic data into the database"
 	@echo "make reset   - delete databases and reseed from scratch"
 	@echo "make eval    - score detections against datagen/ground_truth.json"
+	@echo "make eval-robust - score a second, perturbed dataset the detectors were not tuned on"
 
 setup: $(VENV)/.installed keys
 	@cd web && npm install --no-fund --no-audit
@@ -59,6 +60,12 @@ reset: $(VENV)/.installed
 
 eval: $(VENV)/.installed
 	@$(PY) -m datagen.evaluate
+
+# A second dataset with a different seed and perturbations the detectors were never
+# tuned on. Writes its own database, so it never touches the demo data.
+eval-robust: $(VENV)/.installed
+	@$(PY) -m datagen.robust --seed 2026
+	@$(PY) -m datagen.evaluate --robust
 
 clean:
 	@rm -rf $(VENV) web/node_modules web/.next

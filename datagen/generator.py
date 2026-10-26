@@ -81,9 +81,12 @@ class SyntheticDataGenerator:
         students: int = 15000,
         years: tuple[str, ...] = DEFAULT_YEARS,
         ground_truth_path: Path | None = None,
+        scenario_module: Any = None,
+        vary_contact_formats: bool = False,
     ) -> None:
         self.db = db
         self.ground_truth_path = ground_truth_path or GROUND_TRUTH_PATH
+        self.scenario_module = scenario_module
         self.seed = seed
         self.institution_count = institutions
         self.student_target = students
@@ -92,6 +95,7 @@ class SyntheticDataGenerator:
         self.faker = Faker("en_IN")
         Faker.seed(seed)
         self.b = DataBuilder(self.rng, self.faker)
+        self.b.vary_contact_formats = vary_contact_formats
 
         # Filled during generation.
         self.clean_institution_id: int | None = None
@@ -436,6 +440,9 @@ class SyntheticDataGenerator:
     # ---------------------------------------------------------------- scenarios
 
     def inject_scenarios(self) -> None:
+        if self.scenario_module is not None:
+            self.scenario_module.inject_all(self)
+            return
         from datagen import scenarios
 
         scenarios.inject_all(self)
@@ -548,6 +555,8 @@ def generate(
     students: int = 15000,
     years: tuple[str, ...] = DEFAULT_YEARS,
     ground_truth_path: Path | None = None,
+    scenario_module: Any = None,
+    vary_contact_formats: bool = False,
 ) -> dict[str, Any]:
     generator = SyntheticDataGenerator(
         db,
@@ -556,5 +565,7 @@ def generate(
         students=students,
         years=years,
         ground_truth_path=ground_truth_path,
+        scenario_module=scenario_module,
+        vary_contact_formats=vary_contact_formats,
     )
     return generator.run()

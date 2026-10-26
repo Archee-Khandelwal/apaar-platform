@@ -151,6 +151,12 @@ Legend: ☐ not started · ◐ in progress · ☑ done
 - [x] `make eval`
 - **Check:** `make reset && make eval` — record the numbers for the pitch
 
+### Added after Step 11 review  ☑
+
+- [x] `make eval-robust`: a second dataset (different seed, varied contact formats, perturbed cases) scored into `docs/EVALUATION_ROBUST.md`, with every miss diagnosed and no detector retuned afterwards
+- [x] Supernumerary-misuse review signal (`STATISTICAL_ANOMALY` with `signal=supernumerary_share`), modest risk weight, scenario K injected in the main ground truth
+- [x] `EXCESS_INTAKE` severity scaled by % over approved intake (<=5% medium, 5-15% high, >15% critical), configurable
+
 ## Step 12 — Flags, cases, reveal, AICTE APIs  ☐
 
 - [ ] `GET /aicte/overview` (national KPIs + state breakdown, suppression for viewer)

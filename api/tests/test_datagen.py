@@ -406,3 +406,77 @@ def test_sample_files_exist_and_are_messy() -> None:
     assert "student_name" not in frame.columns
     # And there is at least one blank row to skip.
     assert frame.isna().all(axis=1).any()
+
+
+# ------------------------------------------------------------------ robustness harness
+
+
+def test_contact_format_variation_does_not_change_the_hash() -> None:
+    """The robustness run writes contacts in many formats; normalisation must absorb it."""
+    import random
+
+    from faker import Faker
+
+    from app.core.crypto import hash_email, hash_phone
+    from datagen.builder import DataBuilder
+
+    builder = DataBuilder(random.Random(3), Faker("en_IN"))
+    builder.vary_contact_formats = True
+
+    phone_variants = {builder.format_phone("9876543210") for _ in range(60)}
+    assert len(phone_variants) > 3, "formats are not actually varying"
+    assert len({hash_phone(variant) for variant in phone_variants}) == 1
+
+    email_variants = {builder.format_email("rahul@example.invalid") for _ in range(40)}
+    assert len({hash_email(variant) for variant in email_variants}) == 1
+
+
+def test_robust_scenarios_label_their_perturbation(tmp_path: Path) -> None:
+    """Every perturbed case records what was perturbed, so misses can be explained."""
+    from datagen import robust_scenarios
+
+    db = _fresh_session()
+    ground_truth = generate(
+        db,
+        seed=99,
+        institutions=10,
+        students=1200,
+        ground_truth_path=tmp_path / "robust.json",
+        scenario_module=robust_scenarios,
+        vary_contact_formats=True,
+    )
+    scenarios = ground_truth["scenarios"]
+    assert scenarios["B_ghost_cluster"]
+    assert scenarios["J_identity_duplicate"]
+
+    for name in ("A_excess_intake", "B_ghost_cluster", "F_late_admission", "J_identity_duplicate"):
+        for case in scenarios[name]:
+            assert case["details"].get("perturbation"), f"{name} case missing a perturbation label"
+
+    # The name variations are the point of scenario J here.
+    variations = {case["details"]["variation"] for case in scenarios["J_identity_duplicate"]}
+    assert {"letter", "reordered", "initial"} <= variations
+
+    # Cluster sizes span the required range, including a sub-threshold one.
+    sizes = {case["details"]["students"] for case in scenarios["B_ghost_cluster"]}
+    assert min(sizes) <= 6
+    assert max(sizes) >= 20
+
+
+def test_robust_run_has_an_on_time_control(tmp_path: Path) -> None:
+    """Admissions exactly on the cutoff must be labelled as must-not-flag."""
+    from datagen import robust_scenarios
+
+    db = _fresh_session()
+    ground_truth = generate(
+        db,
+        seed=99,
+        institutions=10,
+        students=1200,
+        ground_truth_path=tmp_path / "robust2.json",
+        scenario_module=robust_scenarios,
+        vary_contact_formats=True,
+    )
+    controls = ground_truth["scenarios"].get("F_on_time_control", [])
+    assert controls
+    assert all(case["flag_type"] == "NONE" for case in controls)
