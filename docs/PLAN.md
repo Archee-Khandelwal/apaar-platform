@@ -168,19 +168,19 @@ Legend: ☐ not started · ◐ in progress · ☑ done
 - [x] Institution side: `GET /institution/flags` (own only, rule-10 wording), `PATCH /institution/enrolments/{id}/status` (versioned, with reason), `GET /institution/compliance-certificate` (only with no open high/critical)
 - [x] Tests: RBAC on every new route, reveal requires a reason, suppression
 
-## Step 13 — Student & verifier APIs, consent, tokens  ☐
+## Step 13 — Student & verifier APIs, consent, tokens  ☑
 
-- [ ] `GET /student/me`
-- [ ] `POST /student/enrolments/{id}/confirm` and `/dispute` (dispute → `STUDENT_DISPUTE`, critical, visible to AICTE + institution)
-- [ ] `POST /student/corrections` → institution flag inbox
-- [ ] `GET /student/access-log` ("who accessed my data")
-- [ ] `GET /student/consents`, `POST /student/consents/{id}/approve|deny|revoke`
-- [ ] `GET /student/id-card` (masked APAAR + QR with a signed token)
-- [ ] `POST /verifier/requests` (purpose from a fixed list; mock OTP; minors → "parental consent required")
-- [ ] `GET /verifier/requests/{id}` → pending/approved/denied/expired; on approval the **minimal** response only (verified, program, year)
-- [ ] Tokens: HMAC-signed, 15-min default expiry, carry consent id; `GET /verify/token/{token}` → genuine / expired / revoked / invalid
-- [ ] Everything audit-logged + access-logged
-- [ ] Tests: nothing before approval, denied + expired paths, revoked consent invalidates the token, tampered token fails
+- [x] `GET /student/me`
+- [x] `POST /student/enrolments/{id}/confirm` and `/dispute` (dispute → `STUDENT_DISPUTE`, critical, visible to AICTE + institution)
+- [x] `POST /student/corrections` → institution flag inbox
+- [x] `GET /student/access-log` ("who accessed my data")
+- [x] `GET /student/consents`, `POST /student/consents/{id}/approve|deny|revoke`
+- [x] `GET /student/id-card` (masked APAAR + QR with a signed token)
+- [x] `POST /verifier/requests` (purpose from a fixed list; mock OTP; minors → "parental consent required")
+- [x] `GET /verifier/requests/{id}` → pending/approved/denied/expired; on approval the **minimal** response only (verified, program, year)
+- [x] Tokens: HMAC-signed, 15-min default expiry, carry consent id; `GET /verify/token/{token}` → genuine / expired / revoked / invalid
+- [x] Everything audit-logged + access-logged
+- [x] Tests: nothing before approval, denied + expired paths, revoked consent invalidates the token, tampered token fails
 - **Backend milestone:** `make reset && make test && make eval` all green before heavy frontend integration
 
 ## Step 14 — Frontend foundation  ☐

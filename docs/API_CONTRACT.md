@@ -753,7 +753,7 @@ Response `201`:
 If the APAAR is unknown, the response is identical in shape with `status: "pending"` and resolves to `verified: false` later — we never leak existence of an APAAR before consent. Minors: `parental_consent_required: true` and `message` says "parental consent required".
 
 ### GET /verifier/requests/{request_id}
-Role: `verifier` (own requests only).
+Role: `verifier` (own requests only). Status ∈ `pending | approved | denied | expired | revoked`. Reading an approved result writes to that student's access log.
 
 Pending:
 ```json
@@ -771,7 +771,7 @@ Approved — **minimal response only** (CLAUDE.md §5.11):
   "expires_at": "2026-10-26T10:40:00Z"
 }
 ```
-Denied / expired: `{ "request_id": 455, "status": "denied" | "expired", "result": null }`. No name, no DOB, no institution-side detail, no flags, ever.
+Denied / expired / revoked: `{ "request_id": 455, "status": "denied" | "expired" | "revoked", "result": null }`. No name, no DOB, no institution-side detail, no flags, ever. `revoked` appears when the student withdraws a consent they had already approved: the result is removed and any issued token stops working immediately.
 
 ### GET /verifier/requests
 Role: `verifier`. Query: `status`, `date_from`, `date_to`, pagination. Items are the summary form of the object above.
@@ -921,3 +921,4 @@ All ten Step-0 questions are now decided — see the decision table in `docs/PLA
 |---|---|---|
 | 2026-10-26 | Initial frozen contract (Step 0) | Claude Code |
 | 2026-10-26 | Step-0 decisions applied: viewer flag fields narrowed, role matrix split for flag list/detail, `reporting_calendar.yaml` noted, `inspection-shortlist.csv` documented | Claude Code |
+| 2026-10-26 | Step 13: verifier request status gains `revoked` (a student withdrawing an approved consent is not the same as denying it); `GET /aicte/reports/trends` gains `new_admissions_only`; `GET /aicte/non-reporting` rows gain `days_to_deadline` and `reporting_deadline`; `GET /institution/compliance-certificate` gains `format=json` for an eligibility check without issuing | Claude Code |

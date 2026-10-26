@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import select
 
+from app.core.access_log import log_access
 from app.core.audit import log_audit
 from app.core.config import settings
 from app.models.core import Consent, Enrolment, Institution, Student, User, VerificationRequest
@@ -215,11 +216,41 @@ def _create_consent_state(
                 student_id=revoked_student_id,
                 consent_id=consent.id,
                 purpose="higher_education_admission",
-                status="approved",
-                result={"verified": True},
+                # A revoked consent leaves no result behind, which is what
+                # app/services/consent.revoke_consent does for a live request.
+                status="revoked",
+                result=None,
                 responded_at=consent.responded_at,
                 expires_at=consent.expires_at,
             )
+        )
+
+    for student_id, purpose, label in (
+        (pending_student_id, "employment_verification", "Employment background verification"),
+        (revoked_student_id, "higher_education_admission", "Admission to higher education"),
+    ):
+        if student_id is None:
+            continue
+        log_access(
+            db,
+            actor=verifier.username,
+            role="verifier",
+            action="verification_requested",
+            target=f"student:{student_id}",
+            student_id=student_id,
+            purpose=purpose,
+            reason=f"Verification requested for {label}.",
+        )
+    if revoked_student_id is not None:
+        log_access(
+            db,
+            actor=verifier.username,
+            role="verifier",
+            action="verification_result_read",
+            target=f"student:{revoked_student_id}",
+            student_id=revoked_student_id,
+            purpose="higher_education_admission",
+            reason="Consented verification for Admission to higher education.",
         )
 
     log_audit(

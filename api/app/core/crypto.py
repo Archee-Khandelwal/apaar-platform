@@ -71,6 +71,11 @@ def is_valid_apaar(value: str | None) -> bool:
 # --------------------------------------------------------------------------- keyed hashing
 
 
+def hmac_key() -> bytes:
+    """The raw HMAC key. Used by app/services/tokens.py to sign verification tokens."""
+    return _hmac_key()
+
+
 def _hmac_key() -> bytes:
     key = settings.hmac_key
     if not key or key.startswith("replace-me"):
