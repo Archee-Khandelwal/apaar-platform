@@ -77,18 +77,32 @@ def lateral_adds_vacant_year1() -> bool:
 
 
 def excess_severity(excess: int, intake: int) -> str:
-    """Severity of an EXCESS_INTAKE flag, from the configured thresholds."""
+    """Severity of an EXCESS_INTAKE flag, by excess as a share of approved intake.
+
+    A share, not a raw count: 3 seats over a 30-seat programme (10%) is a bigger breach
+    than 3 over 300 (1%). Any excess is at least medium.
+    """
     if excess <= 0:
         return "low"
     bands = intake_rules().get("excess_severity", {})
     share = (excess / intake * 100.0) if intake else 100.0
-    if share <= float(bands.get("low_max_percent", 1.0)):
-        return "low"
     if share <= float(bands.get("medium_max_percent", 5.0)):
         return "medium"
     if share <= float(bands.get("high_max_percent", 15.0)):
         return "high"
     return "critical"
+
+
+def supernumerary_misuse_config() -> dict[str, Any]:
+    """Thresholds for the supernumerary-share review signal."""
+    raw = intake_rules().get("supernumerary_misuse", {})
+    return {
+        "categories": tuple(raw.get("categories", ("tfw", "other_supernumerary"))),
+        "min_share_percent": float(raw.get("min_share_percent", 4.0)),
+        "median_multiple": float(raw.get("median_multiple", 3.0)),
+        "min_admissions": int(raw.get("min_admissions", 20)),
+        "min_supernumerary_admissions": int(raw.get("min_supernumerary_admissions", 10)),
+    }
 
 
 @dataclass(frozen=True)

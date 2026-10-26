@@ -68,6 +68,19 @@ def _regular_programs(gen: SyntheticDataGenerator, institution_id: int) -> list[
     ]
 
 
+def _count_admission_type(
+    gen: SyntheticDataGenerator, program_id: int, year: str, admission_type: str
+) -> int:
+    return sum(
+        1
+        for row in gen.b.enrolments
+        if row["program_id"] == program_id
+        and row["academic_year"] == year
+        and row["admission_type"] == admission_type
+        and row["status"] in ("admitted", "completed")
+    )
+
+
 def _count_regular_year1(gen: SyntheticDataGenerator, program_id: int, year: str) -> int:
     return sum(
         1
@@ -834,6 +847,82 @@ def scenario_j_identity_duplicates(gen: SyntheticDataGenerator) -> None:
             )
 
 
+# --------------------------------------------------------------------------- K
+
+
+def scenario_k_supernumerary_misuse(gen: SyntheticDataGenerator) -> None:
+    """One institution labels an unusual share of admissions as TFW / other supernumerary.
+
+    Every bucket stays INSIDE its cap, so this is not an intake breach — it is the
+    pattern you would expect if regular admissions were being relabelled to keep them
+    outside approved intake. The detector must raise it as a review signal, not as
+    EXCESS_INTAKE.
+    """
+    year = CURRENT_YEAR
+    calendar = year_calendar(year)
+    candidates = [
+        inst
+        for inst in _eligible_institutions(gen)
+        if len(_regular_programs(gen, inst["id"])) >= 2
+    ]
+    if not candidates:
+        return
+    institution = gen.rng.choice(candidates)
+    upload = gen.upload_by[(institution["id"], year)]
+
+    added: dict[str, int] = {"tfw": 0, "other_supernumerary": 0}
+    for program in _regular_programs(gen, institution["id"]):
+        _reserved(gen).add(program["id"])
+        caps = supernumerary_caps(program["intake"])
+        for admission_type in ("tfw", "other_supernumerary"):
+            cap = caps.get(admission_type, 0)
+            if cap <= 0:
+                continue
+            # Top up TO almost the whole cap, counting what is already reported:
+            # legal, but far above what peers report. Adding on top of existing
+            # admissions would breach the cap and turn this into a real EXCESS_INTAKE.
+            existing = _count_admission_type(gen, program["id"], year, admission_type)
+            count = max(int(cap * 0.95) - existing, 0)
+            for _ in range(count):
+                student_id = gen.b.add_student()
+                gen.b.add_enrolment(
+                    student_id=student_id,
+                    program=program,
+                    academic_year=year,
+                    year_of_study=1,
+                    admission_type=admission_type,
+                    admitted_on=gen.b.random_date_in(
+                        calendar.admission_window_start, calendar.admission_window_end
+                    ),
+                    created_at=upload["created_at"],
+                    upload_id=upload["id"],
+                )
+                added[admission_type] += 1
+
+    if not sum(added.values()):
+        return
+
+    gen.b.label(
+        GroundTruthCase(
+            scenario="K_supernumerary_misuse",
+            flag_type="STATISTICAL_ANOMALY",
+            key_kind="institution_year",
+            key=f"{institution['id']}|{year}",
+            institution_id=institution["id"],
+            institution_name=institution["name"],
+            details={
+                "signal": "supernumerary_share",
+                "added": added,
+                "within_caps": True,
+                "note": (
+                    "Every bucket is inside its cap, so this must NOT be flagged as "
+                    "EXCESS_INTAKE - only as a review signal."
+                ),
+            },
+        )
+    )
+
+
 # --------------------------------------------------------------------------- entry point
 
 SCENARIOS = {
@@ -847,6 +936,7 @@ SCENARIOS = {
     "H_last_minute_bulk": scenario_h_last_minute_bulk,
     "I_phantom_progression": scenario_i_phantom_progression,
     "J_identity_duplicate": scenario_j_identity_duplicates,
+    "K_supernumerary_misuse": scenario_k_supernumerary_misuse,
 }
 
 

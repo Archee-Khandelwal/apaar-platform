@@ -278,16 +278,35 @@ def test_flag_closes_itself_when_the_college_fixes_the_data(db: Session, program
     assert "no longer present" in flag.notes[-1]["note"]
 
 
-def test_severity_scales_with_the_size_of_the_breach(db: Session, program, two_institutions) -> None:
-    admit(db, program, 303)  # 1% of 300 -> low
+def test_severity_scales_with_the_share_over_intake_not_the_raw_seats(
+    db: Session, program, two_institutions
+) -> None:
+    """Any excess is at least medium; the bands are % of approved intake."""
+    admit(db, program, 303)  # 3 seats = 1% of 300 -> medium
     run_intake_compliance(db, institution_id=program.institution_id)
     db.commit()
-    assert db.execute(select(Flag)).scalars().one().severity == "low"
+    assert db.execute(select(Flag)).scalars().one().severity == "medium"
 
-    admit(db, program, 60)  # 21% over -> critical
+    admit(db, program, 27)  # 30 seats = 10% -> high
+    run_intake_compliance(db, institution_id=program.institution_id)
+    db.commit()
+    assert db.execute(select(Flag)).scalars().one().severity == "high"
+
+    admit(db, program, 30)  # 60 seats = 20% -> critical
     run_intake_compliance(db, institution_id=program.institution_id)
     db.commit()
     assert db.execute(select(Flag)).scalars().one().severity == "critical"
+
+
+def test_the_same_seat_count_is_worse_on_a_small_programme(db: Session, two_institutions) -> None:
+    """3 seats over a 30-seat programme is high; 3 over 300 is medium."""
+    from app.services.rules import excess_severity
+
+    assert excess_severity(3, 300) == "medium"
+    assert excess_severity(3, 30) == "high"
+    assert excess_severity(1, 120) == "medium"
+    assert excess_severity(25, 120) == "critical"
+    assert excess_severity(0, 120) == "low"  # no excess at all
 
 
 # ------------------------------------------------------------------ routes

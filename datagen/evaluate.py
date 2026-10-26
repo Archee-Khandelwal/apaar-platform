@@ -64,6 +64,12 @@ SCENARIOS: dict[str, dict[str, Any]] = {
         "flag_types": ["IDENTITY_DUPLICATE"],
         "label": "One person with two APAAR IDs",
     },
+    "K_supernumerary_misuse": {
+        "flag_types": ["STATISTICAL_ANOMALY"],
+        "label": "Supernumerary share far above peers",
+        # Two detectors share this flag type, so match only this signal's flags.
+        "evidence_signal": "supernumerary_share",
+    },
 }
 
 
@@ -121,10 +127,16 @@ class ScenarioScore:
         }
 
 
-def _flag_keys(db: Session, flag_types: list[str], key_kind: str) -> set[str]:
+def _flag_keys(
+    db: Session, flag_types: list[str], key_kind: str, evidence_signal: str | None = None
+) -> set[str]:
     """Build the ground-truth key for every produced flag of these types."""
     keys: set[str] = set()
     flags = list(db.execute(select(Flag).where(Flag.type.in_(flag_types))).scalars())
+    if evidence_signal is not None:
+        flags = [
+            flag for flag in flags if (flag.evidence or {}).get("signal") == evidence_signal
+        ]
 
     cluster_members: dict[int, list[int]] = {}
     if key_kind == "institution_year" and "GHOST_CLUSTER" in flag_types:
@@ -157,7 +169,9 @@ def score(db: Session, ground_truth: dict[str, Any]) -> list[ScenarioScore]:
             continue
         key_kind = cases[0]["key_kind"]
         expected = {case["key"] for case in cases}
-        predicted = _flag_keys(db, config["flag_types"], key_kind)
+        predicted = _flag_keys(
+            db, config["flag_types"], key_kind, config.get("evidence_signal")
+        )
 
         notes: list[str] = []
         # LATE_ADMISSION produces both per-row and per-institution flags; the ground
@@ -166,6 +180,11 @@ def score(db: Session, ground_truth: dict[str, Any]) -> list[ScenarioScore]:
             notes.append(
                 "Scored on per-enrolment flags; the per-institution aggregate flag is "
                 "reported separately below."
+            )
+        if name == "K_supernumerary_misuse":
+            notes.append(
+                "Matched on STATISTICAL_ANOMALY flags carrying signal=supernumerary_share; "
+                "the IsolationForest ranking uses the same flag type and is excluded."
             )
 
         scores.append(
@@ -230,6 +249,13 @@ def unlabelled_flags(db: Session, scores: list[ScenarioScore]) -> dict[str, int]
     scored_types = {flag_type for item in scores for flag_type in item.flag_types}
     counts: dict[str, int] = {}
     for flag in db.execute(select(Flag)).scalars():
+        signal = (flag.evidence or {}).get("signal")
+        if flag.type == "STATISTICAL_ANOMALY" and signal != "supernumerary_share":
+            # The IsolationForest ranking has no injected label of its own.
+            counts["STATISTICAL_ANOMALY (IsolationForest ranking)"] = (
+                counts.get("STATISTICAL_ANOMALY (IsolationForest ranking)", 0) + 1
+            )
+            continue
         if flag.type in scored_types:
             continue
         counts[flag.type] = counts.get(flag.type, 0) + 1

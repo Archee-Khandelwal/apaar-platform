@@ -378,7 +378,9 @@ def detect_statistical_anomalies(
         created += int(was_created)
         updated += int(not was_created)
 
-    closed = resolve_stale_flags(db, type="STATISTICAL_ANOMALY", keep_keys=keep)
+    closed = resolve_stale_flags(
+        db, type="STATISTICAL_ANOMALY", keep_keys=keep, key_suffix=":STATISTICAL_ANOMALY"
+    )
     db.flush()
     return {
         "statistical_anomalies": created,
@@ -525,8 +527,139 @@ def _suggested_checks(db: Session, institution_id: int) -> list[str]:
 
 
 def run_risk_scoring(db: Session, *, academic_year: str) -> dict[str, Any]:
-    anomaly = detect_statistical_anomalies(db, academic_year=academic_year)
-    scores = anomaly.pop("anomaly_scores", {})
+    summary = detect_statistical_anomalies(db, academic_year=academic_year)
+    scores = summary.pop("anomaly_scores", {})
+    summary.update(detect_supernumerary_misuse(db, academic_year=academic_year))
     results = compute_risk(db, academic_year=academic_year, anomaly_scores=scores)
-    anomaly["institutions_scored"] = len(results)
-    return anomaly
+    summary["institutions_scored"] = len(results)
+    return summary
+
+
+# --------------------------------------------------------------------------- supernumerary misuse
+
+
+def detect_supernumerary_misuse(db: Session, *, academic_year: str) -> dict[str, int]:
+    """Flag institutions whose supernumerary share sits far above their peers'.
+
+    Supernumerary seats are outside approved intake, so labelling a regular admission as
+    TFW or "other supernumerary" is a way to hide an intake breach. An unusually high
+    share is **not proof** of that — some institutions genuinely run large fee-waiver
+    programmes — so this is raised as a STATISTICAL_ANOMALY for review, with the peer
+    comparison that triggered it, and never as an EXCESS_INTAKE finding.
+    """
+    from app.services.rules import supernumerary_misuse_config
+
+    config = supernumerary_misuse_config()
+    categories = list(config["categories"])
+
+    # The denominator is this year's NEW admissions (year-1 entrants plus lateral
+    # entrants), not every enrolled student: a supernumerary seat is consumed at entry,
+    # so comparing it against continuing year-2 students understates the share.
+    rows = db.execute(
+        select(Enrolment.institution_id, Enrolment.admission_type, func.count())
+        .where(
+            Enrolment.academic_year == academic_year,
+            Enrolment.status.in_(ACTIVE_ENROLMENT_STATUSES),
+            (Enrolment.year_of_study == 1) | (Enrolment.admission_type == "lateral"),
+        )
+        .group_by(Enrolment.institution_id, Enrolment.admission_type)
+    ).all()
+
+    totals: dict[int, int] = {}
+    flagged_counts: dict[int, int] = {}
+    for institution_id, admission_type, count in rows:
+        totals[institution_id] = totals.get(institution_id, 0) + int(count)
+        if admission_type in categories:
+            flagged_counts[institution_id] = flagged_counts.get(institution_id, 0) + int(count)
+
+    institutions = {row.id: row for row in db.execute(select(Institution)).scalars()}
+    shares = {
+        institution_id: (flagged_counts.get(institution_id, 0) / total * 100.0)
+        for institution_id, total in totals.items()
+        if total
+    }
+    if len(shares) < 5:
+        return {"supernumerary_misuse": 0, "supernumerary_misuse_updated": 0}
+
+    # Compare against peers in the same state, falling back to the national median.
+    by_state: dict[str, list[float]] = {}
+    for institution_id, share in shares.items():
+        state = institutions[institution_id].state
+        by_state.setdefault(state, []).append(share)
+    national_median = statistics.median(list(shares.values()))
+
+    created = 0
+    updated = 0
+    keep: set[str] = set()
+
+    for institution_id, share in shares.items():
+        institution = institutions[institution_id]
+        peers = by_state.get(institution.state, [])
+        peer_median = statistics.median(peers) if len(peers) >= 3 else national_median
+        reference = max(peer_median, 0.5)  # never divide by a zero median
+
+        if totals[institution_id] < config["min_admissions"]:
+            continue
+        if flagged_counts.get(institution_id, 0) < config["min_supernumerary_admissions"]:
+            continue  # too few students behind the share to mean anything
+        if share < config["min_share_percent"]:
+            continue
+        if share < reference * config["median_multiple"]:
+            continue
+
+        dedupe_key = f"institution:{institution_id}:{academic_year}:SUPERNUMERARY_SHARE"
+        keep.add(dedupe_key)
+        breakdown = {
+            admission_type: count
+            for inst_id, admission_type, count in rows
+            if inst_id == institution_id and admission_type in categories
+        }
+        _flag, was_created = upsert_flag(
+            db,
+            type="STATISTICAL_ANOMALY",
+            dedupe_key=dedupe_key,
+            severity="medium",
+            title="Unusually high share of supernumerary admissions",
+            explanation=(
+                f"{institution.name} reported {flagged_counts.get(institution_id, 0)} of its "
+                f"{totals[institution_id]} new {academic_year} admissions ({share:.1f}%) under "
+                f"supernumerary categories ({', '.join(categories)}), against a median of "
+                f"{peer_median:.1f}% for {institution.state}. Supernumerary seats sit outside "
+                "approved intake, so this is a possible mislabelling of regular admissions to "
+                "hide excess. It is a statistical signal for review, not proof: verify the "
+                "fee-waiver and supernumerary approvals for these students."
+            ),
+            evidence={
+                "signal": "supernumerary_share",
+                "academic_year": academic_year,
+                "share_percent": round(share, 2),
+                "peer_median_percent": round(peer_median, 2),
+                "median_multiple_threshold": config["median_multiple"],
+                "min_share_threshold": config["min_share_percent"],
+                "min_supernumerary_admissions_threshold": config["min_supernumerary_admissions"],
+                "state": institution.state,
+                "categories": categories,
+                "counts_by_category": breakdown,
+                "supernumerary_admissions": flagged_counts.get(institution_id, 0),
+                "new_admissions_this_year": totals[institution_id],
+                "denominator": "year-1 entrants plus lateral entrants",
+                "note": "Not proof of excess intake; verify approvals.",
+            },
+            institution_id=institution_id,
+            academic_year=academic_year,
+        )
+        created += int(was_created)
+        updated += int(not was_created)
+
+    closed = resolve_stale_flags(
+        db,
+        type="STATISTICAL_ANOMALY",
+        keep_keys=keep,
+        key_suffix=":SUPERNUMERARY_SHARE",
+    )
+    db.flush()
+    return {
+        "supernumerary_misuse": created,
+        "supernumerary_misuse_updated": updated,
+        "supernumerary_misuse_closed": closed,
+    }

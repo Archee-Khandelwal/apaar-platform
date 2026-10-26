@@ -94,12 +94,21 @@ def upsert_flag(
 
 
 def resolve_stale_flags(
-    db: Session, *, type: str, keep_keys: set[str], institution_id: int | None = None
+    db: Session,
+    *,
+    type: str,
+    keep_keys: set[str],
+    institution_id: int | None = None,
+    key_suffix: str | None = None,
 ) -> int:
     """Auto-resolve open flags of one type whose finding no longer exists.
 
     Used by idempotent detector re-runs: if a college fixes its data, the flag closes
     itself with a note rather than lingering in the queue.
+
+    ``key_suffix`` limits reconciliation to one detector's dedupe-key namespace. Two
+    detectors share the STATISTICAL_ANOMALY type (the IsolationForest ranking and the
+    supernumerary-share signal), and without this each would close the other's flags.
     """
     statement = select(Flag).where(Flag.type == type, Flag.status.in_(OPEN_FLAG_STATUSES))
     if institution_id is not None:
@@ -108,6 +117,8 @@ def resolve_stale_flags(
     closed = 0
     for flag in db.execute(statement).scalars():
         if flag.dedupe_key in keep_keys:
+            continue
+        if key_suffix is not None and not flag.dedupe_key.endswith(key_suffix):
             continue
         flag.status = "resolved"
         notes = list(flag.notes or [])

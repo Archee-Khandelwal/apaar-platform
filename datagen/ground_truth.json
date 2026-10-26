@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-26T23:07:38",
+  "generated_at": "2026-10-26T23:14:37",
   "seed": 42,
   "years": [
     "2025-26",
@@ -8,10 +8,10 @@
   "counts": {
     "institutions": 40,
     "programs": 160,
-    "students": 14873,
-    "enrolments": 21865,
+    "students": 14881,
+    "enrolments": 21873,
     "uploads": 81,
-    "labelled_cases": 266
+    "labelled_cases": 267
   },
   "clean_institution": {
     "id": 40,
@@ -48,47 +48,47 @@
     {
       "username": "student_minor",
       "password": "demo1234",
-      "student_id": 12627,
+      "student_id": 2787,
       "label": "Student \u2014 under 18 (parental consent required)",
-      "apaar_masked": "XXXX-XXXX-5599",
+      "apaar_masked": "XXXX-XXXX-7996",
       "is_minor": true,
-      "institution": "Kolhanpur College of Engineering"
+      "institution": "Godavari Nandan College of Engineering and Management"
     },
     {
       "username": "student_fn",
       "password": "demo1234",
-      "student_id": 12087,
+      "student_id": 11826,
       "label": "Student \u2014 foreign national, APAAR not applicable",
       "apaar_masked": "XXXX-XXXX-XXXX",
       "is_minor": false,
-      "institution": "Charminara Institute of Engineering and Technology"
+      "institution": "Kaladgi Technical Institute"
     },
     {
       "username": "student_clean",
       "password": "demo1234",
-      "student_id": 14090,
+      "student_id": 14190,
       "label": "Student \u2014 clean record at the model institution",
-      "apaar_masked": "XXXX-XXXX-9691",
+      "apaar_masked": "XXXX-XXXX-9941",
       "is_minor": false,
       "institution": "Meghdoot Institute of Engineering and Technology"
     },
     {
       "username": "student_pending",
       "password": "demo1234",
-      "student_id": 849,
+      "student_id": 1640,
       "label": "Student \u2014 has a pending verifier request",
-      "apaar_masked": "XXXX-XXXX-9224",
+      "apaar_masked": "XXXX-XXXX-5235",
       "is_minor": false,
-      "institution": "Yamunotri College of Engineering and Management"
+      "institution": "Kundalini Nagar Institute of Engineering and Technology"
     },
     {
       "username": "student_revoked",
       "password": "demo1234",
-      "student_id": 1993,
+      "student_id": 732,
       "label": "Student \u2014 revoked a consent earlier",
-      "apaar_masked": "XXXX-XXXX-9612",
+      "apaar_masked": "XXXX-XXXX-4299",
       "is_minor": false,
-      "institution": "Pampavati Institute of Science and Technology"
+      "institution": "Sindhupuri Institute of Engineering and Technology"
     }
   ],
   "scenarios": {
@@ -3496,6 +3496,25 @@
           ],
           "same_name_dob_guardian": true,
           "different_apaar": true
+        }
+      }
+    ],
+    "K_supernumerary_misuse": [
+      {
+        "scenario": "K_supernumerary_misuse",
+        "flag_type": "STATISTICAL_ANOMALY",
+        "key_kind": "institution_year",
+        "key": "39|2026-27",
+        "institution_id": 39,
+        "institution_name": "Kharapur Technical Institute",
+        "details": {
+          "signal": "supernumerary_share",
+          "added": {
+            "tfw": 6,
+            "other_supernumerary": 2
+          },
+          "within_caps": true,
+          "note": "Every bucket is inside its cap, so this must NOT be flagged as EXCESS_INTAKE - only as a review signal."
         }
       }
     ]

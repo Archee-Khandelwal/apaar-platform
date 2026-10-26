@@ -313,3 +313,130 @@ def test_evaluation_report_states_its_limitations() -> None:
     assert "What these numbers do and do not show" in text
     assert "not* evidence of accuracy on" in text or "not evidence of accuracy" in text
     assert "Legal dual degrees wrongly flagged as fraud" in text
+
+
+# ------------------------------------------------------------------ supernumerary misuse
+
+
+def _add_supernumerary(db: Session, institution: Institution, *, tfw: int, regular: int) -> None:
+    program = db.execute(
+        select(Program).where(Program.institution_id == institution.id)
+    ).scalars().first()
+    for index in range(tfw + regular):
+        student = Student(apaar_masked="XXXX-XXXX-1111", name_masked="S**** T.")
+        db.add(student)
+        db.flush()
+        db.add(
+            Enrolment(
+                student_id=student.id,
+                program_id=program.id,
+                institution_id=institution.id,
+                academic_year=YEAR,
+                year_of_study=1,
+                admission_type="tfw" if index < tfw else "regular",
+                status="admitted",
+                admitted_on=date(2026, 8, 1),
+            )
+        )
+    db.commit()
+
+
+def test_supernumerary_share_far_above_peers_is_flagged_for_review(
+    db: Session, seeded_states
+) -> None:
+    from app.services.risk import detect_supernumerary_misuse
+
+    # Peers report a couple of TFW admissions each; one institution reports many.
+    for institution in seeded_states[1:]:
+        _add_supernumerary(db, institution, tfw=2, regular=0)
+    _add_supernumerary(db, seeded_states[0], tfw=20, regular=0)
+
+    summary = detect_supernumerary_misuse(db, academic_year=YEAR)
+    db.commit()
+    assert summary["supernumerary_misuse"] == 1
+
+    flag = db.execute(
+        select(Flag).where(Flag.type == "STATISTICAL_ANOMALY")
+    ).scalars().one()
+    assert flag.institution_id == seeded_states[0].id
+    assert flag.evidence["signal"] == "supernumerary_share"
+    assert flag.severity == "medium"  # a signal, not a finding
+    # It must explain itself as a possibility, not a conclusion.
+    assert "possible mislabelling of regular admissions" in flag.explanation
+    assert "not proof" in flag.explanation
+    assert flag.evidence["peer_median_percent"] < flag.evidence["share_percent"]
+    assert flag.evidence["denominator"] == "year-1 entrants plus lateral entrants"
+
+
+def test_a_thin_supernumerary_share_is_not_flagged(db: Session, seeded_states) -> None:
+    """A 100% share built from 5 students is noise, not a signal."""
+    from app.services.risk import detect_supernumerary_misuse
+
+    for institution in seeded_states[1:]:
+        _add_supernumerary(db, institution, tfw=1, regular=0)
+    _add_supernumerary(db, seeded_states[0], tfw=5, regular=0)
+
+    summary = detect_supernumerary_misuse(db, academic_year=YEAR)
+    db.commit()
+    assert summary["supernumerary_misuse"] == 0
+
+
+def test_the_misuse_signal_is_never_reported_as_excess_intake(
+    db: Session, seeded_states
+) -> None:
+    """Within-cap supernumerary use must not become an intake breach."""
+    from app.services.intake import run_intake_compliance
+    from app.services.risk import detect_supernumerary_misuse
+
+    for institution in seeded_states[1:]:
+        _add_supernumerary(db, institution, tfw=2, regular=0)
+    _add_supernumerary(db, seeded_states[0], tfw=6, regular=0)  # cap is 6 for intake 120
+
+    detect_supernumerary_misuse(db, academic_year=YEAR)
+    run_intake_compliance(db, academic_year=YEAR)
+    db.commit()
+    assert db.execute(select(Flag).where(Flag.type == "EXCESS_INTAKE")).scalars().first() is None
+
+
+def test_the_two_statistical_anomaly_detectors_do_not_close_each_others_flags(
+    db: Session, seeded_states
+) -> None:
+    """Both write STATISTICAL_ANOMALY; each must reconcile only its own keys."""
+    from app.services.risk import detect_statistical_anomalies, detect_supernumerary_misuse
+
+    for institution in seeded_states[1:]:
+        _add_supernumerary(db, institution, tfw=2, regular=0)
+    _add_supernumerary(db, seeded_states[0], tfw=20, regular=0)
+    for student in db.execute(
+        select(Student)
+        .join(Enrolment, Enrolment.student_id == Student.id)
+        .where(Enrolment.institution_id == seeded_states[1].id)
+        .limit(60)
+    ).scalars():
+        student.registry_status = "not_found"
+    db.commit()
+
+    detect_supernumerary_misuse(db, academic_year=YEAR)
+    db.commit()
+    detect_statistical_anomalies(db, academic_year=YEAR, contamination=0.1)
+    db.commit()
+    detect_supernumerary_misuse(db, academic_year=YEAR)
+    db.commit()
+
+    flags = list(db.execute(select(Flag).where(Flag.type == "STATISTICAL_ANOMALY")).scalars())
+    signals = [(flag.evidence or {}).get("signal") for flag in flags]
+    assert "supernumerary_share" in signals
+    open_misuse = [
+        flag
+        for flag in flags
+        if (flag.evidence or {}).get("signal") == "supernumerary_share"
+        and flag.status == "open"
+    ]
+    assert open_misuse, "the IsolationForest detector closed the misuse flag"
+
+
+def test_the_misuse_signal_adds_only_modest_risk(db: Session, seeded_states) -> None:
+    from app.services.risk import FLAG_TYPE_WEIGHTS
+
+    assert FLAG_TYPE_WEIGHTS["STATISTICAL_ANOMALY"] < FLAG_TYPE_WEIGHTS["EXCESS_INTAKE"]
+    assert FLAG_TYPE_WEIGHTS["STATISTICAL_ANOMALY"] < FLAG_TYPE_WEIGHTS["GHOST_CLUSTER"]
