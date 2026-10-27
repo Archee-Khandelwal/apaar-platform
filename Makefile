@@ -9,12 +9,13 @@ PYTEST := $(VENV)/bin/pytest
 UVICORN := $(VENV)/bin/uvicorn
 export PYTHONPATH := api:.
 
-.PHONY: help setup keys dev dev-api dev-registry dev-web test seed reset eval eval-robust clean
+.PHONY: help setup keys dev demo dev-api dev-registry dev-web test seed reset eval eval-robust clean
 
 help:
 	@echo "make setup   - create venv, install python + node dependencies"
 	@echo "make keys    - generate HMAC_KEY / VAULT_KEY / JWT_SECRET into .env"
 	@echo "make dev     - run api (8000), registry (8001) and web (3000) together"
+	@echo "make demo    - reset the data then start everything (one command before a demo)"
 	@echo "make test    - run pytest"
 	@echo "make seed    - generate synthetic data into the database"
 	@echo "make reset   - delete databases and reseed from scratch"
@@ -37,6 +38,9 @@ keys: $(VENV)/.installed
 
 dev:
 	@bash scripts/dev.sh
+
+# One command to go from nothing to a demo-ready stack.
+demo: reset dev
 
 dev-api:
 	@$(UVICORN) app.main:app --reload --port 8000

@@ -7,6 +7,7 @@
  */
 import type {
   AccessLogRow,
+  AdminStatus,
   AicteInstitutionProfile,
   ApiErrorBody,
   ClusterDetail,
@@ -35,6 +36,8 @@ import type {
   TokenCheck,
   Trends,
   UploadCreated,
+  ScenarioInfo,
+  TamperResult,
   UploadSummary,
   User,
   VerificationRequestStatus,
@@ -278,6 +281,30 @@ export const api = {
     request<Page<VerificationRequestStatus>>("/verifier/requests", { query }),
   verificationRequest: (id: number) =>
     request<VerificationRequestStatus>(`/verifier/requests/${id}`),
+
+  // ----------------------------------------------------------------- admin
+  adminStatus: () => request<AdminStatus>("/admin/status"),
+  adminScenarios: () => request<{ scenarios: ScenarioInfo[] }>("/admin/scenarios"),
+  reseed: (body?: { seed?: number; institutions?: number; students?: number }) =>
+    request<{ status: string; seed: number; duration_ms: number; counts: Record<string, number> }>(
+      "/admin/reseed",
+      { method: "POST", body: body ?? {} },
+    ),
+  loadScenario: (name: string) =>
+    request<{
+      scenario: string;
+      label: string;
+      status: string;
+      added: Record<string, number>;
+      flags_before: Record<string, number>;
+      flags_after: Record<string, number>;
+    }>(`/admin/load-scenario/${name}`, { method: "POST" }),
+  verifyAudit: () =>
+    request<{ ok: boolean; rows_checked: number; rows_total: number; first_broken_row?: unknown; checked_at: string }>(
+      "/admin/audit/verify",
+    ),
+  tamperTest: () => request<TamperResult>("/admin/audit/tamper-test", { method: "POST" }),
+  runDetectors: () => request<Record<string, unknown>>("/admin/run-detectors", { method: "POST" }),
 
   // public
   checkToken: (token: string) => request<TokenCheck>(`/verify/token/${encodeURIComponent(token)}`),

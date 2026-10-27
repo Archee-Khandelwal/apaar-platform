@@ -569,6 +569,188 @@ class SyntheticDataGenerator:
 
         demo.create_users_and_demo_data(self)
 
+
+    # ---------------------------------------------------------------- live injection
+
+    def adopt_existing(self) -> None:
+        """Load the existing database into the builder, so one scenario can be injected live.
+
+        Used by ``POST /admin/load-scenario/{name}``: the scenario functions work against
+        the builder's in-memory lists, so they need to see what is already there (which
+        programmes exist, how full each cohort is, which upload to attach rows to).
+        Row ids continue from the current maximum, and ``persist_additions`` writes only
+        what the scenario added.
+        """
+        from sqlalchemy import func, select
+
+        institutions = list(self.db.execute(select(Institution).order_by(Institution.id)).scalars())
+        programs = list(self.db.execute(select(Program).order_by(Program.id)).scalars())
+        intakes = list(self.db.execute(select(ApprovedIntake)).scalars())
+        uploads = list(self.db.execute(select(Upload)).scalars())
+        enrolments = list(self.db.execute(select(Enrolment)).scalars())
+        students = list(self.db.execute(select(Student)).scalars())
+
+        intake_by_program = {row.program_id: row.intake for row in intakes}
+
+        self.b.institutions = [
+            {
+                "id": row.id,
+                "aicte_permanent_id": row.aicte_permanent_id,
+                "name": row.name,
+                "state": row.state,
+                "region": row.region,
+                "type": row.type,
+                "district": row.district,
+                "created_at": row.created_at,
+            }
+            for row in institutions
+        ]
+        self.b.programs = [
+            {
+                "id": row.id,
+                "institution_id": row.institution_id,
+                "course": row.course,
+                "branch": row.branch,
+                "level": row.level,
+                "mode": row.mode,
+                "created_at": row.created_at,
+                "intake": intake_by_program.get(row.id, 60),
+            }
+            for row in programs
+        ]
+        self.b.uploads = [
+            {"id": row.id, "institution_id": row.institution_id, "created_at": row.created_at}
+            for row in uploads
+        ]
+        self.b.enrolments = [
+            {
+                "id": row.id,
+                "student_id": row.student_id,
+                "program_id": row.program_id,
+                "institution_id": row.institution_id,
+                "academic_year": row.academic_year,
+                "year_of_study": row.year_of_study,
+                "admission_type": row.admission_type,
+                "status": row.status,
+                "admitted_on": row.admitted_on,
+                "upload_id": row.upload_id,
+                "version": row.version,
+                "student_confirmation": row.student_confirmation,
+                "registry_status": row.registry_status,
+                "created_at": row.created_at,
+            }
+            for row in enrolments
+        ]
+        self.b.students = [
+            {"id": row.id, "apaar_status": row.apaar_status, "registry_status": row.registry_status}
+            for row in students
+        ]
+
+        self.programs_by_institution = {}
+        for program in self.b.programs:
+            self.programs_by_institution.setdefault(program["institution_id"], []).append(program)
+
+        self.upload_by = {}
+        for upload in uploads:
+            key = (upload.institution_id, upload.academic_year or self.years[-1])
+            # Keep the earliest upload per institution-year as the one to attach to.
+            if key not in self.upload_by:
+                self.upload_by[key] = {"id": upload.id, "created_at": upload.created_at}
+
+        self.cohorts = {}
+        for row in enrolments:
+            if row.year_of_study == 1 and row.admission_type == "regular":
+                self.cohorts.setdefault((row.program_id, row.academic_year), []).append(row.student_id)
+
+        # The clean institution and the non-reporting ones stay off limits.
+        self.clean_institution_id = self.b.institutions[-1]["id"] if self.b.institutions else None
+        reported = {row.institution_id for row in enrolments}
+        self.non_reporting_ids = {
+            row["id"] for row in self.b.institutions if row["id"] not in reported
+        }
+
+        # Continue every id sequence from the current maximum.
+        for table, model in (
+            ("institutions", Institution),
+            ("programs", Program),
+            ("approved_intake", ApprovedIntake),
+            ("students", Student),
+            ("enrolments", Enrolment),
+            ("uploads", Upload),
+        ):
+            highest = self.db.scalar(select(func.max(model.id))) or 0
+            self.b._next_ids[table] = highest
+
+        self._watermarks = {
+            "institutions": len(self.b.institutions),
+            "programs": len(self.b.programs),
+            "intakes": len(self.b.intakes),
+            "uploads": len(self.b.uploads),
+            "students": len(self.b.students),
+            "vault_rows": len(self.b.vault_rows),
+            "enrolments": len(self.b.enrolments),
+        }
+
+    def persist_additions(self) -> dict[str, int]:
+        """Insert only the rows a live scenario injection added."""
+        marks = getattr(self, "_watermarks", None)
+        if marks is None:
+            raise RuntimeError("persist_additions() requires adopt_existing() first")
+
+        new_students = self.b.students[marks["students"] :]
+        new_vault = self.b.vault_rows[marks["vault_rows"] :]
+        new_enrolments = self.b.enrolments[marks["enrolments"] :]
+
+        if new_students:
+            self.db.bulk_insert_mappings(Student, new_students)
+        if new_vault:
+            self.db.bulk_insert_mappings(Vault, new_vault)
+        if new_enrolments:
+            self.db.bulk_insert_mappings(Enrolment, new_enrolments)
+        self.db.commit()
+
+        # Register any newly issued APAAR with the mock registry too.
+        if new_students:
+            self.populate_registry_additions(len(new_students))
+
+        return {
+            "students": len(new_students),
+            "enrolments": len(new_enrolments),
+            "labelled_cases": len(self.b.cases),
+        }
+
+    def populate_registry_additions(self, count: int) -> None:
+        """Insert the APAARs of the last ``count`` generated students into the registry."""
+        from registry.app.db import IssuedApaar, SessionLocal, init_registry_db
+
+        init_registry_db()
+        session = SessionLocal()
+        try:
+            rows = []
+            for identity in self.b.raw[-count:]:
+                if not identity.apaar or identity.registry_status in (
+                    "not_found",
+                    "invalid_format",
+                    "skipped",
+                ):
+                    continue
+                if session.get(IssuedApaar, identity.apaar) is not None:
+                    continue
+                rows.append(
+                    {
+                        "apaar": identity.apaar,
+                        "name": self.faker.name()
+                        if identity.registry_status == "mismatch"
+                        else identity.name,
+                        "dob": identity.dob.isoformat(),
+                    }
+                )
+            if rows:
+                session.bulk_insert_mappings(IssuedApaar, rows)
+                session.commit()
+        finally:
+            session.close()
+
     # ---------------------------------------------------------------- ground truth
 
     def write_ground_truth(self) -> dict[str, Any]:

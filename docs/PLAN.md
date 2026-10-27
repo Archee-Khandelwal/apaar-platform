@@ -220,24 +220,24 @@ Legend: ☐ not started · ◐ in progress · ☑ done
 - [x] "Compare with a normal cluster" toggle (side-by-side healthy sibling cluster)
 - [x] Smooth at ~100 nodes
 
-## Step 18 — Student & verifier portals  ☐
+## Step 18 — Student & verifier portals  ☑
 
-- [ ] "Was this you?" card for unconfirmed enrolments → Confirm / Dispute (reason) → "AICTE has been notified" + case status
-- [ ] My records page + correction request form
-- [ ] "Who accessed my data" timeline (actor role, purpose/reason, time)
-- [ ] Consent manager: pending (verifier, purpose, what will be shared) → approve/deny; active → revoke; minors see "parental consent required"
-- [ ] Digital ID card with QR from `/student/id-card`
-- [ ] Verifier: request form (APAAR + purpose), status page polling until resolved, minimal result card
-- [ ] Public "Verify a token/QR" page (paste or camera scan) → Genuine / Expired / Revoked / Invalid in big clear states
-- [ ] Mobile-friendly
+- [x] "Was this you?" card for unconfirmed enrolments → Confirm / Dispute (reason) → "AICTE has been notified" + case status
+- [x] My records page + correction request form
+- [x] "Who accessed my data" timeline (actor role, purpose/reason, time)
+- [x] Consent manager: pending (verifier, purpose, what will be shared) → approve/deny; active → revoke; minors see "parental consent required"
+- [x] Digital ID card with QR from `/student/id-card`
+- [x] Verifier: request form (APAAR + purpose), status page polling until resolved, minimal result card
+- [x] Public "Verify a token/QR" page (paste or camera scan) → Genuine / Expired / Revoked / Invalid in big clear states
+- [x] Mobile-friendly
 
-## Step 19 — Admin & demo tooling  ☐
+## Step 19 — Admin & demo tooling  ☑
 
-- [ ] Admin page: reset & reseed, "load scenario A–J" buttons, "verify audit chain", "tamper test" (on a copy) showing detection
-- [ ] `POST /admin/reseed`, `POST /admin/load-scenario/{name}` (admin only)
-- [ ] Seed so the demo story runs in order: messy upload → excess intake → ghost cluster → student dispute → duplicate vs dual degree → verifier consent
-- [ ] README: setup, `make` commands, demo accounts, 5-minute walkthrough with exact clicks
-- [ ] `make reset && make dev` → clean demo-ready state in one command
+- [x] Admin page: reset & reseed, "load scenario A–J" buttons, "verify audit chain", "tamper test" (on a copy) showing detection
+- [x] `POST /admin/reseed`, `POST /admin/load-scenario/{name}` (admin only)
+- [x] Seed so the demo story runs in order: messy upload → excess intake → ghost cluster → student dispute → duplicate vs dual degree → verifier consent
+- [x] README: setup, `make` commands, demo accounts, 5-minute walkthrough with exact clicks
+- [x] `make reset && make dev` → clean demo-ready state in one command
 
 ## Step 20 — Final QA & hardening (no new features)  ☐
 

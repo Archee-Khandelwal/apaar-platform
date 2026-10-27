@@ -572,3 +572,27 @@ export interface TokenCheck {
   institution_name?: string | null;
   checked_at: string;
 }
+
+// ----------------------------------------------------------------- admin
+
+export interface AdminStatus {
+  counts: Record<string, number>;
+  flags_by_type: Record<string, number>;
+  audit: { ok: boolean; rows_checked: number; rows_total: number; first_broken_row?: Record<string, unknown> | null };
+  current_academic_year: string;
+  demo_mode: boolean;
+}
+
+export interface ScenarioInfo {
+  name: string;
+  label: string;
+  flag_types: FlagType[];
+}
+
+export interface TamperResult {
+  copy_rows: number;
+  tampered_row_id?: number;
+  detected: boolean;
+  first_broken_row_id?: number | null;
+  message: string;
+}
