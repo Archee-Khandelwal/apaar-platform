@@ -239,13 +239,17 @@ Legend: ☐ not started · ◐ in progress · ☑ done
 - [x] README: setup, `make` commands, demo accounts, 5-minute walkthrough with exact clicks
 - [x] `make reset && make dev` → clean demo-ready state in one command
 
-## Step 20 — Final QA & hardening (no new features)  ☑
+## Step 20 — Final QA & hardening (no new features)  ◐ (one item needs a human with a browser)
 
 - [x] `make reset && make test && make eval` all green
 - [x] Security review vs CLAUDE.md §5: any raw phone/email/APAAR/name returned or logged, any route missing `require_role`, any institution query not tenant-scoped, any hardcoded secret → fix and list
 - [x] Walk the README demo script end to end via the API; each step's data actually appears
 - [x] Edge cases: empty upload, 5,000-row timing, registry down, expired token, revoked consent, cross-role page access
-- [x] Frontend: no console errors, loading/empty states everywhere, works at 1280px and tablet
+- [~] Frontend: loading, empty and error states are implemented on every page, `tsc` and
+  `next lint` are clean, all 28 routes build and all 25 pages serve 200, and a contract check
+  confirms all 92 fields the UI reads exist in the live API responses. **Not verified: browser
+  console output and rendering at 1280px / tablet width** — no browser was available in this
+  environment, so this needs a human to click through once.
 - [x] Final report: fixes, known limitations, anything not to show in the demo
 
 ---
