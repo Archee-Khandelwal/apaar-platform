@@ -51,6 +51,15 @@ Every demo password is `demo1234`, and the login page lists the accounts with on
 | `make eval` | Score every detector against `datagen/ground_truth.json` → `docs/EVALUATION.md` |
 | `make eval-robust` | Score a **second, perturbed** dataset the detectors were not tuned on → `docs/EVALUATION_ROBUST.md` |
 
+### Checking the UI
+
+With the stack running, `cd web && npm run screenshots` signs in as each demo role and
+saves a full-page screenshot of every page into `web/screenshots/<role>/<page>--<width>.png`
+at 1440px and 768px (and 390px for the login and student pages). It prints any console or
+network error it saw, so a broken page shows up as a file you can look at rather than a
+bug someone finds during the demo. Pass role names to narrow it, e.g.
+`npm run screenshots -- student aicte_officer`.
+
 ---
 
 ## Demo accounts
@@ -212,6 +221,10 @@ These are product requirements, not extras (CLAUDE.md section 5), and the tests 
 /registry   Mock APAAR registry — a separate FastAPI service on port 8001
 /datagen    Synthetic generator, ground_truth.json, evaluate.py, robustness run
 /web        Next.js (App Router) + TypeScript + Tailwind frontend
+  /app        one route group per role, each behind a RoleGuard
+  /components AppShell (per-role sidebar), DataTable, ExplanationPanel, ui/page.tsx primitives
+  /lib        typed API client, auth, and the single navigation map in nav.tsx
+  /scripts    screenshot.ts — the visual check described above
 /samples    Deliberately messy Excel/CSV files for live demo uploads
 /docs       API_CONTRACT.md (frozen), PLAN.md, EVALUATION.md, EVALUATION_ROBUST.md
 /scripts    gen_keys.py, dev.sh

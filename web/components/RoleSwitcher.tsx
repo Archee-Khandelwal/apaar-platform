@@ -1,25 +1,34 @@
 "use client";
 
-/** Demo-only: log in as any seeded account in one click. */
+/**
+ * Demo-only: hop to any seeded account in one click.
+ *
+ * Grouped by role and scrollable, so the judge can jump from a college to the
+ * student it just reported without signing out.
+ */
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
 import { ChevronDown, UserCog } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Button, Spinner } from "@/components/ui/primitives";
 import { api } from "@/lib/api";
 import { ROLE_HOME, useAuth } from "@/lib/auth";
+import { ROLE_LABELS } from "@/lib/nav";
 import type { DemoUser, Role } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const ROLE_GROUPS: { role: Role; label: string }[] = [
-  { role: "aicte_officer", label: "AICTE Officer" },
-  { role: "aicte_viewer", label: "AICTE Analyst" },
-  { role: "institution", label: "Institutions" },
-  { role: "student", label: "Students" },
-  { role: "verifier", label: "Verifiers" },
-  { role: "admin", label: "Admin" },
+const ROLE_ORDER: Role[] = [
+  "aicte_officer",
+  "aicte_viewer",
+  "institution",
+  "student",
+  "verifier",
+  "admin",
 ];
+
+/** Institutions run to 40; only the first few are useful in a demo. */
+const MAX_PER_ROLE: Partial<Record<Role, number>> = { institution: 6 };
 
 export function RoleSwitcher() {
   const { login, user } = useAuth();
@@ -45,13 +54,13 @@ export function RoleSwitcher() {
     }
   }
 
-  const grouped = ROLE_GROUPS.map((group) => ({
-    ...group,
-    users: (data?.users ?? []).filter((account) => account.role === group.role),
+  const grouped = ROLE_ORDER.map((role) => ({
+    role,
+    users: (data?.users ?? []).filter((account) => account.role === role),
   })).filter((group) => group.users.length > 0);
 
   return (
-    <div className="relative">
+    <div className="relative shrink-0">
       <Button variant="outline" size="sm" onClick={() => setOpen((value) => !value)}>
         <UserCog className="h-3.5 w-3.5" />
         <span className="hidden sm:inline">Switch role</span>
@@ -61,47 +70,50 @@ export function RoleSwitcher() {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 z-50 mt-2 max-h-[70vh] w-80 overflow-y-auto rounded-lg border border-border bg-card p-2 shadow-lg">
+          <div className="absolute right-0 z-50 mt-2 max-h-[70vh] w-[19rem] max-w-[calc(100vw-2rem)] overflow-y-auto rounded-lg border border-border bg-card p-2 shadow-raised">
             <p className="px-2 py-1.5 text-xs text-muted-foreground">
-              Demo accounts — every password is <code className="font-mono">demo1234</code>.
+              Demo accounts — every password is{" "}
+              <code className="font-mono text-foreground">demo1234</code>.
             </p>
             {isLoading && (
               <p className="flex items-center gap-2 p-3 text-sm text-muted-foreground">
                 <Spinner /> Loading accounts…
               </p>
             )}
-            {grouped.map((group) => (
-              <div key={group.role} className="mt-1">
-                <p className="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {group.label}
-                </p>
-                {group.users.slice(0, group.role === "institution" ? 6 : 10).map((account) => (
-                  <button
-                    key={account.username}
-                    type="button"
-                    onClick={() => switchTo(account)}
-                    disabled={busy !== null}
-                    className={cn(
-                      "flex w-full items-start gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-muted disabled:opacity-60",
-                      user?.username === account.username && "bg-muted",
-                    )}
-                  >
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-medium">{account.label}</span>
-                      <span className="block truncate font-mono text-xs text-muted-foreground">
-                        {account.username}
+            {grouped.map((group) => {
+              const limit = MAX_PER_ROLE[group.role] ?? group.users.length;
+              return (
+                <div key={group.role} className="mt-2">
+                  <p className="px-2 pb-1 type-label">{ROLE_LABELS[group.role]}</p>
+                  {group.users.slice(0, limit).map((account) => (
+                    <button
+                      key={account.username}
+                      type="button"
+                      onClick={() => switchTo(account)}
+                      disabled={busy !== null}
+                      className={cn(
+                        "flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-secondary disabled:opacity-60",
+                        user?.username === account.username && "bg-secondary",
+                      )}
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-mono text-xs font-medium">{account.username}</span>
+                        <span className="block text-xs leading-snug text-muted-foreground">
+                          {account.label}
+                        </span>
                       </span>
-                    </span>
-                    {busy === account.username && <Spinner className="mt-1" />}
-                  </button>
-                ))}
-                {group.role === "institution" && group.users.length > 6 && (
-                  <p className="px-2 py-1 text-xs text-muted-foreground">
-                    …and {group.users.length - 6} more institution accounts (see the login page).
-                  </p>
-                )}
-              </div>
-            ))}
+                      {busy === account.username && <Spinner className="mt-1 shrink-0" />}
+                    </button>
+                  ))}
+                  {group.users.length > limit && (
+                    <p className="px-2 py-1 text-xs text-muted-foreground">
+                      …and {group.users.length - limit} more {ROLE_LABELS[group.role].toLowerCase()}{" "}
+                      accounts.
+                    </p>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </>
       )}

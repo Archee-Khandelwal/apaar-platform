@@ -1,23 +1,52 @@
 "use client";
 
-/** Demo control panel: reseed, inject one scenario, and prove the audit chain works. */
+/** Demo control panel: reseed the dataset and inject one scenario live. */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, Database, PlayCircle, RefreshCw, ShieldCheck } from "lucide-react";
-import { useState } from "react";
+import { Database, PlayCircle, RefreshCw, Rows3, ShieldCheck } from "lucide-react";
+import Link from "next/link";
 
-import { PageHeader } from "@/components/AppShell";
-import { ErrorState, LoadingSkeleton } from "@/components/States";
-import { Button, Card, CardContent, CardHeader, CardTitle, Spinner } from "@/components/ui/primitives";
+import { ErrorState, KpiSkeleton, Skeleton } from "@/components/States";
+import { KpiCard, KpiRow, PageHeader, SectionCard } from "@/components/ui/page";
+import { Button, Spinner } from "@/components/ui/primitives";
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
 import { flagLabel } from "@/lib/format";
-import type { TamperResult } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { useState } from "react";
+
+/** The four counts a judge actually asks about, in plain English. */
+const HEADLINE_COUNTS: { key: string; label: string; hint: string }[] = [
+  { key: "institutions", label: "Institutions", hint: "AICTE-approved colleges in the dataset" },
+  { key: "students", label: "Students", hint: "Student records, all synthetic" },
+  { key: "enrolments", label: "Enrolments", hint: "Student-level enrolment rows" },
+  { key: "flags", label: "Flags", hint: "Findings raised by the detectors" },
+];
+
+/**
+ * One demo control: a button with a sentence saying exactly what pressing it does.
+ */
+function ControlAction({
+  title,
+  description,
+  button,
+}: {
+  title: string;
+  description: string;
+  button: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3 py-4 first:pt-0 last:pb-0">
+      <div className="min-w-0 flex-1 space-y-1">
+        <p className="text-sm font-medium">{title}</p>
+        <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
+      </div>
+      <div className="shrink-0">{button}</div>
+    </div>
+  );
+}
 
 export default function AdminPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [tamper, setTamper] = useState<TamperResult | null>(null);
   const [busyScenario, setBusyScenario] = useState<string | null>(null);
 
   const status = useQuery({ queryKey: ["admin-status"], queryFn: api.adminStatus });
@@ -39,6 +68,15 @@ export default function AdminPage() {
     onError: (error: Error) => toast(error.message, "danger"),
   });
 
+  const detectors = useMutation({
+    mutationFn: api.runDetectors,
+    onSuccess: () => {
+      toast("Detectors re-run. Flags are updated in place, never duplicated.", "success");
+      refreshAll();
+    },
+    onError: (error: Error) => toast(error.message, "danger"),
+  });
+
   const loadScenario = useMutation({
     mutationFn: (name: string) => api.loadScenario(name),
     onMutate: (name) => setBusyScenario(name),
@@ -53,45 +91,15 @@ export default function AdminPage() {
     onSettled: () => setBusyScenario(null),
   });
 
-  const verify = useMutation({
-    mutationFn: api.verifyAudit,
-    onSuccess: (result) => {
-      toast(
-        result.ok
-          ? `Audit chain verified across ${result.rows_checked} rows.`
-          : `Chain broken at row ${(result.first_broken_row as { id?: number } | null)?.id}.`,
-        result.ok ? "success" : "danger",
-      );
-      queryClient.invalidateQueries({ queryKey: ["admin-status"] });
-    },
-    onError: (error: Error) => toast(error.message, "danger"),
-  });
-
-  const runTamper = useMutation({
-    mutationFn: api.tamperTest,
-    onSuccess: (result) => {
-      setTamper(result);
-      toast(result.detected ? "Tampering detected, as it should be." : "Tampering was NOT detected.", result.detected ? "success" : "danger");
-    },
-    onError: (error: Error) => toast(error.message, "danger"),
-  });
-
-  const detectors = useMutation({
-    mutationFn: api.runDetectors,
-    onSuccess: () => {
-      toast("Detectors re-run. Flags are updated in place, never duplicated.", "success");
-      refreshAll();
-    },
-    onError: (error: Error) => toast(error.message, "danger"),
-  });
-
   if (status.isError) return <ErrorState error={status.error} onRetry={status.refetch} />;
+
+  const counts = status.data?.counts ?? {};
 
   return (
     <>
       <PageHeader
         title="Demo controls"
-        description="Reseed the dataset, inject a single scenario live, and prove the audit chain detects tampering."
+        description="Reset the dataset, re-run the detectors, or inject one fraud scenario live during a demo."
         actions={
           <Button variant="outline" onClick={() => status.refetch()} disabled={status.isFetching}>
             <RefreshCw className="h-4 w-4" />
@@ -101,171 +109,117 @@ export default function AdminPage() {
       />
 
       {status.isLoading || !status.data ? (
-        <LoadingSkeleton rows={6} />
+        <>
+          <KpiSkeleton />
+          <Skeleton rows={3} height="h-32" />
+        </>
       ) : (
         <>
-          <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-4">
-            {Object.entries(status.data.counts).map(([key, value]) => (
-              <div key={key} className="rounded-lg border border-border bg-card p-4">
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  {key}
-                </p>
-                <p className="mt-1.5 text-2xl font-semibold tabular-nums">
-                  {value.toLocaleString("en-IN")}
-                </p>
-              </div>
+          <KpiRow>
+            {HEADLINE_COUNTS.map((item) => (
+              <KpiCard
+                key={item.key}
+                label={item.label}
+                value={counts[item.key] ?? 0}
+                hint={item.hint}
+                icon={<Rows3 className="h-4 w-4" />}
+              />
             ))}
-          </div>
+          </KpiRow>
 
-          <div className="mt-4 grid gap-4 lg:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Database className="h-4 w-4" />
-                  Dataset
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Reseeding wipes every table and regenerates 40 institutions and about 15,000
-                  students from seed 42, then runs every detector. It takes roughly 15 seconds.
-                </p>
-                <div className="flex flex-wrap gap-2">
+          <SectionCard
+            title="Dataset"
+            description={`Current academic year: ${status.data.current_academic_year}.`}
+          >
+            <div className="divide-y divide-border">
+              <ControlAction
+                title="Reset and reseed the demo data"
+                description="Wipes every table and regenerates 40 institutions and roughly 15,000 students from seed 42, then runs every detector. Takes about 15 seconds, and anything you injected during the demo is lost."
+                button={
                   <Button onClick={() => reseed.mutate()} disabled={reseed.isPending}>
-                    {reseed.isPending && <Spinner />}
-                    Reset &amp; reseed demo data
+                    {reseed.isPending ? <Spinner /> : <Database className="h-4 w-4" />}
+                    Reset &amp; reseed
                   </Button>
+                }
+              />
+              <ControlAction
+                title="Re-run the detectors"
+                description="Re-scores every institution and refreshes the findings against the data that is already there. Existing flags are updated in place, never duplicated, so it is safe to press twice."
+                button={
                   <Button
                     variant="outline"
                     onClick={() => detectors.mutate()}
                     disabled={detectors.isPending}
                   >
-                    {detectors.isPending && <Spinner />}
+                    {detectors.isPending ? <Spinner /> : <RefreshCw className="h-4 w-4" />}
                     Re-run detectors
                   </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Current academic year: {status.data.current_academic_year}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className={status.data.audit.ok ? "border-emerald-300" : "border-red-300"}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4" />
-                  Audit chain
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <p
-                  className={cn(
-                    "flex items-center gap-2 text-sm font-medium",
-                    status.data.audit.ok ? "text-emerald-700" : "text-red-700",
-                  )}
-                >
-                  {status.data.audit.ok ? (
-                    <CheckCircle2 className="h-4 w-4" />
-                  ) : (
-                    <AlertTriangle className="h-4 w-4" />
-                  )}
-                  {status.data.audit.ok
-                    ? `Intact across ${status.data.audit.rows_total} rows`
-                    : "The chain is broken"}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Each row stores <code className="font-mono text-xs">prev_hash</code> and{" "}
-                  <code className="font-mono text-xs">
-                    hash = sha256(prev_hash + canonical_json(row))
-                  </code>
-                  , so editing or deleting any row breaks every hash after it.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <Button variant="outline" onClick={() => verify.mutate()} disabled={verify.isPending}>
-                    {verify.isPending && <Spinner />}
-                    Verify the chain
+                }
+              />
+              <ControlAction
+                title="Check the audit chain"
+                description="Verifies the hash chain over the audit log and runs a tamper test that edits a row in a copy, to show the break being caught."
+                button={
+                  <Button asChild variant="outline">
+                    <Link href="/admin/audit">
+                      <ShieldCheck className="h-4 w-4" />
+                      Open audit log
+                    </Link>
                   </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => runTamper.mutate()}
-                    disabled={runTamper.isPending}
-                  >
-                    {runTamper.isPending && <Spinner />}
-                    Run the tamper test
-                  </Button>
-                </div>
-                {tamper && (
-                  <div
-                    className={cn(
-                      "rounded-md border p-3 text-sm",
-                      tamper.detected
-                        ? "border-emerald-300 bg-emerald-50 text-emerald-900"
-                        : "border-red-300 bg-red-50 text-red-900",
-                    )}
-                  >
-                    <p className="font-medium">
-                      {tamper.detected ? "Detected" : "Not detected"} — row{" "}
-                      {tamper.tampered_row_id} was edited in a copy of {tamper.copy_rows} rows.
-                    </p>
-                    <p className="mt-1 text-xs">{tamper.message}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                }
+              />
+            </div>
+          </SectionCard>
 
-          <Card className="mt-4">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <PlayCircle className="h-4 w-4" />
-                Inject a scenario live
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="mb-3 text-sm text-muted-foreground">
-                Each button injects that scenario into the current database and re-runs the
-                detectors, so you can show a finding appearing during the demo.
-              </p>
-              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          <SectionCard
+            title="Inject a scenario live"
+            description="Each one adds its students to the current database and re-runs the detectors, so a finding appears while you are presenting."
+          >
+            {scenarios.isLoading ? (
+              <Skeleton rows={3} />
+            ) : (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {(scenarios.data?.scenarios ?? []).map((scenario) => (
                   <button
                     key={scenario.name}
                     type="button"
                     onClick={() => loadScenario.mutate(scenario.name)}
                     disabled={loadScenario.isPending}
-                    className="flex items-start justify-between gap-2 rounded-md border border-border bg-card p-3 text-left transition-colors hover:border-primary hover:bg-primary/5 disabled:opacity-60"
+                    className="flex h-full flex-col gap-2 rounded-md border border-border bg-card p-4 text-left transition-colors hover:border-primary hover:bg-primary/[0.03] disabled:opacity-60"
                   >
-                    <span className="min-w-0">
-                      <span className="block text-sm font-medium">{scenario.label}</span>
-                      <span className="block truncate font-mono text-xs text-muted-foreground">
-                        {scenario.name}
-                      </span>
+                    <span className="flex items-start justify-between gap-2">
+                      <span className="text-sm font-medium leading-snug">{scenario.label}</span>
+                      {busyScenario === scenario.name ? (
+                        <Spinner className="mt-0.5 shrink-0" />
+                      ) : (
+                        <PlayCircle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                      )}
                     </span>
-                    {busyScenario === scenario.name && <Spinner className="mt-1" />}
+                    <span className="text-xs leading-relaxed text-muted-foreground">
+                      Raises {scenario.flag_types.map(flagLabel).join(", ")}.
+                    </span>
                   </button>
                 ))}
               </div>
-            </CardContent>
-          </Card>
+            )}
+          </SectionCard>
 
-          <Card className="mt-4">
-            <CardHeader>
-              <CardTitle>Flags in the database</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(status.data.flags_by_type).map(([type, count]) => (
-                  <span
-                    key={type}
-                    className="inline-flex items-center gap-2 rounded border border-border px-2.5 py-1 text-xs"
-                  >
-                    {flagLabel(type)}
-                    <span className="font-semibold tabular-nums">{count}</span>
-                  </span>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <SectionCard
+            title="Flags currently in the database"
+            description="What the detectors have found across every institution."
+          >
+            <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {Object.entries(status.data.flags_by_type).map(([type, total]) => (
+                <li
+                  key={type}
+                  className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 text-sm"
+                >
+                  <span className="min-w-0 leading-snug">{flagLabel(type)}</span>
+                  <span className="shrink-0 font-semibold tabular-nums">{total}</span>
+                </li>
+              ))}
+            </ul>
+          </SectionCard>
         </>
       )}
     </>

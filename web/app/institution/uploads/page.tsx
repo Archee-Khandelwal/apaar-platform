@@ -5,7 +5,7 @@ import { Download, FileSpreadsheet } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
-import { PageHeader } from "@/components/AppShell";
+import { PageHeader } from "@/components/ui/page";
 import { DataTable, type Column } from "@/components/DataTable";
 import { Badge, Button } from "@/components/ui/primitives";
 import { api, download } from "@/lib/api";
@@ -25,46 +25,76 @@ export default function UploadHistoryPage() {
       key: "file",
       header: "File",
       cell: (row) => (
-        <span className="flex items-center gap-2 font-medium">
-          <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
-          {row.filename}
+        <span className="flex items-start gap-2 font-medium">
+          <FileSpreadsheet className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+          <span className="min-w-0 leading-snug">{row.filename}</span>
         </span>
       ),
     },
-    { key: "year", header: "Year", cell: (row) => row.academic_year ?? "—" },
+    {
+      key: "year",
+      header: "Year",
+      width: "w-[6.5rem]",
+      nowrap: true,
+      cell: (row) => row.academic_year ?? "—",
+    },
     {
       key: "state",
       header: "State",
+      width: "w-[7.5rem]",
+      nowrap: true,
       cell: (row) => (
         <Badge tone={row.state === "completed" ? "success" : row.state === "failed" ? "danger" : "warning"}>
           {row.state.replace("_", " ")}
         </Badge>
       ),
     },
-    { key: "rows", header: "Rows", align: "right", sortKey: "rows_total", cell: (row) => row.rows_total },
-    { key: "ok", header: "Accepted", align: "right", cell: (row) => row.rows_ok },
+    {
+      key: "rows",
+      header: "Rows",
+      width: "w-[5.5rem]",
+      align: "right",
+      nowrap: true,
+      sortKey: "rows_total",
+      cell: (row) => row.rows_total,
+    },
+    {
+      key: "ok",
+      header: "Accepted",
+      width: "w-[6.5rem]",
+      align: "right",
+      nowrap: true,
+      cell: (row) => row.rows_ok,
+    },
     {
       key: "errors",
       header: "Rejected",
+      width: "w-[6.5rem]",
       align: "right",
-      cell: (row) => (row.rows_error > 0 ? <span className="text-red-700">{row.rows_error}</span> : 0),
+      nowrap: true,
+      cell: (row) => (row.rows_error > 0 ? <span className="font-semibold text-red-700">{row.rows_error}</span> : 0),
     },
     {
       key: "score",
       header: "Quality",
+      width: "w-[5.5rem]",
       align: "right",
+      nowrap: true,
       sortKey: "quality_score",
       cell: (row) => (row.quality_score === null || row.quality_score === undefined ? "—" : row.quality_score),
     },
     {
       key: "created",
       header: "Uploaded",
+      width: "w-[9.5rem]",
+      nowrap: true,
       sortKey: "created_at",
       cell: (row) => <span className="text-xs text-muted-foreground">{dateTime(row.created_at)}</span>,
     },
     {
       key: "actions",
       header: "",
+      width: "w-[6.5rem]",
       align: "right",
       cell: (row) =>
         row.rows_error > 0 ? (
@@ -84,7 +114,7 @@ export default function UploadHistoryPage() {
     <>
       <PageHeader
         title="Upload history"
-        description="Every file you have submitted, with its quality score and rejected rows."
+        description="Every file you have submitted, with its quality score and the rows that were rejected."
         actions={
           <Button asChild>
             <Link href="/institution/upload">New upload</Link>
@@ -92,6 +122,7 @@ export default function UploadHistoryPage() {
         }
       />
       <DataTable
+        minWidth="min-w-[70rem]"
         columns={columns}
         rows={query.data?.items ?? []}
         loading={query.isLoading}
@@ -103,6 +134,7 @@ export default function UploadHistoryPage() {
         onPageChange={setPage}
         emptyTitle="No uploads yet"
         emptyDescription="Upload an Excel or CSV file of your admissions to get started."
+        rowKey={(row) => row.id}
       />
     </>
   );

@@ -4,12 +4,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { PageHeader } from "@/components/AppShell";
-import { DataTable, type Column } from "@/components/DataTable";
+import { PageHeader } from "@/components/ui/page";
+import { DataTable, TableFilters, type Column } from "@/components/DataTable";
 import { ExplanationPanel } from "@/components/ExplanationPanel";
 import { RevealButton } from "@/components/RevealButton";
 import { SeverityBadge, StatusBadge } from "@/components/SeverityBadge";
-import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/ui/dialog";
 import { Button, Input, Label, Select, Spinner, Textarea } from "@/components/ui/primitives";
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
@@ -79,39 +79,54 @@ export default function FlagQueuePage() {
       key: "severity",
       header: "Severity",
       sortKey: "severity",
+      width: "w-[7.5rem]",
+      nowrap: true,
       cell: (row) => <SeverityBadge severity={row.severity} />,
     },
     {
       key: "type",
       header: "Finding",
       sortKey: "type",
-      cell: (row) => <span className="font-medium">{flagLabel(row.type)}</span>,
+      width: "w-[11rem]",
+      cell: (row) => <span className="font-medium leading-snug">{flagLabel(row.type)}</span>,
     },
     {
       key: "institution",
       header: "Institution",
+      width: "w-[14rem]",
       cell: (row) => (
-        <span className="text-sm">
-          {row.institution_name ?? "—"}
-          {row.state && <span className="block text-xs text-muted-foreground">{row.state}</span>}
+        <span className="block">
+          <span className="block leading-snug">{row.institution_name ?? "—"}</span>
+          {row.state && <span className="mt-0.5 block text-xs text-muted-foreground">{row.state}</span>}
         </span>
       ),
     },
     {
       key: "title",
       header: "What we saw",
-      cell: (row) => <span className="line-clamp-2 max-w-sm text-sm">{row.title}</span>,
+      cell: (row) => <span className="leading-snug">{row.title}</span>,
     },
-    { key: "status", header: "Status", sortKey: "status", cell: (row) => <StatusBadge status={row.status} /> },
     {
-      key: "assigned",
-      header: "Assigned",
-      cell: (row) => <span className="text-xs">{row.assigned_to ?? "—"}</span>,
+      key: "status",
+      header: "Status",
+      sortKey: "status",
+      width: "w-[8.5rem]",
+      nowrap: true,
+      cell: (row) => (
+        <span className="block space-y-1">
+          <StatusBadge status={row.status} />
+          {row.assigned_to && (
+            <span className="block text-[11px] text-muted-foreground">{row.assigned_to}</span>
+          )}
+        </span>
+      ),
     },
     {
       key: "created",
       header: "Raised",
       sortKey: "created_at",
+      width: "w-[8.5rem]",
+      nowrap: true,
       cell: (row) => <span className="text-xs text-muted-foreground">{relative(row.created_at)}</span>,
     },
   ];
@@ -124,13 +139,13 @@ export default function FlagQueuePage() {
         title="Flag queue"
         description={
           isOfficer
-            ? "Every finding, with its evidence. Click a row to open the case file."
-            : "Findings in masked form. Evidence and case actions are available to officers."
+            ? "Every open finding across the country, most serious first. Select a row to open its case file."
+            : "Findings in masked form. Evidence and case actions belong to officers."
         }
       />
 
       {facets && (
-        <div className="mb-4 flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2">
           {SEVERITIES.filter((item) => facets.by_severity[item]).map((item) => (
             <button
               key={item}
@@ -151,6 +166,7 @@ export default function FlagQueuePage() {
       )}
 
       <DataTable
+        minWidth="min-w-[70rem]"
         columns={columns}
         rows={list.data?.items ?? []}
         loading={list.isLoading}
@@ -162,8 +178,9 @@ export default function FlagQueuePage() {
         onPageChange={setPage}
         onRowClick={(row) => setSelectedId(row.id)}
         emptyTitle="No findings match these filters"
+        rowKey={(row) => row.id}
         toolbar={
-          <div className="flex flex-wrap items-center gap-2">
+          <TableFilters hint={isOfficer ? "Select a row to open the case file." : undefined}>
             <Input
               value={search}
               onChange={(event) => {
@@ -216,16 +233,21 @@ export default function FlagQueuePage() {
               />
               Open cases only
             </label>
-          </div>
+          </TableFilters>
         }
       />
 
       <Dialog open={selectedId !== null} onOpenChange={(open) => !open && setSelectedId(null)}>
         <DialogContent className="max-h-[88vh] max-w-3xl overflow-y-auto">
-          {detail.isLoading && <Spinner />}
+          {/* A dialog needs an accessible name even before its content lands. */}
+          {detail.isLoading && (
+            <DialogTitle className="flex items-center gap-2 text-base font-medium text-muted-foreground">
+              <Spinner /> Opening the case file…
+            </DialogTitle>
+          )}
           {detail.data && (
             <>
-              <ExplanationPanel flag={detail.data} />
+              <ExplanationPanel flag={detail.data} asDialogTitle />
 
               {detail.data.students.length > 0 && (
                 <div className="mt-4 rounded-md border border-border p-3">

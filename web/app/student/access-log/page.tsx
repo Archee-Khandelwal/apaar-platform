@@ -4,9 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Eye, FileSearch, Network, ShieldCheck, UserCheck } from "lucide-react";
 import { useState } from "react";
 
-import { PageHeader } from "@/components/AppShell";
-import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/States";
-import { Button, Card, CardContent } from "@/components/ui/primitives";
+import { PageHeader } from "@/components/ui/page";
+import { EmptyState, ErrorState, Skeleton } from "@/components/States";
+import { Button } from "@/components/ui/primitives";
 import { api } from "@/lib/api";
 import { dateTime } from "@/lib/format";
 
@@ -43,7 +43,7 @@ export default function AccessLogPage() {
       />
 
       {query.isLoading ? (
-        <LoadingSkeleton rows={5} />
+        <Skeleton rows={4} height="h-20" />
       ) : (query.data?.items.length ?? 0) === 0 ? (
         <EmptyState
           title="Nobody has opened your details"
@@ -52,40 +52,35 @@ export default function AccessLogPage() {
         />
       ) : (
         <>
-          <ol className="relative space-y-3 border-l border-border pl-6">
+          <ol className="relative space-y-4 border-l border-border pl-7 sm:pl-8">
             {query.data!.items.map((row) => (
               <li key={row.id} className="relative">
-                <span className="absolute -left-[31px] flex h-6 w-6 items-center justify-center rounded-full border border-border bg-card text-muted-foreground">
+                <span className="absolute -left-[2.3rem] flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-muted-foreground sm:-left-[2.55rem]">
                   {ACTION_ICONS[row.action] ?? <Eye className="h-3.5 w-3.5" />}
                 </span>
-                <Card>
-                  <CardContent className="pt-4">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium">
-                          {ACTION_LABELS[row.action] ?? row.action.replace(/_/g, " ")}
-                        </p>
-                        <p className="text-xs text-muted-foreground">{row.actor_label}</p>
-                      </div>
-                      <span className="text-xs text-muted-foreground">{dateTime(row.at)}</span>
-                    </div>
-                    {row.reason && (
-                      <p className="mt-2 rounded-md bg-muted/50 p-2.5 text-sm">
-                        <span className="text-xs uppercase tracking-wide text-muted-foreground">
-                          Reason given
-                        </span>
-                        <br />
-                        {row.reason}
+                <div className="rounded-lg border border-border bg-card p-4 shadow-card">
+                  <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium leading-snug">
+                        {ACTION_LABELS[row.action] ?? row.action.replace(/_/g, " ")}
                       </p>
-                    )}
-                  </CardContent>
-                </Card>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{row.actor_label}</p>
+                    </div>
+                    <span className="shrink-0 text-xs text-muted-foreground">{dateTime(row.at)}</span>
+                  </div>
+                  {row.reason && (
+                    <div className="mt-3 rounded-md bg-secondary/60 p-3">
+                      <p className="type-label">Reason given</p>
+                      <p className="mt-1 text-sm leading-relaxed">{row.reason}</p>
+                    </div>
+                  )}
+                </div>
               </li>
             ))}
           </ol>
 
           {(query.data?.total ?? 0) > 25 && (
-            <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
               <span>
                 {query.data!.total} entries · page {page} of {query.data!.total_pages}
               </span>
@@ -105,7 +100,7 @@ export default function AccessLogPage() {
             </div>
           )}
 
-          <p className="mt-4 text-xs text-muted-foreground">
+          <p className="text-xs leading-relaxed text-muted-foreground">
             Officers are shown by role, not by name. An AICTE officer cannot open your details
             without typing a reason, and that reason appears above exactly as they wrote it.
           </p>

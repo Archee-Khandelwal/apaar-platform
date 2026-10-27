@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { PageHeader } from "@/components/AppShell";
+import { PageHeader } from "@/components/ui/page";
 import { DataTable, type Column } from "@/components/DataTable";
 import { Badge } from "@/components/ui/primitives";
 import { api } from "@/lib/api";
@@ -27,11 +27,24 @@ export default function VerifierRequestsPage() {
   });
 
   const columns: Column<VerificationRequestStatus>[] = [
-    { key: "apaar", header: "APAAR", cell: (row) => <span className="font-mono text-xs">{row.apaar_masked}</span> },
-    { key: "purpose", header: "Purpose", cell: (row) => row.purpose.replace(/_/g, " ") },
+    {
+      key: "apaar",
+      header: "APAAR",
+      width: "w-[10rem]",
+      nowrap: true,
+      cell: (row) => <span className="font-mono text-xs">{row.apaar_masked}</span>,
+    },
+    {
+      key: "purpose",
+      header: "Purpose",
+      width: "w-[11rem]",
+      cell: (row) => <span className="leading-snug">{row.purpose.replace(/_/g, " ")}</span>,
+    },
     {
       key: "status",
       header: "Status",
+      width: "w-[7.5rem]",
+      nowrap: true,
       cell: (row) => <Badge tone={TONE[row.status] ?? "neutral"}>{row.status}</Badge>,
     },
     {
@@ -51,17 +64,30 @@ export default function VerifierRequestsPage() {
           <span className="text-xs text-muted-foreground">nothing shared</span>
         ),
     },
-    { key: "requested", header: "Requested", cell: (row) => <span className="text-xs">{dateTime(row.requested_at)}</span> },
-    { key: "answered", header: "Answered", cell: (row) => <span className="text-xs">{dateTime(row.responded_at)}</span> },
+    {
+      key: "requested",
+      header: "Requested",
+      width: "w-[9.5rem]",
+      nowrap: true,
+      cell: (row) => <span className="text-xs text-muted-foreground">{dateTime(row.requested_at)}</span>,
+    },
+    {
+      key: "answered",
+      header: "Answered",
+      width: "w-[9.5rem]",
+      nowrap: true,
+      cell: (row) => <span className="text-xs text-muted-foreground">{dateTime(row.responded_at)}</span>,
+    },
   ];
 
   return (
     <>
       <PageHeader
-        title="My verification requests"
-        description="Statuses update on their own. A revoked consent removes the result you were given."
+        title="My requests"
+        description="Every verification you have asked for, and how each student answered. Statuses update on their own."
       />
       <DataTable
+        minWidth="min-w-[64rem]"
         columns={columns}
         rows={query.data?.items ?? []}
         loading={query.isLoading}
@@ -70,7 +96,8 @@ export default function VerifierRequestsPage() {
         pageSize={25}
         onPageChange={setPage}
         emptyTitle="No requests yet"
-        emptyDescription="Submit an APAAR ID on the verify page to get started."
+        emptyDescription="Submit an APAAR ID on the new-request page to get started."
+        rowKey={(row) => row.request_id}
       />
     </>
   );

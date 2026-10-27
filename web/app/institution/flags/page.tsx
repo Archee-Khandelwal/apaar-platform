@@ -4,8 +4,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { PageHeader } from "@/components/AppShell";
-import { DataTable, type Column } from "@/components/DataTable";
+import { PageHeader } from "@/components/ui/page";
+import { DataTable, TableFilters, type Column } from "@/components/DataTable";
 import { ExplanationPanel } from "@/components/ExplanationPanel";
 import { SeverityBadge, StatusBadge } from "@/components/SeverityBadge";
 import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
@@ -52,20 +52,34 @@ export default function InstitutionFlagsPage() {
       key: "severity",
       header: "Severity",
       sortKey: "severity",
+      width: "w-[7.5rem]",
+      nowrap: true,
       cell: (row) => <SeverityBadge severity={row.severity} />,
     },
-    { key: "type", header: "Finding", cell: (row) => <span className="font-medium">{flagLabel(row.type)}</span> },
+    {
+      key: "type",
+      header: "Finding",
+      width: "w-[12rem]",
+      cell: (row) => <span className="font-medium leading-snug">{flagLabel(row.type)}</span>,
+    },
     {
       key: "title",
       header: "What we saw",
-      cell: (row) => <span className="line-clamp-2 max-w-md text-sm">{row.title}</span>,
+      cell: (row) => <span className="leading-snug">{row.title}</span>,
     },
-    { key: "status", header: "Status", cell: (row) => <StatusBadge status={row.status} /> },
-    { key: "year", header: "Year", cell: (row) => row.academic_year ?? "—" },
+    {
+      key: "status",
+      header: "Status",
+      width: "w-[8rem]",
+      nowrap: true,
+      cell: (row) => <StatusBadge status={row.status} />,
+    },
     {
       key: "created",
       header: "Raised",
       sortKey: "created_at",
+      width: "w-[8rem]",
+      nowrap: true,
       cell: (row) => <span className="text-xs text-muted-foreground">{relative(row.created_at)}</span>,
     },
   ];
@@ -73,11 +87,12 @@ export default function InstitutionFlagsPage() {
   return (
     <>
       <PageHeader
-        title="Flag inbox"
-        description="Every finding against your institution, with the reasoning and the evidence behind it."
+        title="Flags"
+        description="What has been flagged against your institution, why, and what you can do about it."
       />
 
       <DataTable
+        minWidth="min-w-[56rem]"
         columns={columns}
         rows={query.data?.items ?? []}
         loading={query.isLoading}
@@ -90,8 +105,9 @@ export default function InstitutionFlagsPage() {
         onRowClick={setSelected}
         emptyTitle="No findings against your institution"
         emptyDescription="Findings appear here after an upload is validated, or when AICTE's detectors run."
+        rowKey={(row) => row.id}
         toolbar={
-          <div className="flex flex-wrap items-center gap-2">
+          <TableFilters hint="Select a row to read the full explanation and the evidence.">
             <Select
               value={severity}
               onChange={(event) => {
@@ -122,8 +138,7 @@ export default function InstitutionFlagsPage() {
                 </option>
               ))}
             </Select>
-            <p className="text-xs text-muted-foreground">Click a row for the full explanation.</p>
-          </div>
+          </TableFilters>
         }
       />
 
@@ -131,7 +146,10 @@ export default function InstitutionFlagsPage() {
         <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
           {selected && (
             <>
-              <ExplanationPanel flag={{ ...selected, institution_name: null, state: null }} />
+              <ExplanationPanel
+                flag={{ ...selected, institution_name: null, state: null }}
+                asDialogTitle
+              />
               <div className="mt-5 space-y-2 border-t border-border pt-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   What did you do about it?

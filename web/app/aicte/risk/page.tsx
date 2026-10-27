@@ -4,8 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { PageHeader } from "@/components/AppShell";
-import { DataTable, type Column } from "@/components/DataTable";
+import { AICTE_INSTITUTION_TABS, PageHeader, SubTabs } from "@/components/ui/page";
+import { DataTable, TableFilters, type Column } from "@/components/DataTable";
 import { SeverityBadge } from "@/components/SeverityBadge";
 import { Select } from "@/components/ui/primitives";
 import { api } from "@/lib/api";
@@ -28,6 +28,8 @@ export default function RiskPage() {
     {
       key: "rank",
       header: "#",
+      width: "w-[3.5rem]",
+      nowrap: true,
       cell: (row) => (
         <span className="tabular-nums text-muted-foreground">
           {(query.data?.items.indexOf(row) ?? 0) + 1 + (page - 1) * 25}
@@ -37,17 +39,20 @@ export default function RiskPage() {
     {
       key: "name",
       header: "Institution",
+      width: "w-[15rem]",
       cell: (row) => (
-        <span>
-          <span className="font-medium">{row.name}</span>
-          <span className="block text-xs text-muted-foreground">{row.state}</span>
+        <span className="block">
+          <span className="block font-medium leading-snug">{row.name}</span>
+          <span className="mt-0.5 block text-xs text-muted-foreground">{row.state}</span>
         </span>
       ),
     },
     {
       key: "score",
       header: "Risk",
+      width: "w-[8.5rem]",
       align: "right",
+      nowrap: true,
       cell: (row) => (
         <span className="inline-flex items-center gap-2">
           <span className="tabular-nums font-semibold">{row.risk_score.toFixed(1)}</span>
@@ -57,11 +62,11 @@ export default function RiskPage() {
     },
     {
       key: "reasons",
-      header: "Why",
+      header: "Why it scores this high",
       cell: (row) => (
-        <ol className="max-w-xl space-y-0.5 text-xs">
+        <ol className="space-y-1 text-xs leading-relaxed">
           {row.top_reasons.slice(0, 3).map((reason, index) => (
-            <li key={index} className="line-clamp-1">
+            <li key={index}>
               {index + 1}. {reason}
             </li>
           ))}
@@ -70,8 +75,10 @@ export default function RiskPage() {
     },
     {
       key: "components",
-      header: "Findings / model",
+      header: "From flags / model",
+      width: "w-[8rem]",
       align: "right",
+      nowrap: true,
       cell: (row) => (
         <span className="text-xs tabular-nums text-muted-foreground">
           {row.components.flags.toFixed(0)} / {row.components.anomaly.toFixed(0)}
@@ -80,8 +87,10 @@ export default function RiskPage() {
     },
     {
       key: "open",
-      header: "Open",
+      header: "Open flags",
+      width: "w-[6rem]",
       align: "right",
+      nowrap: true,
       cell: (row) => count(row.open_flags),
     },
   ];
@@ -90,9 +99,13 @@ export default function RiskPage() {
     <>
       <PageHeader
         title="Risk leaderboard"
-        description="A weighted sum of open findings plus the statistical anomaly score. Every row carries its own reasons — nothing here is a black box."
+        description="Which institutions to look at first, and the reasons behind each score — nothing here is a black box."
       />
+
+      <SubTabs tabs={AICTE_INSTITUTION_TABS} current="/aicte/risk" />
+
       <DataTable
+        minWidth="min-w-[64rem]"
         columns={columns}
         rows={query.data?.items ?? []}
         loading={query.isLoading}
@@ -103,8 +116,9 @@ export default function RiskPage() {
         onRowClick={(row) => router.push(`/aicte/institutions/${row.institution_id}`)}
         emptyTitle="No institutions scored yet"
         emptyDescription="Risk is computed when the detectors run. Try `make reset`."
+        rowKey={(row) => row.institution_id}
         toolbar={
-          <div className="flex flex-wrap items-center gap-2">
+          <TableFilters hint="A legal dual degree never adds risk; it carries weight zero.">
             <Select
               value={band}
               onChange={(event) => {
@@ -120,10 +134,7 @@ export default function RiskPage() {
                 </option>
               ))}
             </Select>
-            <p className="text-xs text-muted-foreground">
-              A legal dual degree never adds risk; it carries weight zero.
-            </p>
-          </div>
+          </TableFilters>
         }
       />
     </>

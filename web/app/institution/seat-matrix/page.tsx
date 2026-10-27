@@ -4,10 +4,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 
-import { PageHeader } from "@/components/AppShell";
-import { StatCard } from "@/components/StatCard";
-import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/States";
-import { Card, CardContent, CardHeader, CardTitle, Select } from "@/components/ui/primitives";
+import { PageHeader } from "@/components/ui/page";
+import { KpiCard, KpiRow, SectionCard, TechnicalDetails } from "@/components/ui/page";
+import { EmptyState, ErrorState, KpiSkeleton, Skeleton } from "@/components/States";
+import { Select } from "@/components/ui/primitives";
 import { api } from "@/lib/api";
 import type { ProgramSeatMatrix } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -111,11 +111,7 @@ export default function SeatMatrixPage() {
     <>
       <PageHeader
         title="Seat matrix"
-        description={
-          data
-            ? `Rule set ${data.rule_set}. Supernumerary seats sit outside approved intake, each with its own cap.`
-            : "Approved intake against what was reported."
-        }
+        description="Whether each programme stayed inside its approved intake — supernumerary seats sit outside it, each with its own cap."
         actions={
           <Select value={year} onChange={(event) => setYear(event.target.value)} className="w-36">
             {YEARS.map((option) => (
@@ -128,7 +124,10 @@ export default function SeatMatrixPage() {
       />
 
       {query.isLoading ? (
-        <LoadingSkeleton rows={5} />
+        <>
+          <KpiSkeleton count={5} />
+          <Skeleton rows={3} height="h-40" />
+        </>
       ) : !data || data.programs.length === 0 ? (
         <EmptyState
           title="No approved intake on record for this year"
@@ -136,53 +135,55 @@ export default function SeatMatrixPage() {
         />
       ) : (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            <StatCard label="Approved intake" value={data.totals.approved_intake} />
-            <StatCard label="Regular admitted" value={data.totals.regular_admitted} />
-            <StatCard label="Valid supernumerary" value={data.totals.valid_supernumerary} />
-            <StatCard label="Total admitted" value={data.totals.total_admitted} />
-            <StatCard
+          <KpiRow className="xl:grid-cols-5">
+            <KpiCard label="Approved intake" value={data.totals.approved_intake} hint="Across every programme" />
+            <KpiCard label="Regular admitted" value={data.totals.regular_admitted} hint="Counted against intake" />
+            <KpiCard
+              label="Valid supernumerary"
+              value={data.totals.valid_supernumerary}
+              hint="Within their caps, outside intake"
+            />
+            <KpiCard label="Total admitted" value={data.totals.total_admitted} hint="Regular plus supernumerary" />
+            <KpiCard
               label="Excess"
               value={data.totals.excess}
-              tone={data.totals.excess > 0 ? "danger" : "success"}
-              hint={overProgrammes.length > 0 ? `${overProgrammes.length} programme(s) over` : "all within limits"}
+              tone={data.totals.excess > 0 ? "critical" : "positive"}
+              hint={
+                overProgrammes.length > 0
+                  ? `${overProgrammes.length} programme(s) over the limit`
+                  : "Every programme is within limits"
+              }
             />
-          </div>
+          </KpiRow>
 
-          <div className="mt-4 space-y-3">
+          <div className="space-y-6">
             {data.programs.map((program) => (
-              <Card key={program.program_id} className={program.excess > 0 ? "border-red-200" : undefined}>
-                <CardHeader>
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <CardTitle>
-                        {program.course} — {program.branch}
-                      </CardTitle>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        {program.mode === "online" ? "Online / ODL" : "Regular"} ·{" "}
-                        {program.vacant_regular_seats} seats vacant in year 1
-                      </p>
-                    </div>
-                    {program.excess > 0 ? (
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-800">
-                        <AlertTriangle className="h-3.5 w-3.5" />
-                        {program.excess} excess
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800">
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        within limits
-                      </span>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <SeatBar program={program} />
-                  <p className="rounded-md border-l-4 border-accent bg-accent/5 p-3 text-sm leading-relaxed">
+              <SectionCard
+                key={program.program_id}
+                className={program.excess > 0 ? "border-red-200" : undefined}
+                title={`${program.course} — ${program.branch}`}
+                description={`${program.mode === "online" ? "Online / ODL" : "Regular"} · ${program.vacant_regular_seats} seats vacant in year 1`}
+                actions={
+                  program.excess > 0 ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-800">
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                      {program.excess} excess
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Within limits
+                    </span>
+                  )
+                }
+                bodyClassName="space-y-5 p-5"
+              >
+                  <p className="rounded-md border-l-[3px] border-primary bg-primary/[0.04] p-4 text-sm leading-relaxed">
                     {program.explanation}
                   </p>
+                  <SeatBar program={program} />
                   {program.supernumerary.some((bucket) => bucket.admitted > 0) && (
-                    <div className="overflow-x-auto">
+                    <div className="-mx-1 overflow-x-auto px-1">
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -218,8 +219,14 @@ export default function SeatMatrixPage() {
                       </table>
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                  <TechnicalDetails label="Rule set and caps">
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      Caps come from rule set{" "}
+                      <code className="font-mono text-foreground">{data.rule_set}</code> (programme
+                      id {program.program_id}). Every cap is configured, never hardcoded.
+                    </p>
+                  </TechnicalDetails>
+              </SectionCard>
             ))}
           </div>
         </>

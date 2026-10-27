@@ -18,8 +18,8 @@ const buttonVariants = cva(
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary/90",
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        outline: "border border-border bg-card hover:bg-muted",
-        ghost: "hover:bg-muted",
+        outline: "border border-border bg-card hover:bg-secondary",
+        ghost: "hover:bg-secondary",
         destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         accent: "bg-accent text-accent-foreground hover:bg-accent/90",
       },
@@ -27,7 +27,7 @@ const buttonVariants = cva(
         default: "h-9 px-4",
         sm: "h-8 px-3 text-xs",
         lg: "h-11 px-6",
-        icon: "h-9 w-9",
+        icon: "h-9 w-9 px-0",
       },
     },
     defaultVariants: { variant: "default", size: "default" },
@@ -53,7 +53,7 @@ Button.displayName = "Button";
 export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("rounded-lg border border-border bg-card text-card-foreground shadow-sm", className)}
+      className={cn("rounded-lg border border-border bg-card text-card-foreground shadow-card", className)}
       {...props}
     />
   );
@@ -126,7 +126,7 @@ Select.displayName = "Select";
 export function Label({ className, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) {
   return (
     <label
-      className={cn("text-xs font-medium uppercase tracking-wide text-muted-foreground", className)}
+      className={cn("text-xs font-medium text-foreground", className)}
       {...props}
     />
   );

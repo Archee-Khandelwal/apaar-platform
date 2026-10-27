@@ -1,23 +1,22 @@
 "use client";
 
 /**
- * Cytoscape view of one cluster. Students are circles coloured by institution; shared
- * contacts are larger diamonds in the accent colour. Every label is masked, and a
- * contact is "Guardian contact #1", never a number or a hash.
+ * Cytoscape view of one cluster. Students are circles coloured by institution;
+ * shared contacts are larger diamonds. Every label is masked, and a contact is
+ * "Guardian contact #1", never a number or a hash.
+ *
+ * The layout runs without animation: it settles instantly for a screenshot, and
+ * it removes the race where unmounting mid-animation tears down the core while
+ * the layout is still notifying it.
  */
 import cytoscape, { type Core, type ElementDefinition } from "cytoscape";
 import { useEffect, useMemo, useRef } from "react";
 
 import type { ClusterDetail, GraphNode } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
-const INSTITUTION_COLOURS = [
-  "#1d4ed8",
-  "#0e7490",
-  "#7c3aed",
-  "#b45309",
-  "#be123c",
-  "#15803d",
-];
+const INSTITUTION_COLOURS = ["#1e40af", "#0e7490", "#7c3aed", "#b45309", "#be123c", "#15803d"];
+const CONTACT_COLOUR = "#0284c7";
 
 export function institutionColours(nodes: GraphNode[]): Map<string, string> {
   const names = Array.from(
@@ -30,10 +29,12 @@ export function ClusterGraph({
   cluster,
   onSelectStudent,
   height = 460,
+  className,
 }: {
   cluster: ClusterDetail;
   onSelectStudent?: (node: GraphNode["data"] | null) => void;
   height?: number;
+  className?: string;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const instance = useRef<Core | null>(null);
@@ -49,7 +50,7 @@ export function ClusterGraph({
           colour:
             node.data.type === "student"
               ? (colours.get(node.data.institution ?? "—") ?? INSTITUTION_COLOURS[0])
-              : "#0ea5e9",
+              : CONTACT_COLOUR,
         },
       })),
       ...cluster.edges.map((edge) => ({ data: { ...edge.data } })),
@@ -65,7 +66,7 @@ export function ClusterGraph({
             "background-color": "data(colour)",
             label: "data(label)",
             "font-size": 8,
-            color: "#0f172a",
+            color: "#334155",
             "text-valign": "bottom",
             "text-margin-y": 3,
             width: 22,
@@ -77,7 +78,7 @@ export function ClusterGraph({
         {
           selector: "node[type != 'student']",
           style: {
-            "background-color": "#0ea5e9",
+            "background-color": CONTACT_COLOUR,
             shape: "diamond",
             label: "data(label)",
             "font-size": 10,
@@ -96,14 +97,14 @@ export function ClusterGraph({
           selector: "edge",
           style: {
             width: 1.2,
-            "line-color": "#94a3b8",
+            "line-color": "#cbd5e1",
             "curve-style": "haystack",
-            opacity: 0.7,
+            opacity: 0.8,
           },
         },
         {
           selector: "edge[attribute_type = 'guardian_phone']",
-          style: { "line-color": "#0ea5e9", width: 1.6 },
+          style: { "line-color": CONTACT_COLOUR, width: 1.6, opacity: 0.55 },
         },
         {
           selector: ":selected",
@@ -112,11 +113,10 @@ export function ClusterGraph({
       ],
       layout: {
         name: "cose",
-        animate: true,
-        animationDuration: 700,
+        animate: false,
         nodeRepulsion: () => 9000,
         idealEdgeLength: () => 70,
-        padding: 24,
+        padding: 28,
         randomize: false,
       } as cytoscape.LayoutOptions,
       minZoom: 0.3,
@@ -139,24 +139,36 @@ export function ClusterGraph({
   }, [cluster, colours, onSelectStudent]);
 
   return (
-    <div className="space-y-2">
-      <div
-        ref={container}
-        style={{ height }}
-        className="w-full rounded-lg border border-border bg-gradient-to-b from-slate-50 to-white"
-      />
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-        <span className="inline-flex items-center gap-1.5">
-          <span className="h-3 w-3 rotate-45 bg-sky-500" /> shared contact
+    <div
+      ref={container}
+      style={{ height }}
+      className={cn("w-full min-w-0 rounded-md border border-border bg-slate-50", className)}
+    />
+  );
+}
+
+/** The graph's key, kept outside the canvas so it never overlaps a node. */
+export function ClusterLegend({ cluster }: { cluster: ClusterDetail }) {
+  const colours = institutionColours(cluster.nodes);
+  return (
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
+      <span className="inline-flex items-center gap-2">
+        <span
+          className="h-3 w-3 rotate-45"
+          style={{ background: CONTACT_COLOUR }}
+          aria-hidden
+        />
+        <span className="text-muted-foreground">Shared contact</span>
+      </span>
+      {Array.from(colours.entries()).map(([name, colour]) => (
+        <span key={name} className="inline-flex min-w-0 items-center gap-2">
+          <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: colour }} aria-hidden />
+          <span className="min-w-0 text-muted-foreground">{name}</span>
         </span>
-        {Array.from(colours.entries()).map(([name, colour]) => (
-          <span key={name} className="inline-flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded-full" style={{ background: colour }} />
-            <span className="max-w-[16rem] truncate">{name}</span>
-          </span>
-        ))}
-        <span>· drag to pan, scroll to zoom, click a student for detail</span>
-      </div>
+      ))}
+      <span className="text-muted-foreground">
+        Drag to pan, scroll to zoom, select a student for their masked detail.
+      </span>
     </div>
   );
 }

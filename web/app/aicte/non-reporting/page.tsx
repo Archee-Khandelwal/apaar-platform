@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Send } from "lucide-react";
 import { useState } from "react";
 
-import { PageHeader } from "@/components/AppShell";
+import { AICTE_INSTITUTION_TABS, PageHeader, SubTabs } from "@/components/ui/page";
 import { DataTable, type Column } from "@/components/DataTable";
 import { Badge, Button, Spinner } from "@/components/ui/primitives";
 import { useToast } from "@/components/ui/toast";
@@ -41,15 +41,16 @@ export default function NonReportingPage() {
       key: "name",
       header: "Institution",
       cell: (row) => (
-        <span>
-          <span className="font-medium">{row.name}</span>
-          <span className="block text-xs text-muted-foreground">{row.state}</span>
+        <span className="block">
+          <span className="block font-medium leading-snug">{row.name}</span>
+          <span className="mt-0.5 block text-xs text-muted-foreground">{row.state}</span>
         </span>
       ),
     },
     {
       key: "deadline",
       header: "Reporting deadline",
+      width: "w-[12rem]",
       cell: (row) => (
         <span className="text-sm">
           {dateTime(row.reporting_deadline)}
@@ -66,13 +67,21 @@ export default function NonReportingPage() {
     {
       key: "status",
       header: "Status",
+      width: "w-[7rem]",
+      nowrap: true,
       cell: (row) =>
         row.days_overdue > 0 ? <Badge tone="danger">overdue</Badge> : <Badge tone="warning">not filed</Badge>,
     },
-    { key: "last", header: "Last upload ever", cell: (row) => dateTime(row.last_upload_at) },
+    {
+      key: "last",
+      header: "Last upload ever",
+      width: "w-[11rem]",
+      cell: (row) => <span className="text-xs text-muted-foreground">{dateTime(row.last_upload_at)}</span>,
+    },
     {
       key: "reminders",
       header: "Reminders",
+      width: "w-[8rem]",
       align: "right",
       cell: (row) => (
         <span className="text-sm">
@@ -86,6 +95,7 @@ export default function NonReportingPage() {
     {
       key: "actions",
       header: "",
+      width: "w-[9.5rem]",
       align: "right",
       cell: (row) =>
         user?.role === "aicte_officer" ? (
@@ -105,10 +115,14 @@ export default function NonReportingPage() {
   return (
     <>
       <PageHeader
-        title="Non-reporting institutions"
-        description="Approved institutions with no student-level data filed for the current year. Reminders are mocked in this prototype, and logged."
+        title="Not reporting"
+        description="Approved institutions that have filed no student-level data for the current year. Reminders are mocked in this prototype, and logged."
       />
+
+      <SubTabs tabs={AICTE_INSTITUTION_TABS} current="/aicte/non-reporting" />
+
       <DataTable
+        minWidth="min-w-[66rem]"
         columns={columns}
         rows={query.data?.items ?? []}
         loading={query.isLoading}
@@ -118,6 +132,7 @@ export default function NonReportingPage() {
         onPageChange={setPage}
         emptyTitle="Every institution has reported"
         emptyDescription="Nothing is outstanding for this academic year."
+        rowKey={(row) => row.institution_id}
       />
     </>
   );

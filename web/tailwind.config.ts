@@ -25,10 +25,22 @@ const config: Config = {
           critical: "#dc2626",
         },
       },
+      /** An 8px grid: the sizes below are the only ones layouts should reach for. */
+      spacing: {
+        sidebar: "15rem",
+        topbar: "3.5rem",
+      },
+      maxWidth: {
+        content: "80rem", // 1280px
+      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+      },
+      boxShadow: {
+        card: "0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.06)",
+        raised: "0 4px 12px -2px rgb(15 23 42 / 0.08), 0 2px 6px -2px rgb(15 23 42 / 0.06)",
       },
     },
   },

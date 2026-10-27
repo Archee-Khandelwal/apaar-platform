@@ -4,8 +4,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { PageHeader } from "@/components/AppShell";
-import { DataTable, type Column } from "@/components/DataTable";
+import { PageHeader } from "@/components/ui/page";
+import { DataTable, TableFilters, type Column } from "@/components/DataTable";
 import { MaskedApaar, MaskedName } from "@/components/Masked";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge, Button, Input, Label, Select, Spinner, Textarea } from "@/components/ui/primitives";
@@ -60,10 +60,17 @@ export default function StudentsPage() {
   });
 
   const columns: Column<StudentRow>[] = [
-    { key: "apaar", header: "APAAR", cell: (row) => <MaskedApaar value={row.apaar_masked} /> },
+    {
+      key: "apaar",
+      header: "APAAR",
+      width: "w-[9.5rem]",
+      nowrap: true,
+      cell: (row) => <MaskedApaar value={row.apaar_masked} />,
+    },
     {
       key: "name",
       header: "Name",
+      width: "w-[9.5rem]",
       cell: (row) => (
         <span className="flex items-center gap-2">
           <MaskedName value={row.name_masked} />
@@ -75,18 +82,20 @@ export default function StudentsPage() {
       key: "programme",
       header: "Programme",
       cell: (row) => (
-        <span className="text-sm">
-          {row.enrolment.course} {row.enrolment.branch}
-          <span className="block text-xs text-muted-foreground">
-            year {row.enrolment.year_of_study} · {row.enrolment.admission_type}
+        <span className="block">
+          <span className="block leading-snug">
+            {row.enrolment.course} {row.enrolment.branch}
+          </span>
+          <span className="mt-0.5 block text-xs text-muted-foreground">
+            Year {row.enrolment.year_of_study} · {row.enrolment.admission_type}
           </span>
         </span>
       ),
     },
-    { key: "year", header: "Year", cell: (row) => row.enrolment.academic_year },
     {
       key: "apaar_status",
       header: "APAAR status",
+      width: "w-[8.5rem]",
       cell: (row) => (
         <Badge tone={row.apaar_status === "provided" ? "success" : row.apaar_status === "pending" ? "warning" : "neutral"}>
           {row.apaar_status.replace("_", " ")}
@@ -96,6 +105,7 @@ export default function StudentsPage() {
     {
       key: "status",
       header: "Enrolment",
+      width: "w-[7.5rem]",
       cell: (row) => (
         <span className="text-sm">
           {row.enrolment.status}
@@ -108,17 +118,21 @@ export default function StudentsPage() {
     {
       key: "admitted",
       header: "Admitted",
+      width: "w-[7.5rem]",
+      nowrap: true,
       cell: (row) => <span className="text-xs">{dateOnly(row.enrolment.admitted_on)}</span>,
     },
     {
       key: "flags",
-      header: "Findings",
+      header: "Flags",
+      width: "w-[5rem]",
       align: "right",
       cell: (row) => (row.flag_count > 0 ? <Badge tone="danger">{row.flag_count}</Badge> : "—"),
     },
     {
       key: "actions",
       header: "",
+      width: "w-[10rem]",
       align: "right",
       cell: (row) => (
         <Button
@@ -141,10 +155,11 @@ export default function StudentsPage() {
     <>
       <PageHeader
         title="Students"
-        description="Your reported students, masked by default. Raw identifiers are not shown anywhere in this portal."
+        description="Every student you have reported, and the enrolment record behind each one."
       />
 
       <DataTable
+        minWidth="min-w-[66rem]"
         columns={columns}
         rows={query.data?.items ?? []}
         loading={query.isLoading}
@@ -153,8 +168,9 @@ export default function StudentsPage() {
         pageSize={25}
         onPageChange={setPage}
         emptyTitle="No students match these filters"
+        rowKey={(row) => row.enrolment.id}
         toolbar={
-          <div className="flex flex-wrap items-center gap-2">
+          <TableFilters hint="Masked by default — raw identifiers are never shown in this portal.">
             <Input
               value={search}
               onChange={(event) => {
@@ -191,7 +207,7 @@ export default function StudentsPage() {
               <option value="pending">pending</option>
               <option value="not_applicable">not applicable (FN/OCI)</option>
             </Select>
-          </div>
+          </TableFilters>
         }
       />
 

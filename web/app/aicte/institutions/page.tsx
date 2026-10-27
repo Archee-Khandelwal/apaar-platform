@@ -4,12 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { PageHeader } from "@/components/AppShell";
-import { DataTable, type Column } from "@/components/DataTable";
+import { AICTE_INSTITUTION_TABS, PageHeader, SubTabs, TechnicalDetails } from "@/components/ui/page";
+import { DataTable, TableFilters, type Column } from "@/components/DataTable";
 import { SeverityBadge } from "@/components/SeverityBadge";
 import { Input, Select } from "@/components/ui/primitives";
 import { api } from "@/lib/api";
-import { count, dateTime } from "@/lib/format";
+import { count, dateOnly } from "@/lib/format";
 import { FLAG_TYPES, type InstitutionRow } from "@/lib/types";
 
 export default function InstitutionsPage() {
@@ -42,24 +42,24 @@ export default function InstitutionsPage() {
       key: "name",
       header: "Institution",
       sortKey: "name",
-      cell: (row) => (
-        <span>
-          <span className="font-medium">{row.name}</span>
-          <span className="block font-mono text-xs text-muted-foreground">
-            {row.aicte_permanent_id}
-          </span>
-        </span>
-      ),
+      cell: (row) => <span className="font-medium leading-snug">{row.name}</span>,
     },
-    { key: "state", header: "State", cell: (row) => row.state },
+    {
+      key: "state",
+      header: "State",
+      width: "w-[9rem]",
+      cell: (row) => row.state,
+    },
     {
       key: "risk",
       header: "Risk",
       sortKey: "risk_score",
+      width: "w-[8.5rem]",
       align: "right",
+      nowrap: true,
       cell: (row) => (
         <span className="inline-flex items-center gap-2">
-          <span className="tabular-nums">{row.risk_score.toFixed(1)}</span>
+          <span className="font-semibold tabular-nums">{row.risk_score.toFixed(1)}</span>
           <SeverityBadge severity={row.risk_band} showDot={false} />
         </span>
       ),
@@ -68,23 +68,31 @@ export default function InstitutionsPage() {
       key: "students",
       header: "Students",
       sortKey: "students_reported",
+      width: "w-[6.5rem]",
       align: "right",
+      nowrap: true,
       cell: (row) => count(row.students_reported),
     },
     {
       key: "flags",
-      header: "Open findings",
+      header: "Open flags",
+      width: "w-[12rem]",
       align: "right",
       cell: (row) => (
-        <span className="flex justify-end gap-1 text-xs">
-          {(["critical", "high", "medium", "low"] as const).map((severity) =>
-            row.open_flags[severity] ? (
-              <span key={severity} title={severity}>
+        <span className="flex flex-wrap justify-end gap-1.5">
+          {(["critical", "high", "medium", "low"] as const)
+            .filter((severity) => row.open_flags[severity])
+            .map((severity) => (
+              <span
+                key={severity}
+                className="inline-flex items-center gap-1 whitespace-nowrap"
+                title={severity}
+              >
                 <SeverityBadge severity={severity} showDot={false} className="px-1.5" />
-                <span className="ml-0.5 tabular-nums">{count(row.open_flags[severity])}</span>
+                <span className="tabular-nums">{count(row.open_flags[severity])}</span>
               </span>
-            ) : null,
-          )}
+            ))}
+          {!(["critical", "high", "medium", "low"] as const).some((s) => row.open_flags[s]) && "—"}
         </span>
       ),
     },
@@ -92,14 +100,18 @@ export default function InstitutionsPage() {
       key: "excess",
       header: "Excess",
       sortKey: "excess_seats",
+      width: "w-[6.5rem]",
       align: "right",
+      nowrap: true,
       cell: (row) =>
-        row.excess_seats === 0 ? "—" : <span className="font-medium text-red-700">{count(row.excess_seats)}</span>,
+        row.excess_seats === 0 ? "—" : <span className="font-semibold text-red-700">{count(row.excess_seats)}</span>,
     },
     {
       key: "upload",
       header: "Last upload",
-      cell: (row) => <span className="text-xs text-muted-foreground">{dateTime(row.last_upload_at)}</span>,
+      width: "w-[8.5rem]",
+      nowrap: true,
+      cell: (row) => <span className="text-xs text-muted-foreground">{dateOnly(row.last_upload_at)}</span>,
     },
   ];
 
@@ -107,9 +119,13 @@ export default function InstitutionsPage() {
     <>
       <PageHeader
         title="Institutions"
-        description="Every AICTE-approved institution in the dataset, ranked by risk. Click a row for the full profile."
+        description="Which AICTE-approved institutions carry the most risk. Select a row for the full profile."
       />
+
+      <SubTabs tabs={AICTE_INSTITUTION_TABS} current="/aicte/institutions" />
+
       <DataTable
+        minWidth="min-w-[70rem]"
         columns={columns}
         rows={query.data?.items ?? []}
         loading={query.isLoading}
@@ -121,8 +137,9 @@ export default function InstitutionsPage() {
         onPageChange={setPage}
         onRowClick={(row) => router.push(`/aicte/institutions/${row.id}`)}
         emptyTitle="No institutions match these filters"
+        rowKey={(row) => row.id}
         toolbar={
-          <div className="flex flex-wrap items-center gap-2">
+          <TableFilters hint="Select a row for the full profile.">
             <Input
               value={search}
               onChange={(event) => {
@@ -174,9 +191,17 @@ export default function InstitutionsPage() {
               <option value="yes">Reporting</option>
               <option value="no">Not reporting</option>
             </Select>
-          </div>
+          </TableFilters>
         }
       />
+
+      <TechnicalDetails label="What the risk score is made of">
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          Risk is a weighted sum of open findings plus a statistical anomaly score, rescaled to
+          0–100. A legal dual degree carries weight zero, so it never raises a score. Each
+          institution&rsquo;s profile lists its own top reasons.
+        </p>
+      </TechnicalDetails>
     </>
   );
 }

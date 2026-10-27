@@ -19,25 +19,25 @@ const STATES: Record<
   genuine: {
     label: "Genuine",
     blurb: "This token was issued by the platform and the student's consent is still active.",
-    tone: "border-emerald-300 bg-emerald-50 text-emerald-900",
+    tone: "border-emerald-200 bg-emerald-50 text-emerald-900",
     icon: <BadgeCheck className="h-10 w-10" />,
   },
   expired: {
     label: "Expired",
     blurb: "This token was valid but has passed its expiry. Ask for a fresh one.",
-    tone: "border-amber-300 bg-amber-50 text-amber-900",
+    tone: "border-amber-200 bg-amber-50 text-amber-900",
     icon: <Clock className="h-10 w-10" />,
   },
   revoked: {
     label: "Revoked",
     blurb: "The student has withdrawn consent, so this token no longer verifies anything.",
-    tone: "border-orange-300 bg-orange-50 text-orange-900",
+    tone: "border-orange-200 bg-orange-50 text-orange-900",
     icon: <CircleSlash className="h-10 w-10" />,
   },
   invalid: {
     label: "Invalid",
     blurb: "This is not a token issued by the platform, or it has been altered.",
-    tone: "border-red-300 bg-red-50 text-red-900",
+    tone: "border-red-200 bg-red-50 text-red-900",
     icon: <ShieldX className="h-10 w-10" />,
   },
 };
@@ -61,22 +61,22 @@ function VerifyInner() {
   const state = result ? STATES[result.state] : null;
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      <p className="bg-amber-100 px-4 py-1.5 text-center text-xs font-medium text-amber-900">
+    <main className="min-h-screen bg-background">
+      <p className="bg-amber-100 px-4 py-2 text-center text-xs font-medium text-amber-900">
         Prototype — all data is synthetic.
       </p>
-      <div className="mx-auto max-w-xl px-4 py-10">
-        <p className="text-xs font-semibold uppercase tracking-widest text-accent">
+      <div className="mx-auto max-w-xl px-4 py-10 sm:py-14">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
           Public verification
         </p>
-        <h1 className="mt-1 text-xl font-semibold tracking-tight">Check a student QR or token</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <h1 className="mt-2 type-page-title">Verify a QR or token</h1>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
           Paste the token from a student&apos;s digital ID card. The check tells you whether the
           token is genuine and, if the student has consented, their programme and academic year —
           nothing else.
         </p>
 
-        <Card className="mt-5 p-5">
+        <Card className="mt-6 p-6">
           <form
             className="space-y-3"
             onSubmit={(event) => {
@@ -102,7 +102,7 @@ function VerifyInner() {
         </Card>
 
         {result && state && (
-          <div className={cn("mt-5 rounded-lg border p-6 text-center", state.tone)}>
+          <div className={cn("mt-6 rounded-lg border p-6 text-center", state.tone)}>
             <div className="flex justify-center">{state.icon}</div>
             <p className="mt-3 text-2xl font-semibold tracking-tight">{state.label}</p>
             <p className="mx-auto mt-1 max-w-sm text-sm">{state.blurb}</p>
@@ -136,7 +136,7 @@ function VerifyInner() {
           </div>
         )}
 
-        <p className="mt-6 flex items-start gap-1.5 text-xs text-muted-foreground">
+        <p className="mt-8 flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
           <HelpCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           No name, date of birth or contact detail is ever returned by this check, and every check
           is written to the platform&apos;s audit trail.

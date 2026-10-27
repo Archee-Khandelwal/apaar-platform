@@ -1,48 +1,115 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, BadgeCheck, FileSpreadsheet, Flag, Users } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  BadgeCheck,
+  CheckCircle2,
+  FileSpreadsheet,
+  Flag,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
 
-import { PageHeader } from "@/components/AppShell";
 import { SeverityBadge } from "@/components/SeverityBadge";
-import { StatCard } from "@/components/StatCard";
-import { ErrorState, LoadingSkeleton } from "@/components/States";
-import { Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui/primitives";
+import { ErrorState, KpiSkeleton, Skeleton } from "@/components/States";
+import { KpiCard, KpiRow, PageHeader, SectionCard } from "@/components/ui/page";
+import { Button } from "@/components/ui/primitives";
 import { api } from "@/lib/api";
-import { dateTime } from "@/lib/format";
-import type { Severity } from "@/lib/types";
+import { dateTime, flagLabel } from "@/lib/format";
+import type { InstitutionFlag, Severity } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 const CURRENT_YEAR = "2026-27";
 
-function QualityDial({ score }: { score: number | null | undefined }) {
-  const value = score ?? 0;
-  const tone = value >= 85 ? "text-emerald-600" : value >= 65 ? "text-amber-600" : "text-red-600";
-  const circumference = 2 * Math.PI * 42;
+/** A horizontal stack showing how the admitted seats sit against approved intake. */
+function SeatSummaryChart({
+  intake,
+  regular,
+  supernumerary,
+  excess,
+}: {
+  intake: number;
+  regular: number;
+  supernumerary: number;
+  excess: number;
+}) {
+  const scale = Math.max(intake, regular + supernumerary + excess, 1);
+  const width = (value: number) => `${(value / scale) * 100}%`;
+  const segments = [
+    { label: "Regular admitted", value: regular, className: "bg-primary" },
+    { label: "Valid supernumerary", value: supernumerary, className: "bg-sky-400" },
+    { label: "Excess", value: excess, className: "bg-severity-critical" },
+  ].filter((segment) => segment.value > 0);
+
   return (
-    <div className="relative h-32 w-32">
-      <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
-        <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="9" className="text-muted" />
-        <circle
-          cx="50"
-          cy="50"
-          r="42"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="9"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={circumference * (1 - value / 100)}
-          className={tone}
+    <div className="space-y-4">
+      <div className="relative h-9 w-full overflow-hidden rounded-md bg-secondary">
+        <div className="flex h-full">
+          {segments.map((segment) => (
+            <div
+              key={segment.label}
+              className={cn("h-full", segment.className)}
+              style={{ width: width(segment.value) }}
+              title={`${segment.label}: ${segment.value}`}
+            />
+          ))}
+        </div>
+        {/* The approved-intake line is the thing a college actually watches. */}
+        <div
+          className="absolute inset-y-0 z-10 w-0.5 bg-slate-900"
+          style={{ left: width(intake) }}
+          aria-hidden
         />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className={`text-2xl font-semibold tabular-nums ${tone}`}>
-          {score === null || score === undefined ? "—" : score}
-        </span>
-        <span className="text-xs text-muted-foreground">quality</span>
       </div>
+
+      <ul className="flex flex-wrap gap-x-5 gap-y-2 text-xs">
+        {segments.map((segment) => (
+          <li key={segment.label} className="inline-flex items-center gap-1.5">
+            <span className={cn("h-2.5 w-2.5 rounded-sm", segment.className)} />
+            <span className="text-muted-foreground">{segment.label}</span>
+            <span className="font-semibold tabular-nums">{segment.value}</span>
+          </li>
+        ))}
+        <li className="inline-flex items-center gap-1.5">
+          <span className="h-3.5 w-0.5 bg-slate-900" />
+          <span className="text-muted-foreground">Approved intake</span>
+          <span className="font-semibold tabular-nums">{intake}</span>
+        </li>
+      </ul>
     </div>
+  );
+}
+
+/** One row of the "Needs your attention" list: what happened, and what to do. */
+function AttentionRow({
+  severity,
+  title,
+  detail,
+  action,
+}: {
+  severity?: Severity;
+  title: string;
+  detail: string;
+  action: { label: string; href: string };
+}) {
+  return (
+    <li className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 py-4 first:pt-0 last:pb-0">
+      <div className="min-w-0 flex-1 space-y-1">
+        <div className="flex flex-wrap items-center gap-2">
+          {severity && <SeverityBadge severity={severity} />}
+          <p className="text-sm font-medium">{title}</p>
+        </div>
+        <p className="text-sm leading-relaxed text-muted-foreground">{detail}</p>
+      </div>
+      <Button asChild size="sm" variant="outline" className="shrink-0">
+        <Link href={action.href}>
+          {action.label}
+          <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
+      </Button>
+    </li>
   );
 }
 
@@ -52,6 +119,10 @@ export default function InstitutionDashboardPage() {
     queryKey: ["institution-dashboard", CURRENT_YEAR],
     queryFn: () => api.institutionDashboard(CURRENT_YEAR),
   });
+  const openFlags = useQuery({
+    queryKey: ["institution-flags", "attention"],
+    queryFn: () => api.institutionFlags({ page: 1, page_size: 5, status: "open", sort: "-severity" }),
+  });
 
   if (dashboard.isError) return <ErrorState error={dashboard.error} onRetry={dashboard.refetch} />;
 
@@ -59,15 +130,37 @@ export default function InstitutionDashboardPage() {
   const flags = data?.open_flags ?? { low: 0, medium: 0, high: 0, critical: 0 };
   const openTotal = Object.values(flags).reduce((sum, value) => sum + value, 0);
   const seats = data?.seat_matrix_summary;
+  const quality = data?.latest_quality_score;
+  const topFlags: InstitutionFlag[] = openFlags.data?.items ?? [];
+  // Five rows of "APAAR not found" is noise; one row saying "5 students" is a task.
+  const groupedFlags = Array.from(
+    topFlags
+      .reduce((groups, flag) => {
+        const existing = groups.get(flag.type);
+        if (existing) existing.count += 1;
+        else groups.set(flag.type, { flag, count: 1 });
+        return groups;
+      }, new Map<string, { flag: InstitutionFlag; count: number }>())
+      .values(),
+  );
+
+  const qualityTone =
+    quality === null || quality === undefined
+      ? "default"
+      : quality >= 85
+        ? "positive"
+        : quality >= 65
+          ? "warning"
+          : "critical";
 
   return (
     <>
       <PageHeader
-        title={profile.data?.name ?? "Institution dashboard"}
+        title="Dashboard"
         description={
           profile.data
-            ? `${profile.data.state} · AICTE permanent id ${profile.data.aicte_permanent_id} · ${profile.data.programs.length} approved programmes`
-            : "Loading your institution…"
+            ? `What ${profile.data.name} has reported for ${CURRENT_YEAR}, and what still needs your attention.`
+            : "What your institution has reported this year, and what still needs your attention."
         }
         actions={
           <Button asChild>
@@ -80,124 +173,155 @@ export default function InstitutionDashboardPage() {
       />
 
       {dashboard.isLoading ? (
-        <LoadingSkeleton rows={6} />
+        <>
+          <KpiSkeleton />
+          <Skeleton rows={4} height="h-24" />
+        </>
       ) : (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard
+          <KpiRow>
+            <KpiCard
               label="Students reported"
               value={data?.students_reported ?? 0}
-              hint={`${CURRENT_YEAR} · active enrolments`}
+              hint={`Active enrolments for ${CURRENT_YEAR}`}
               icon={<Users className="h-4 w-4" />}
             />
-            <StatCard
-              label="Open findings"
+            <KpiCard
+              label="Data quality score"
+              value={quality ?? "—"}
+              hint={
+                data?.last_upload_at
+                  ? `Your latest upload, ${dateTime(data.last_upload_at)}`
+                  : "No upload yet this year"
+              }
+              tone={qualityTone}
+              icon={<FileSpreadsheet className="h-4 w-4" />}
+            />
+            <KpiCard
+              label="Open flags"
               value={openTotal}
               hint={
                 openTotal === 0
                   ? "Nothing outstanding"
-                  : `${flags.critical} critical · ${flags.high} high · ${flags.medium} medium`
+                  : `${flags.critical} critical · ${flags.high} high · ${flags.medium} medium · ${flags.low} low`
               }
-              tone={flags.critical > 0 ? "danger" : flags.high > 0 ? "warning" : "success"}
+              tone={flags.critical > 0 ? "critical" : flags.high > 0 ? "warning" : "positive"}
               icon={<Flag className="h-4 w-4" />}
             />
-            <StatCard
-              label="Approved intake"
-              value={seats?.approved_intake ?? 0}
-              hint={`${seats?.regular_admitted ?? 0} regular admitted`}
-            />
-            <StatCard
-              label="Excess seats"
-              value={seats?.excess ?? 0}
-              hint={
-                (seats?.excess ?? 0) > 0
-                  ? "Beyond intake and valid supernumerary"
-                  : "Within approved intake"
-              }
-              tone={(seats?.excess ?? 0) > 0 ? "danger" : "success"}
+            <KpiCard
+              label="Seats status"
+              value={(seats?.excess ?? 0) === 0 ? "Within limits" : `${seats?.excess} excess`}
+              hint={`${seats?.total_admitted ?? 0} admitted against ${seats?.approved_intake ?? 0} approved intake`}
+              tone={(seats?.excess ?? 0) > 0 ? "critical" : "positive"}
               icon={<AlertTriangle className="h-4 w-4" />}
             />
-          </div>
+          </KpiRow>
 
-          <div className="mt-4 grid gap-4 lg:grid-cols-3">
-            <Card>
-              <CardHeader>
-                <CardTitle>Data quality</CardTitle>
-              </CardHeader>
-              <CardContent className="flex items-center gap-4">
-                <QualityDial score={data?.latest_quality_score} />
-                <div className="min-w-0 text-sm">
-                  <p className="text-muted-foreground">
-                    Score of your most recent upload. It falls with rejected rows, warnings and
-                    missing columns we need for detection.
-                  </p>
-                  {data?.quality_trend && data.quality_trend.length > 1 && (
-                    <div className="mt-3 flex items-end gap-1" aria-label="Quality score trend">
-                      {data.quality_trend.map((point) => (
-                        <div
-                          key={point.upload_id}
-                          title={`Upload #${point.upload_id}: ${point.quality_score ?? "—"}`}
-                          className="w-4 rounded-t bg-accent/70"
-                          style={{ height: `${Math.max(((point.quality_score ?? 0) / 100) * 56, 4)}px` }}
-                        />
-                      ))}
-                    </div>
-                  )}
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Last upload {dateTime(data?.last_upload_at)}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Open findings by severity</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {(["critical", "high", "medium", "low"] as Severity[]).map((severity) => (
-                  <div key={severity} className="flex items-center justify-between gap-2">
-                    <SeverityBadge severity={severity} />
-                    <span className="text-sm font-medium tabular-nums">{flags[severity]}</span>
-                  </div>
-                ))}
-                <Button asChild variant="outline" size="sm" className="mt-2 w-full">
-                  <Link href="/institution/flags">Open the flag inbox</Link>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <SectionCard
+              title="Seats against approved intake"
+              description="Supernumerary seats sit outside approved intake, each with its own cap."
+              className="lg:col-span-2"
+              actions={
+                <Button asChild size="sm" variant="outline">
+                  <Link href="/institution/seat-matrix">Open seat matrix</Link>
                 </Button>
-              </CardContent>
-            </Card>
+              }
+            >
+              {seats ? (
+                <SeatSummaryChart
+                  intake={seats.approved_intake}
+                  regular={seats.regular_admitted}
+                  supernumerary={seats.valid_supernumerary}
+                  excess={seats.excess}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No approved intake on record for {CURRENT_YEAR}.
+                </p>
+              )}
+            </SectionCard>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Compliance certificate</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {data?.compliance_certificate_eligible ? (
-                  <>
-                    <p className="flex items-center gap-2 text-sm text-emerald-700">
-                      <BadgeCheck className="h-4 w-4" />
-                      Eligible for {CURRENT_YEAR}
-                    </p>
-                    <Button asChild size="sm" className="mt-3">
-                      <Link href="/institution/certificate">View certificate</Link>
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-sm text-muted-foreground">Not available yet:</p>
-                    <ul className="mt-2 space-y-1 text-sm">
-                      {(data?.compliance_certificate_reasons ?? []).map((reason) => (
-                        <li key={reason} className="flex items-start gap-1.5">
-                          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
-                          {reason}
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+            <SectionCard title="Compliance certificate">
+              {data?.compliance_certificate_eligible ? (
+                <div className="space-y-4">
+                  <p className="flex items-start gap-2 text-sm font-medium text-emerald-700">
+                    <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0" />
+                    Eligible for {CURRENT_YEAR}
+                  </p>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    No high or critical finding is open against you for this year.
+                  </p>
+                  <Button asChild size="sm" className="w-full">
+                    <Link href="/institution/certificate">View certificate</Link>
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <p className="flex items-start gap-2 text-sm font-medium text-amber-700">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                    Not available yet
+                  </p>
+                  <ul className="space-y-2 text-sm leading-relaxed text-muted-foreground">
+                    {(data?.compliance_certificate_reasons ?? []).map((reason) => (
+                      <li key={reason}>{reason}</li>
+                    ))}
+                  </ul>
+                  <Button asChild size="sm" variant="outline" className="w-full">
+                    <Link href="/institution/certificate">What is blocking it</Link>
+                  </Button>
+                </div>
+              )}
+            </SectionCard>
           </div>
+
+          <SectionCard
+            title="Needs your attention"
+            description="The next things to act on, most serious first."
+            actions={
+              <Button asChild size="sm" variant="outline">
+                <Link href="/institution/flags">All flags</Link>
+              </Button>
+            }
+          >
+            {openFlags.isLoading ? (
+              <Skeleton rows={3} height="h-16" />
+            ) : (
+              <ul className="divide-y divide-border">
+                {(seats?.excess ?? 0) > 0 && (
+                  <AttentionRow
+                    severity="high"
+                    title={`${seats!.excess} admissions beyond approved intake`}
+                    detail="Cancel or reclassify the extra admissions, or record the supernumerary category they belong to. The seat matrix shows which programme is over."
+                    action={{ label: "Open seat matrix", href: "/institution/seat-matrix" }}
+                  />
+                )}
+                {groupedFlags.map(({ flag, count: repeats }) => (
+                  <AttentionRow
+                    key={flag.id}
+                    severity={flag.severity}
+                    title={repeats > 1 ? `${flagLabel(flag.type)} — ${repeats} findings` : flag.title}
+                    detail={flag.explanation}
+                    action={{ label: "Open flags", href: "/institution/flags" }}
+                  />
+                ))}
+                {(quality ?? 100) < 85 && (
+                  <AttentionRow
+                    severity="medium"
+                    title={`Data quality is ${quality}`}
+                    detail="Rejected rows, warnings and missing columns pull this score down. Fix the rows listed in your last upload report and submit again."
+                    action={{ label: "Upload again", href: "/institution/upload" }}
+                  />
+                )}
+                {groupedFlags.length === 0 && (seats?.excess ?? 0) === 0 && (quality ?? 100) >= 85 && (
+                  <li className="flex items-start gap-2 py-2 text-sm text-emerald-700">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+                    Nothing outstanding. Your data for {CURRENT_YEAR} is reported and clean.
+                  </li>
+                )}
+              </ul>
+            )}
+          </SectionCard>
         </>
       )}
     </>

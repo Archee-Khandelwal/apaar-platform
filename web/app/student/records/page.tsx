@@ -3,9 +3,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { PageHeader } from "@/components/AppShell";
-import { ErrorState, LoadingSkeleton } from "@/components/States";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Label, Select, Spinner, Textarea } from "@/components/ui/primitives";
+import { FieldList, PageHeader, SectionCard } from "@/components/ui/page";
+import { ErrorState, Skeleton } from "@/components/States";
+import { Badge, Button, Input, Label, Select, Spinner, Textarea } from "@/components/ui/primitives";
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
 import { dateOnly, dateTime } from "@/lib/format";
@@ -50,7 +50,7 @@ export default function MyRecordsPage() {
   });
 
   if (me.isError) return <ErrorState error={me.error} onRetry={me.refetch} />;
-  if (me.isLoading || !me.data) return <LoadingSkeleton rows={6} />;
+  if (me.isLoading || !me.data) return <Skeleton rows={4} height="h-28" />;
 
   const { student, enrolments } = me.data;
 
@@ -58,44 +58,33 @@ export default function MyRecordsPage() {
     <>
       <PageHeader
         title="My records"
-        description="Everything the platform holds about you, and how to get it corrected."
+        description="Everything the platform holds about you, and how to get anything wrong put right."
       />
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Your identity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="grid gap-3 sm:grid-cols-2">
-              {[
-                ["APAAR ID", student.apaar_masked],
-                ["APAAR status", student.apaar_status.replace("_", " ")],
-                ["Name", student.name ?? "—"],
-                ["Date of birth", dateOnly(student.dob)],
-                ["Category", student.category ?? "not reported"],
-                ["Gender", student.gender ?? "not reported"],
-                ["Nationality", student.nationality_status],
-              ].map(([label, text]) => (
-                <div key={label}>
-                  <dt className="text-xs uppercase tracking-wide text-muted-foreground">{label}</dt>
-                  <dd className="text-sm font-medium">{text}</dd>
-                </div>
-              ))}
-            </dl>
-            <p className="mt-4 rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
-              Your phone number, email and guardian contact are not shown because they are not
-              stored: the platform keeps only a keyed hash, which cannot be turned back into the
-              number. Matching for fraud detection happens on those hashes.
-            </p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <SectionCard title="Your identity">
+          <FieldList
+            fields={[
+              { label: "APAAR ID", value: student.apaar_masked },
+              { label: "APAAR status", value: student.apaar_status.replace("_", " ") },
+              { label: "Name", value: student.name ?? "—" },
+              { label: "Date of birth", value: dateOnly(student.dob) },
+              { label: "Category", value: student.category ?? "not reported" },
+              { label: "Gender", value: student.gender ?? "not reported" },
+              { label: "Nationality", value: student.nationality_status },
+            ]}
+          />
+          <p className="mt-6 rounded-md bg-secondary/60 p-4 text-xs leading-relaxed text-muted-foreground">
+            Your phone number, email and guardian contact are not shown because they are not stored:
+            the platform keeps only a keyed hash, which cannot be turned back into the number.
+            Matching for fraud detection happens on those hashes.
+          </p>
+        </SectionCard>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Ask for a correction</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <SectionCard
+          title="Ask for a correction"
+          description="This goes to your institution, who see it in their flag inbox."
+        >
             <form
               className="space-y-3"
               onSubmit={(event) => {
@@ -153,17 +142,12 @@ export default function MyRecordsPage() {
                 Send to my institution
               </Button>
             </form>
-          </CardContent>
-        </Card>
+        </SectionCard>
       </div>
 
-      <Card className="mt-4">
-        <CardHeader>
-          <CardTitle>My correction requests</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <SectionCard title="My correction requests">
           {corrections.isLoading ? (
-            <LoadingSkeleton rows={2} />
+            <Skeleton rows={2} />
           ) : (corrections.data?.items.length ?? 0) === 0 ? (
             <p className="text-sm text-muted-foreground">You have not asked for any corrections.</p>
           ) : (
@@ -182,8 +166,7 @@ export default function MyRecordsPage() {
               ))}
             </ul>
           )}
-        </CardContent>
-      </Card>
+      </SectionCard>
     </>
   );
 }

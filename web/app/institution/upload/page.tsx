@@ -13,9 +13,9 @@ import {
 import Link from "next/link";
 import { useRef, useState } from "react";
 
-import { PageHeader } from "@/components/AppShell";
+import { KpiCard, KpiRow, PageHeader, SectionCard } from "@/components/ui/page";
 import { SeverityBadge } from "@/components/SeverityBadge";
-import { Button, Card, CardContent, CardHeader, CardTitle, Label, Select, Spinner } from "@/components/ui/primitives";
+import { Button, Card, Label, Select, Spinner } from "@/components/ui/primitives";
 import { useToast } from "@/components/ui/toast";
 import { api, download } from "@/lib/api";
 import { flagLabel } from "@/lib/format";
@@ -77,35 +77,46 @@ export default function UploadPage() {
   return (
     <>
       <PageHeader
-        title="Upload student data"
-        description="Excel or CSV. Headers do not have to match ours — we propose a mapping and you confirm it."
+        title="Upload data"
+        description="Send your admissions file. Headers do not have to match ours — we propose a mapping and you confirm it before anything is stored."
         actions={
-          <Button
-            variant="outline"
-            onClick={() => download("/institution/template", "apaar_upload_template.csv")}
-          >
-            <Download className="h-4 w-4" />
-            Download template
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button asChild variant="outline">
+              <Link href="/institution/uploads">Upload history</Link>
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => download("/institution/template", "apaar_upload_template.csv")}
+            >
+              <Download className="h-4 w-4" />
+              Download template
+            </Button>
+          </div>
         }
       />
 
-      <ol className="mb-5 flex flex-wrap items-center gap-2 text-xs">
+      <ol className="flex flex-wrap items-center gap-2 text-sm">
         {["Choose a file", "Confirm the column mapping", "Quality report"].map((step, index) => {
-          const state = index === 0 ? Boolean(created) : index === 1 ? Boolean(report) : false;
+          const done = index === 0 ? Boolean(created) : index === 1 ? Boolean(report) : false;
           const active =
             (index === 0 && !created) || (index === 1 && created && !report) || (index === 2 && report);
           return (
             <li
               key={step}
               className={cn(
-                "flex items-center gap-1.5 rounded-full border px-3 py-1",
-                active ? "border-primary bg-primary/5 font-medium text-primary" : "border-border",
-                state && "text-muted-foreground",
+                "flex items-center gap-2 rounded-full border px-3 py-1.5",
+                active
+                  ? "border-primary bg-primary/[0.06] font-medium text-primary"
+                  : "border-border bg-card text-muted-foreground",
               )}
             >
-              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-muted text-[10px] font-semibold">
-                {index + 1}
+              <span
+                className={cn(
+                  "flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold",
+                  active ? "bg-primary text-primary-foreground" : "bg-secondary",
+                )}
+              >
+                {done && !active ? "\u2713" : index + 1}
               </span>
               {step}
             </li>
@@ -131,7 +142,7 @@ export default function UploadPage() {
             handleFile(event.dataTransfer.files?.[0]);
           }}
         >
-          <CardContent className="flex flex-col items-center gap-3 py-14 text-center">
+          <div className="flex flex-col items-center gap-3 px-5 py-16 text-center">
             <UploadIcon className="h-8 w-8 text-muted-foreground" />
             <div>
               <p className="text-sm font-medium">Drop your admissions file here</p>
@@ -151,24 +162,21 @@ export default function UploadPage() {
               Choose a file
             </Button>
             <p className="text-xs text-muted-foreground">
-              Try the messy sample files in <code className="font-mono">/samples</code>.
+              Try the deliberately messy sample files in{" "}
+              <code className="font-mono">/samples</code>.
             </p>
-          </CardContent>
+          </div>
         </Card>
       )}
 
       {/* ---------------------------------------------------------------- step 2 */}
       {created && !report && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Confirm the column mapping</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              {created.filename} · {created.rows_total} rows
-              {created.blank_rows_skipped > 0 && ` · ${created.blank_rows_skipped} blank rows skipped`}
-              {created.detected_sheet && ` · sheet "${created.detected_sheet}"`}
-            </p>
-          </CardHeader>
-          <CardContent>
+        <SectionCard
+          title="Confirm the column mapping"
+          description={`${created.filename} · ${created.rows_total} rows${
+            created.blank_rows_skipped > 0 ? ` · ${created.blank_rows_skipped} blank rows skipped` : ""
+          }${created.detected_sheet ? ` · sheet "${created.detected_sheet}"` : ""}`}
+        >
             {unmapped.length > 0 && (
               <p className="mb-3 flex items-start gap-2 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -257,8 +265,7 @@ export default function UploadPage() {
                 Rows with errors are reported, never stored. Rows already reported are skipped.
               </p>
             </div>
-          </CardContent>
-        </Card>
+        </SectionCard>
       )}
 
       {/* ---------------------------------------------------------------- step 3 */}
@@ -272,36 +279,37 @@ function QualityReportView({ report, onAgain }: { report: QualityReport; onAgain
   const warnings = report.issues.filter((issue) => issue.severity === "warning");
   const infos = report.issues.filter((issue) => issue.severity === "info");
   const score = report.quality_score ?? 0;
-  const tone = score >= 85 ? "text-emerald-600" : score >= 65 ? "text-amber-600" : "text-red-600";
-
+  
   return (
     <div className="space-y-4">
-      <Card>
-        <CardContent className="flex flex-wrap items-center gap-6 pt-5">
-          <div className="text-center">
-            <p className={cn("text-4xl font-semibold tabular-nums", tone)}>{score}</p>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">quality score</p>
-          </div>
-          <dl className="grid flex-1 gap-3 sm:grid-cols-4">
-            {[
-              ["Rows accepted", report.rows_ok, "text-emerald-700"],
-              ["Rows rejected", report.rows_error, "text-red-700"],
-              ["With warnings", report.rows_warning, "text-amber-700"],
-              ["Already reported", report.already_reported, "text-slate-700"],
-            ].map(([label, value, colour]) => (
-              <div key={label as string}>
-                <dt className="text-xs uppercase tracking-wide text-muted-foreground">{label as string}</dt>
-                <dd className={cn("text-xl font-semibold tabular-nums", colour as string)}>
-                  {value as number}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </CardContent>
-      </Card>
+      <KpiRow>
+        <KpiCard
+          label="Quality score"
+          value={score}
+          hint="Falls with rejected rows, warnings and missing columns"
+          tone={score >= 85 ? "positive" : score >= 65 ? "warning" : "critical"}
+        />
+        <KpiCard
+          label="Rows accepted"
+          value={report.rows_ok}
+          hint="Stored as enrolments"
+          tone="positive"
+        />
+        <KpiCard
+          label="Rows rejected"
+          value={report.rows_error}
+          hint="Not stored — fix them and upload again"
+          tone={report.rows_error > 0 ? "critical" : "default"}
+        />
+        <KpiCard
+          label="Already reported"
+          value={report.already_reported}
+          hint="Skipped, so a re-upload cannot inflate your seat count"
+        />
+      </KpiRow>
 
       {report.already_reported > 0 && (
-        <p className="flex items-start gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
+        <p className="flex items-start gap-2 rounded-md border border-border bg-card px-4 py-3 text-sm leading-relaxed">
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
           {report.already_reported} row(s) were already reported for this programme and year, so they
           were skipped. Re-uploading the same file cannot create duplicate enrolments or raise your
@@ -310,78 +318,75 @@ function QualityReportView({ report, onAgain }: { report: QualityReport; onAgain
       )}
 
       {Object.keys(report.registry_check).length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>APAAR registry check</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-4 text-sm">
+        <SectionCard
+          title="APAAR registry check"
+          description="Every provided APAAR ID was looked up in the national registry."
+        >
+          <dl className="flex flex-wrap gap-x-10 gap-y-4">
             {Object.entries(report.registry_check).map(([key, value]) => (
               <div key={key}>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  {key.replace(/_/g, " ")}
-                </p>
-                <p className="text-lg font-semibold tabular-nums">{value}</p>
+                <dt className="type-label">{key.replace(/_/g, " ")}</dt>
+                <dd className="mt-1 text-xl font-semibold tabular-nums">{value}</dd>
               </div>
             ))}
-          </CardContent>
-        </Card>
+          </dl>
+        </SectionCard>
       )}
 
       {report.flags_created.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Findings raised by this upload</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-2">
+        <SectionCard
+          title="Findings raised by this upload"
+          actions={
+            <Button asChild size="sm" variant="outline">
+              <Link href="/institution/flags">Open your flags</Link>
+            </Button>
+          }
+        >
+          <ul className="flex flex-wrap gap-2">
             {report.flags_created.map((flag) => (
-              <span
+              <li
                 key={flag.id}
-                className="inline-flex items-center gap-2 rounded border border-border px-2 py-1 text-xs"
+                className="inline-flex items-center gap-2 rounded-md border border-border px-2.5 py-1.5 text-xs"
               >
                 <SeverityBadge severity={flag.severity} showDot={false} />
                 {flagLabel(flag.type)}
-              </span>
+              </li>
             ))}
-            <Button asChild size="sm" variant="outline">
-              <Link href="/institution/flags">Open the flag inbox</Link>
-            </Button>
-          </CardContent>
-        </Card>
+          </ul>
+        </SectionCard>
       )}
 
       {[
-        ["Errors — these rows were not stored", errors, "border-red-200 bg-red-50/40"],
-        ["Warnings — stored, but worth checking", warnings, "border-amber-200 bg-amber-50/40"],
-        ["Skipped — already reported", infos, "border-border bg-muted/30"],
+        ["Errors — these rows were not stored", errors, "border-red-200"],
+        ["Warnings — stored, but worth checking", warnings, "border-amber-200"],
+        ["Skipped — already reported", infos, ""],
       ].map(([title, issues, tones]) =>
         (issues as typeof errors).length > 0 ? (
-          <Card key={title as string} className={tones as string}>
-            <CardHeader>
-              <CardTitle>
-                {title as string} ({(issues as typeof errors).length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2">
-                {(issues as typeof errors).slice(0, 25).map((issue, index) => (
-                  <li key={index} className="rounded border border-border bg-card p-3 text-sm">
-                    <p className="font-medium">
-                      Row {issue.row}
-                      {issue.field ? ` · ${issue.field}` : ""} — {issue.message}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      <strong>How to fix:</strong> {issue.fix_suggestion}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-              {(issues as typeof errors).length > 25 && (
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Showing the first 25. Download the CSV for the full list.
-                </p>
-              )}
-            </CardContent>
-          </Card>
+          <SectionCard
+            key={title as string}
+            className={tones as string}
+            title={`${title as string} (${(issues as typeof errors).length})`}
+            bodyClassName="p-0"
+          >
+            <ul className="divide-y divide-border">
+              {(issues as typeof errors).slice(0, 25).map((issue, index) => (
+                <li key={index} className="space-y-1 px-5 py-3">
+                  <p className="text-sm font-medium leading-snug">
+                    Row {issue.row}
+                    {issue.field ? ` · ${issue.field}` : ""} — {issue.message}
+                  </p>
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    <strong className="font-medium">How to fix:</strong> {issue.fix_suggestion}
+                  </p>
+                </li>
+              ))}
+            </ul>
+            {(issues as typeof errors).length > 25 && (
+              <p className="px-5 py-3 text-xs text-muted-foreground">
+                Showing the first 25. Download the CSV for the full list.
+              </p>
+            )}
+          </SectionCard>
         ) : null,
       )}
 
