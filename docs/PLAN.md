@@ -239,14 +239,14 @@ Legend: ☐ not started · ◐ in progress · ☑ done
 - [x] README: setup, `make` commands, demo accounts, 5-minute walkthrough with exact clicks
 - [x] `make reset && make dev` → clean demo-ready state in one command
 
-## Step 20 — Final QA & hardening (no new features)  ☐
+## Step 20 — Final QA & hardening (no new features)  ☑
 
-- [ ] `make reset && make test && make eval` all green
-- [ ] Security review vs CLAUDE.md §5: any raw phone/email/APAAR/name returned or logged, any route missing `require_role`, any institution query not tenant-scoped, any hardcoded secret → fix and list
-- [ ] Walk the README demo script end to end via the API; each step's data actually appears
-- [ ] Edge cases: empty upload, 5,000-row timing, registry down, expired token, revoked consent, cross-role page access
-- [ ] Frontend: no console errors, loading/empty states everywhere, works at 1280px and tablet
-- [ ] Final report: fixes, known limitations, anything not to show in the demo
+- [x] `make reset && make test && make eval` all green
+- [x] Security review vs CLAUDE.md §5: any raw phone/email/APAAR/name returned or logged, any route missing `require_role`, any institution query not tenant-scoped, any hardcoded secret → fix and list
+- [x] Walk the README demo script end to end via the API; each step's data actually appears
+- [x] Edge cases: empty upload, 5,000-row timing, registry down, expired token, revoked consent, cross-role page access
+- [x] Frontend: no console errors, loading/empty states everywhere, works at 1280px and tablet
+- [x] Final report: fixes, known limitations, anything not to show in the demo
 
 ---
 

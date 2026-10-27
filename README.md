@@ -109,16 +109,17 @@ come from seed 42; `make reset` reproduces them.
 ### 2 · The national view (45 seconds)
 
 7. Switch role (top right) to **`aicte_officer1`**.
-8. **National overview**: 40 institutions, ~15,800 students, open findings by severity, excess
-   seats, and the state-wise chart.
+8. **National overview**: 40 institutions, roughly 15,500 students reported for 2026-27, open
+   findings by severity, total excess seats, and the state-wise chart.
 9. **Flag queue**: filter to `critical`. Every row has a plain-English explanation; click one to
    see the evidence behind it.
 
 ### 3 · The headline screen: ghost students (90 seconds)
 
 10. **Ghost clusters**. Three clusters are flagged.
-11. Open the top one (score 82, critical): **29 students at Trivendri Institute of Engineering and
-    Technology share one email address and two guardian contacts**.
+11. Open the top one (score 82, critical). The summary names the college and says it plainly:
+    **29 students share one email address and two guardian contacts** — where a family shares one
+    contact across one to three students.
 12. Press **Compare with a normal cluster**. Beside it sits a real family: a handful of students on
     one guardian contact. That contrast is the argument.
 13. Point at a contact node: it says *Guardian contact #1*, never a number. The platform stores

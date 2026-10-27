@@ -10,10 +10,10 @@ admissions one day past the cutoff, and an intake breach of a single seat.
 **No detector threshold was changed after seeing these results.** Every miss is
 diagnosed below with the rule that caused it and what a fix would be.
 
-- Generated: 2026-10-26T23:21:28
+- Generated: 2026-10-27T09:23:20
 - Seed: `2026`
-- Dataset: 24 institutions, 95 programmes, 7192 students, 10572 enrolments
-- Labelled cases: 161
+- Dataset: 24 institutions, 95 programmes, 8080 students, 13043 enrolments
+- Labelled cases: 169
 
 > Run `make eval-robust`. It builds its own database, so the demo data and the
 > headline numbers in EVALUATION.md are untouched.
@@ -26,14 +26,14 @@ diagnosed below with the rule that caused it and what a fix would be.
 | Ghost-student clusters | `GHOST_CLUSTER` | 7 | 4 | 0 | 3 | 1.000 | 0.571 | 0.727 |
 | Same APAAR at two full-time institutions | `CROSS_INSTITUTION_DUPLICATE` | 8 | 8 | 0 | 0 | 1.000 | 1.000 | 1.000 |
 | Legal dual degree (must NOT be fraud) | `POSSIBLE_DUAL_DEGREE` | 8 | 8 | 0 | 0 | 1.000 | 1.000 | 1.000 |
-| Invalid / unknown / mismatched APAAR | `INVALID_APAAR`, `APAAR_NOT_FOUND`, `APAAR_MISMATCH` | 66 | 66 | 0 | 0 | 1.000 | 1.000 | 1.000 |
+| Invalid / unknown / mismatched APAAR | `INVALID_APAAR`, `APAAR_NOT_FOUND`, `APAAR_MISMATCH` | 74 | 74 | 0 | 0 | 1.000 | 1.000 | 1.000 |
 | Admissions after the cutoff | `LATE_ADMISSION` | 14 | 14 | 0 | 0 | 1.000 | 1.000 | 1.000 |
 | Near-consecutive APAAR ID runs | `SEQUENTIAL_APAAR` | 2 | 1 | 0 | 1 | 1.000 | 0.500 | 0.667 |
 | Records filed in a last-minute burst | `LAST_MINUTE_BULK` | 2 | 2 | 1 | 0 | 0.667 | 1.000 | 0.800 |
 | Phantom year-to-year progression | `PHANTOM_PROGRESSION` | 27 | 27 | 5 | 0 | 0.844 | 1.000 | 0.915 |
 | One person with two APAAR IDs | `IDENTITY_DUPLICATE` | 12 | 6 | 0 | 6 | 1.000 | 0.500 | 0.667 |
-| Supernumerary share far above peers | `STATISTICAL_ANOMALY` | 1 | 1 | 0 | 0 | 1.000 | 1.000 | 1.000 |
-| **Micro average** | all labelled | 150 | 140 | 6 | 10 | **0.959** | **0.933** | **0.946** |
+| Supernumerary share far above peers | `STATISTICAL_ANOMALY` | 1 | 0 | 0 | 1 | 1.000 | 0.000 | 0.000 |
+| **Micro average** | all labelled | 158 | 147 | 6 | 11 | **0.961** | **0.930** | **0.945** |
 
 ## Critical misclassification checks
 
@@ -87,32 +87,32 @@ Precision 1.000, recall 0.500 (6 missed, 0 unlabelled).
 
 | Scenario | Perturbation | Caught |
 |---|---|---|
-| Excess admissions beyond intake | excess of only 2 seat(s) | yes |
 | Excess admissions beyond intake | excess of only 1 seat(s) | yes |
+| Excess admissions beyond intake | excess of only 2 seat(s) | yes |
 | Excess admissions beyond intake | excess of only 8 seat(s) | yes |
-| Ghost-student clusters | 40 students on 6 shared contacts | yes |
 | Ghost-student clusters | 9 students on 5 shared contacts | **no** |
+| Ghost-student clusters | 22 students on 7 shared contacts | yes |
 | Ghost-student clusters | 14 students on 4 shared contacts | yes |
 | Ghost-student clusters | 6 students on 4 shared contacts | **no** |
+| Ghost-student clusters | 40 students on 6 shared contacts | yes |
 | Ghost-student clusters | 16 students split across TWO institutions | yes |
 | Ghost-student clusters | 16 students split across TWO institutions | **no** |
-| Ghost-student clusters | 22 students on 7 shared contacts | yes |
-| Same APAAR at two full-time institutions | second enrolment in year 1 | yes |
-| Same APAAR at two full-time institutions | second enrolment in year 1 | yes |
-| Same APAAR at two full-time institutions | second enrolment in year 2 | yes |
 | Same APAAR at two full-time institutions | second enrolment in year 1 | yes |
 | Same APAAR at two full-time institutions | second enrolment in year 2 | yes |
 | Same APAAR at two full-time institutions | second enrolment in year 2 | yes |
 | Same APAAR at two full-time institutions | second enrolment in year 2 | yes |
 | Same APAAR at two full-time institutions | second enrolment in year 1 | yes |
-| Legal dual degree (must NOT be fraud) | B.Tech regular + MCA online | yes |
+| Same APAAR at two full-time institutions | second enrolment in year 1 | yes |
+| Same APAAR at two full-time institutions | second enrolment in year 2 | yes |
+| Same APAAR at two full-time institutions | second enrolment in year 1 | yes |
+| Legal dual degree (must NOT be fraud) | MBA regular + MCA online | yes |
+| Legal dual degree (must NOT be fraud) | B.Tech regular + B.Tech online | yes |
+| Legal dual degree (must NOT be fraud) | MCA regular + MCA online | yes |
 | Legal dual degree (must NOT be fraud) | B.Tech regular + B.Tech online | yes |
 | Legal dual degree (must NOT be fraud) | MCA regular + B.Tech online | yes |
-| Legal dual degree (must NOT be fraud) | B.Tech regular + B.Tech online | yes |
-| Legal dual degree (must NOT be fraud) | B.Tech regular + MCA online | yes |
-| Legal dual degree (must NOT be fraud) | B.Tech regular + MCA online | yes |
 | Legal dual degree (must NOT be fraud) | B.Tech regular + MCA online | yes |
 | Legal dual degree (must NOT be fraud) | MCA regular + B.Tech online | yes |
+| Legal dual degree (must NOT be fraud) | B.Tech regular + MCA online | yes |
 | Admissions after the cutoff | 1 day(s) after the cutoff | yes |
 | Admissions after the cutoff | 1 day(s) after the cutoff | yes |
 | Admissions after the cutoff | 1 day(s) after the cutoff | yes |
@@ -146,11 +146,12 @@ Precision 1.000, recall 0.500 (6 missed, 0 unlabelled).
 
 ## Misses and extra flags
 
-- **Ghost-student clusters**: missed 3 of 7 (keys: ['14|2026-27', '18|2026-27', '3|2026-27'])
-- **Near-consecutive APAAR ID runs**: missed 1 of 2 (keys: ['16|2026-27'])
-- **One person with two APAAR IDs**: missed 6 of 12 (keys: ['7177', '7178', '7179', '7180', '7181', '7182'])
+- **Ghost-student clusters**: missed 3 of 7 (keys: ['13|2026-27', '19|2026-27', '8|2026-27'])
+- **Near-consecutive APAAR ID runs**: missed 1 of 2 (keys: ['14|2026-27'])
+- **One person with two APAAR IDs**: missed 6 of 12 (keys: ['8073', '8074', '8075', '8076', '8077', '8078'])
+- **Supernumerary share far above peers**: missed 1 of 1 (keys: ['6|2026-27'])
 - **Records filed in a last-minute burst**: 1 flag(s) with no matching label (keys: ['5|2026-27'])
-- **Phantom year-to-year progression**: 5 flag(s) with no matching label (keys: ['4060', '4604', '4886', '6046', '6266'])
+- **Phantom year-to-year progression**: 5 flag(s) with no matching label (keys: ['5067', '5866', '5976', '6684', '7434'])
 
 ## Flags produced that no scenario scores
 
