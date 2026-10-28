@@ -631,3 +631,109 @@ export interface CaseFile {
   integrity_ok: boolean;
   review: { decision?: string | null; reason?: string | null; by?: string | null; at?: string | null };
 }
+
+// ------------------------------------------------------------------ reconciliation (Phase 6)
+
+export type ReconStatus = "confirmed" | "needs_review" | "rejected";
+export type CheckResult = "pass" | "review" | "fail";
+
+export interface ReconProblem {
+  check: string;
+  label: string;
+  result: "review" | "fail";
+  message: string;
+  fix?: string | null;
+}
+
+export interface ReconRow {
+  enrolment_id: number;
+  student_id: number;
+  apaar_masked: string;
+  name_masked: string;
+  institution_id: number;
+  institution_name: string;
+  program_id: number;
+  programme: string;
+  academic_year: string;
+  year_of_study: number;
+  admission_type: string;
+  overall: ReconStatus;
+  problems: ReconProblem[];
+}
+
+export interface ReconPage extends Page<ReconRow> {
+  programmes: { program_id: number; label: string }[];
+}
+
+export interface ReconCounts {
+  confirmed: Suppressible;
+  needs_review: Suppressible;
+  rejected: Suppressible;
+  records: Suppressible;
+}
+
+export interface ReconInstitutionRow extends ReconCounts {
+  institution_id: number;
+  name: string;
+  state: string;
+  aicte_permanent_id: string;
+}
+
+export interface ReconSummary {
+  academic_year: string;
+  totals: ReconCounts;
+  items: ReconInstitutionRow[];
+}
+
+export interface ReconCheck {
+  check: string;
+  label: string;
+  result: CheckResult;
+  message: string;
+  fix?: string | null;
+}
+
+export interface ReconDetail extends ReconRow {
+  submitted: Record<string, string | number | boolean | null>;
+  apaar: { apaar_status: string; registry_status: string | null; result: string };
+  master: {
+    institution_status: string | null;
+    institution_reference: string | null;
+    programme_status: string | null;
+    approved_intake: number | null;
+    supernumerary_caps: Record<string, number>;
+  };
+  documents: { doc_type: string; label: string; status: string; issuer_status: string | null; document_id: number | null }[];
+  checks: ReconCheck[];
+  computed_at: string;
+}
+
+export interface InstitutionRecon {
+  academic_year: string;
+  counts: Record<ReconStatus, number>;
+  records: number;
+  to_fix: { check: string; label: string; result: string; fix?: string | null; example: string; records: number }[];
+  items: ReconRow[];
+  page: number;
+  page_size: number;
+  total: number;
+  total_pages: number;
+}
+
+export interface MasterImport {
+  id: number;
+  kind: string;
+  filename: string;
+  rows_total: number;
+  rows_ok: number;
+  rows_error: number;
+  issues: { row: number; message: string }[];
+  actor: string;
+  created_at: string;
+}
+
+export interface MasterStatus {
+  approvals: Record<string, number>;
+  programme_records: Record<string, number>;
+  imports: MasterImport[];
+}

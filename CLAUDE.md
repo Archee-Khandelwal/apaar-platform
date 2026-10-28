@@ -104,6 +104,7 @@ These are part of the product, not optional extras. Never violate them, even to 
 - `uploads` (id, institution_id, filename, rows_total, rows_ok, rows_error, quality_score, column_mapping JSON, created_at)
 - `flags` (id, type, severity, institution_id, student_id nullable, enrolment_id nullable, title, explanation, evidence JSON, status: open|under_review|escalated|dismissed|resolved, assigned_to, notes JSON, created_at)
 - `student_documents` (student_id, institution_id, doc_type, content_type sniffed from bytes, sha256 of the plaintext, content_enc Fernet, is_current, verification_status: pending|auto_verified|needs_review|rejected|verified, reasons, extracted, data_match, issuer_status, tamper, review fields). Required types per student come from `api/app/rules/document_checklist.yaml`
+- `institution_approvals` (AICTE's approval per institution and year), `approved_intake.status` (approved | withdrawn), `master_imports`, and `reconciliation` (one row per enrolment: six checks pass | review | fail with explanation and fix; overall confirmed | needs_review | rejected). Master records are imported by AICTE only (`services/master_records.py`); `services/reconciliation.py` recomputes after detector runs, document changes and imports
 - `access_log`, `audit_log` (hash-chained), `consents`, `verification_requests`, `users`
 
 ## 8. Flag types (use exactly these)

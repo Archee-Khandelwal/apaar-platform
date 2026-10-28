@@ -15,6 +15,7 @@ from app.routers import documents as documents_router
 from app.routers import admin as admin_router
 from app.routers import aicte as aicte_router
 from app.routers import institution as institution_router
+from app.routers import reconciliation as reconciliation_router
 from app.routers import student as student_router
 from app.routers import verifier as verifier_router
 from app.services.registry_client import RegistryClient
@@ -56,6 +57,7 @@ app.include_router(auth_router.router)
 app.include_router(institution_router.router)
 app.include_router(documents_router.router)
 app.include_router(aicte_router.router)
+app.include_router(reconciliation_router.router)
 app.include_router(student_router.router)
 app.include_router(verifier_router.router)
 app.include_router(admin_router.router)

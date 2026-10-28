@@ -336,3 +336,8 @@ def reconcile(
 
 def reconcile_student(db: Session, student_id: int) -> None:
     reconcile(db, student_ids={student_id})
+
+
+def reconcile_student_set(db: Session, student_ids: set[int]) -> None:
+    """One recomputation for a batch (e.g. a ZIP import), not one per student."""
+    reconcile(db, student_ids=student_ids)

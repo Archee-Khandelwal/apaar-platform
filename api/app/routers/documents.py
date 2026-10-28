@@ -47,6 +47,7 @@ from app.services.document_verification import (
     review_queue,
     verify_document,
 )
+from app.services.reconciliation import reconcile_student, reconcile_student_set
 from app.services.rules import document_checklist, document_types
 from app.services.student_documents import DocumentIntegrityError, DocumentRejected
 
@@ -80,6 +81,7 @@ def _serve(db: Session, document: StudentDocument, *, actor: str, role: str, rea
     try:
         data = documents.read_document(db, document=document, actor=actor, role=role, reason=reason)
     except DocumentIntegrityError as exc:
+        reconcile_student(db, document.student_id)
         db.commit()  # keep the access-log row, the flag and the rejected status
         raise api_error(status.HTTP_409_CONFLICT, "DOCUMENT_TAMPERED", str(exc))
     db.commit()
@@ -166,6 +168,7 @@ async def upload_document(
     except DocumentRejected as exc:
         raise _rejected(exc)
     verify_document(db, document)
+    reconcile_student(db, student_id)
     db.commit()
     return DocumentSummaryOut(**documents.document_summary(document))
 
@@ -186,9 +189,14 @@ async def upload_documents_zip(
         report = documents.import_zip(db, institution_id=institution_id, data=data, actor=user.username)
     except DocumentRejected as exc:
         raise _rejected(exc)
+    changed: set[int] = set()
     for row in report["results"]:
         if row.get("document_id"):
-            verify_document(db, db.get(StudentDocument, row["document_id"]))
+            stored = db.get(StudentDocument, row["document_id"])
+            verify_document(db, stored)
+            changed.add(stored.student_id)
+    if changed:
+        reconcile_student_set(db, changed)
     db.commit()
     return BulkUploadReport(**report)
 
@@ -271,6 +279,7 @@ def document_decision(
         record_decision(db, document=document, decision=payload.decision, reason=payload.reason, actor=user.username)
     except ReviewError as exc:
         raise api_error(status.HTTP_409_CONFLICT, "CANNOT_DECIDE", str(exc))
+    reconcile_student(db, document.student_id)
     db.commit()
     return ReviewDecisionOut(
         document_id=document.id,
@@ -292,6 +301,7 @@ def document_recheck(
     if document is None:
         raise_not_found("No such document.")
     verify_document(db, document)
+    reconcile_student(db, document.student_id)
     db.commit()
     return DocumentSummaryOut(**documents.document_summary(document))
 

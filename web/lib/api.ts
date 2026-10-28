@@ -25,6 +25,12 @@ import type {
   FlagDetail,
   FlagPage,
   IdCard,
+  InstitutionRecon,
+  MasterImport,
+  MasterStatus,
+  ReconDetail,
+  ReconPage,
+  ReconSummary,
   InstitutionDashboard,
   InstitutionFlag,
   InstitutionProfile,
@@ -217,6 +223,7 @@ export const api = {
     form.append("file", file);
     return request<BulkUploadReport>("/institution/documents/bulk", { method: "POST", form });
   },
+  institutionRecon: (query?: Query) => request<InstitutionRecon>("/institution/reconciliation", { query }),
   institutionDashboard: (academic_year?: string) =>
     request<InstitutionDashboard>("/institution/dashboard", { query: { academic_year } }),
   createUpload: (file: File, academicYear?: string) => {
@@ -277,6 +284,18 @@ export const api = {
     }),
   recheckDocument: (id: number) => request<DocumentSummary>(`/aicte/documents/${id}/recheck`, { method: "POST" }),
   trends: (query?: Query) => request<Trends>("/aicte/reports/trends", { query }),
+  reconSummary: (query?: Query) => request<ReconSummary>("/aicte/reconciliation/summary", { query }),
+  reconRecords: (query?: Query) => request<ReconPage>("/aicte/reconciliation/records", { query }),
+  reconRecord: (enrolmentId: number) => request<ReconDetail>(`/aicte/reconciliation/records/${enrolmentId}`),
+  masterStatus: () => request<MasterStatus>("/aicte/master"),
+  masterTemplate: (kind: "institutions" | "programmes") =>
+    request<string>(`/aicte/master/template/${kind}`, { raw: true }),
+  masterImport: (kind: "institutions" | "programmes", file: File) => {
+    const form = new FormData();
+    form.append("kind", kind);
+    form.append("file", file);
+    return request<MasterImport>("/aicte/master/import", { method: "POST", form });
+  },
 
   // ----------------------------------------------------------------- student
   studentMe: () => request<StudentMe>("/student/me"),
