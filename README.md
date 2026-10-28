@@ -37,6 +37,40 @@ make dev        # api :8000, mock registry :8001, web :3000
 
 Every account has its own password. After a reset they are in `demo_credentials.csv` at the repo root (gitignored); the login page lists the accounts, and you type the password.
 
+## Windows commands (no make)
+
+From the repo root in PowerShell, once:
+
+```powershell
+python scripts/tasks.py setup
+```
+
+Reset and reseed the data (stop the API first, or this drops the tables in place instead):
+
+```powershell
+python scripts/tasks.py reset
+```
+
+Start each service in its own PowerShell window (all from the repo root):
+
+```powershell
+# 1. Mock APAAR registry  :8001
+$env:PYTHONPATH = "$PWDpi;$PWD"; .\.venv\Scripts\python.exe -m uvicorn registry.app.main:app --port 8001
+
+# 2. Issuer & DigiLocker registry  :8002
+$env:PYTHONPATH = "$PWDpi;$PWD"; .\.venv\Scripts\python.exe -m uvicorn issuer.app.main:app --port 8002
+
+# 3. API  :8000
+$env:PYTHONPATH = "$PWDpi;$PWD"; .\.venv\Scripts\python.exe -m uvicorn app.main:app --port 8000
+
+# 4. Web app  :3000
+cd web; npm run dev
+```
+
+`python scripts/tasks.py dev` starts all four in one window instead.
+
+---
+
 ## Make targets
 
 | Target | What it does |
@@ -87,58 +121,37 @@ current ones.
 
 ---
 
-## Five-minute demo script
+## Demo script
 
-Run `make demo` first, then open http://localhost:3000 and follow this exactly. The numbers below
-come from seed 42; `make reset` reproduces them.
+Reset the data first (see *Windows commands* below), then open http://localhost:3000. Passwords are in
+`demo_credentials.csv`. Nav labels below are the sidebar entries.
 
-### 0 · Thirty seconds of framing (no clicking)
-
-> "AICTE receives counts today. A college can report 300 students in a programme approved for 120,
-> and nothing contradicts it. This platform takes student-level records keyed on APAAR ID, so the
-> arithmetic can be checked — and so the student can see what was said about them."
-
-### 1 · A messy upload becomes a finding (90 seconds)
-
-1. Sign in as **`kolhanpur32_admin`** (Institution → *Kolhanpur College of Engineering*).
-2. **Upload data** → drop `samples/sample_1_excess_intake.xlsx`.
-3. Stop on the **mapping screen**. Point out that the file's headers are `Stu. Nm`, `APAAR No.`,
-   `D.O.B`, `Adm Dt` — nothing matches our field names — and the platform has proposed a mapping
-   with a confidence per column. `Sr. No.` and `Remarks` are correctly ignored.
-4. Click **Validate and import 63 rows**.
-5. On the quality report, show the score, the rejected rows *with a fix suggestion each*, and the
-   **EXCESS_INTAKE** finding that appeared.
-6. Go to **Seat matrix**. B.Tech Electrical Engineering was at 82 of 120 approved seats; those 63 rows
-   put it **25 seats past intake**. Read the explanation line aloud — it is the arithmetic, in
-   words, including which supernumerary seats were allowed and why.
-
-> If you want to show it twice: upload the same file again. Every row comes back as
-> *already reported*, the seat count does not move, and the finding stays at 25 — not 50.
-
-### 2 · The national view (45 seconds)
-
-7. Switch role (top right) to **`aicte_officer1`**.
-8. **National overview**: 40 institutions, roughly 15,500 students reported for 2026-27, open
-   findings by severity, total excess seats, and the state-wise chart.
-9. **Flag queue**: filter to `critical`. Every row has a plain-English explanation; click one to
-   see the evidence behind it.
-
-### 3 · Verification, with consent (45 seconds)
-
-10. Switch role to **`verifier_demo`**. Enter the APAAR ID of `student_pending`
-    (sign in as that student first to copy it, or use any 12 digits to show the pending state) and
-    a purpose. The response is **pending** — nothing is shared.
-11. Switch to **`student_pending`** → **Consent manager**. It shows who asked, why, and exactly
-    what would be shared: *verified yes/no, programme, academic year*. Approve it.
-12. Back as **`verifier_demo`**: the result appears, and it is only those three facts.
-13. Switch to the student again and **withdraw consent**. The verifier's result disappears and any
-    issued QR token stops working immediately — show it on the public **/verify** page.
-
-### 4 · Close on integrity (30 seconds)
-
-14. Switch role to **`admin`** → **Run the tamper test**. One row is edited in a *copy* of the
-    audit log, and the chain reports exactly which row broke. The real log is untouched, and
-    **Verify the chain** still passes.
+1. **College login, and the wall between colleges.** Sign in as `kolhanpur32_admin`. Open **Students**
+   and **Seat matrix**: only Kolhanpur's programmes appear. Change the URL to another college's id
+   (for example `/institution/documents/<another college's student id>`) and it returns *not found* —
+   the institution comes from the login token, never from the request.
+2. **Upload data.** **Upload data** → `samples/sample_1_excess_intake.xlsx` → confirm the proposed
+   column mapping → validate. Show the quality report and the **EXCESS_INTAKE** finding, then **Seat
+   matrix**: *Approved Intake* vs *Actual Student Enrolment*, with *Supernumerary Seats* (TFW, lateral,
+   NRI category, FN/PIO/OCI, PMSSS) shown outside intake, each against its own cap.
+3. **Upload documents.** **Documents** → bulk-upload `samples/sample_4_documents.zip`, or open one
+   student's checklist and add files. Each file is OCR'd, its QR and issuer checked, and matched
+   against the reported name and DOB.
+4. **AICTE cross-check dashboard.** Switch role to `aicte_officer1` → **Reconciliation**. Every
+   reported record is checked six ways (institution approved, programme approved, within intake,
+   APAAR verified, documents verified, no duplicate) and shown *confirmed / needs review / rejected*
+   with the reason.
+5. **Officer reviews a mismatched document.** **Document review** → open a case whose extracted
+   name or DOB differs from the record → read the side-by-side comparison → approve or reject with a
+   reason. Return to **Reconciliation**: the record now reads **confirmed**.
+6. **Employer verification with consent.** Switch role to `verifier_demo` → request verification of
+   `student_pending` (APAAR ID visible from that student's **My records**). Result: *pending*. As
+   `student_pending` → **Consents**, approve. Back as the verifier: only *verified*, programme and
+   year. Withdraw consent and the result and any QR token stop working.
+7. **Degree certificate.** As the institution → **Degree certificates** → *Issue certificate* for a
+   completed student. The PDF prints the APAAR ID beside the student ID and a QR. Scan it (or open
+   its `/verify?doc=…` link, no login): **Genuine**, with the masked claims. Revoke it and the same
+   link reads **Revoked**.
 
 ### Things worth saying if asked
 

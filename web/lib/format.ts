@@ -53,6 +53,18 @@ export function relative(value?: string | null): string {
   return dateOnly(value);
 }
 
+/** PS field names for nationality status, e.g. nri -> "NRI Category". */
+export const NATIONALITY_LABELS: Record<string, string> = {
+  indian: "Indian",
+  nri: "NRI Category",
+  oci: "OCI Status",
+  fn: "Foreign National (FN) Status",
+};
+
+export function nationalityLabel(value: string): string {
+  return NATIONALITY_LABELS[value] ?? value;
+}
+
 /** Human label for a flag type, e.g. EXCESS_INTAKE -> "Excess intake". */
 export function flagLabel(type: string): string {
   const words = type.toLowerCase().split("_");

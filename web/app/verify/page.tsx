@@ -9,7 +9,7 @@ import { Suspense, useEffect, useState } from "react";
 import { Button, Card, Input, Label, Spinner } from "@/components/ui/primitives";
 import { api } from "@/lib/api";
 import { dateTime } from "@/lib/format";
-import type { TokenCheck, TokenState } from "@/lib/types";
+import type { DocumentCheck, TokenCheck, TokenState } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const STATES: Record<
@@ -42,8 +42,63 @@ const STATES: Record<
   },
 };
 
+/** Public check of a signed degree certificate (the QR on the paper opens /verify?doc=...). */
+function DocumentResult({ doc }: { doc: string }) {
+  const [result, setResult] = useState<DocumentCheck | null>(null);
+  const mutation = useMutation({ mutationFn: api.checkDocument, onSuccess: setResult });
+  useEffect(() => {
+    mutation.mutate(doc);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doc]);
+
+  const genuine = result?.state === "genuine";
+  const revoked = result?.state === "revoked";
+  const claims = result?.claims ?? {};
+  return (
+    <div
+      className={cn(
+        "mt-6 rounded-lg border p-6 text-center",
+        genuine && "border-emerald-200 bg-emerald-50 text-emerald-900",
+        revoked && "border-orange-200 bg-orange-50 text-orange-900",
+        result?.state === "invalid" && "border-red-200 bg-red-50 text-red-900",
+      )}
+    >
+      {!result && <Spinner />}
+      {result && (
+        <>
+          <div className="flex justify-center">
+            {genuine ? <BadgeCheck className="h-10 w-10" /> : revoked ? <CircleSlash className="h-10 w-10" /> : <ShieldX className="h-10 w-10" />}
+          </div>
+          <p className="mt-3 text-2xl font-semibold capitalize tracking-tight">{result.state}</p>
+          <p className="mx-auto mt-1 max-w-sm text-sm">
+            {genuine && "This document was issued by the platform and has not been altered."}
+            {revoked && "The issuing institution has withdrawn this document."}
+            {result.state === "invalid" && "This is not a document issued by the platform, or it has been altered."}
+          </p>
+          {(genuine || revoked) && (
+            <dl className="mx-auto mt-5 grid max-w-sm gap-3 text-left sm:grid-cols-2">
+              <div>
+                <dt className="text-xs uppercase tracking-wide opacity-70">Serial</dt>
+                <dd className="font-mono text-sm font-medium">{result.serial}</dd>
+              </div>
+              {Object.entries(claims).map(([key, value]) => (
+                <div key={key}>
+                  <dt className="text-xs uppercase tracking-wide opacity-70">{key.replace(/_/g, " ")}</dt>
+                  <dd className="break-words text-sm font-medium">{String(value)}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+          <p className="mt-5 text-xs opacity-70">Checked {dateTime(result.checked_at)}</p>
+        </>
+      )}
+    </div>
+  );
+}
+
 function VerifyInner() {
   const params = useSearchParams();
+  const doc = params.get("doc");
   const [token, setToken] = useState(params.get("token") ?? "");
   const [result, setResult] = useState<TokenCheck | null>(null);
 
@@ -59,6 +114,21 @@ function VerifyInner() {
   }, []);
 
   const state = result ? STATES[result.state] : null;
+
+  if (doc) {
+    return (
+      <main className="min-h-screen bg-background">
+        <p className="bg-amber-100 px-4 py-2 text-center text-xs font-medium text-amber-900">
+          Prototype — all data is synthetic.
+        </p>
+        <div className="mx-auto max-w-xl px-4 py-10 sm:py-14">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Public verification</p>
+          <h1 className="mt-2 type-page-title">Degree certificate check</h1>
+          <DocumentResult doc={doc} />
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-background">

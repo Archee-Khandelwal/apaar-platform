@@ -4,6 +4,7 @@
  * Document submission: every enrolled student with their checklist progress, and a ZIP
  * upload for doing a whole batch at once.
  */
+import { nationalityLabel } from "@/lib/format";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, FileArchive, FileWarning, Upload, XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -58,7 +59,7 @@ export default function DocumentsPage() {
       cell: (row) => (
         <span className="text-xs text-muted-foreground">
           {row.admission_type.replace(/_/g, " ")}
-          {row.nationality_status !== "indian" && ` · ${row.nationality_status.toUpperCase()}`}
+          {row.nationality_status !== "indian" && ` · ${nationalityLabel(row.nationality_status)}`}
         </span>
       ),
     },

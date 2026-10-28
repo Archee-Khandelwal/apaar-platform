@@ -67,7 +67,8 @@ ADMISSION_TYPE_MAP = {
     "lateral": "lateral", "lateral entry": "lateral", "le": "lateral", "second year entry": "lateral",
     "tfw": "tfw", "tuition fee waiver": "tfw", "fee waiver": "tfw",
     "fn": "fn_pio_oci", "fn pio oci": "fn_pio_oci", "foreign national": "fn_pio_oci",
-    "pio": "fn_pio_oci", "oci": "fn_pio_oci", "nri": "fn_pio_oci",
+    "pio": "fn_pio_oci", "oci": "fn_pio_oci",
+    "nri": "nri", "nri quota": "nri", "nri category": "nri",
     "pmsss": "pmsss", "pm special scholarship scheme": "pmsss",
     "supernumerary": "other_supernumerary", "other": "other_supernumerary",
 }

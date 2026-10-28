@@ -19,7 +19,7 @@ import { FieldList, PageHeader, SectionCard } from "@/components/ui/page";
 import { Badge } from "@/components/ui/primitives";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { dateOnly, dateTime } from "@/lib/format";
+import { dateOnly, dateTime, nationalityLabel } from "@/lib/format";
 import type { VerificationStatus } from "@/lib/types";
 
 const text = (value: unknown) => (value === null || value === undefined || value === "" ? "—" : String(value).replace(/_/g, " "));
@@ -63,7 +63,7 @@ export default function ReconciliationRecordPage() {
                 { label: "Admitted on", value: dateOnly(String(submitted.admitted_on ?? "")) },
                 { label: "Enrolment status", value: text(submitted.enrolment_status) },
                 { label: "Category", value: text(submitted.category) },
-                { label: "Nationality status", value: text(submitted.nationality_status).toUpperCase() },
+                { label: "Nationality status", value: nationalityLabel(text(submitted.nationality_status)) },
                 { label: "Gender", value: text(submitted.gender) },
                 { label: "Birth year", value: text(submitted.dob_year) },
                 { label: "Minor", value: submitted.is_minor ? "Yes: parental consent required" : "No" },
@@ -98,12 +98,12 @@ export default function ReconciliationRecordPage() {
                 { label: "Institution approval", value: text(record.master.institution_status) },
                 { label: "Approval reference", value: record.master.institution_reference ?? "—" },
                 { label: "Programme for the year", value: text(record.master.programme_status) },
-                { label: "Approved intake", value: record.master.approved_intake ?? "—" },
+                { label: "Approved Intake", value: record.master.approved_intake ?? "—" },
               ]}
             />
             {Object.keys(record.master.supernumerary_caps).length > 0 && (
               <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
-                Supernumerary caps:{" "}
+                Supernumerary Seats caps:{" "}
                 {Object.entries(record.master.supernumerary_caps).map(([key, value]) => `${key.replace(/_/g, " ")} ${value}`).join(", ")}.
               </p>
             )}

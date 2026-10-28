@@ -27,12 +27,13 @@ APAAR_EXEMPT_NATIONALITIES: Final[tuple[str, ...]] = ("fn", "oci")
 ProgramMode = Literal["regular", "online"]
 PROGRAM_MODES: Final[tuple[str, ...]] = ("regular", "online")
 
-AdmissionType = Literal["regular", "lateral", "tfw", "fn_pio_oci", "pmsss", "other_supernumerary"]
+AdmissionType = Literal["regular", "lateral", "tfw", "fn_pio_oci", "nri", "pmsss", "other_supernumerary"]
 ADMISSION_TYPES: Final[tuple[str, ...]] = (
     "regular",
     "lateral",
     "tfw",
     "fn_pio_oci",
+    "nri",
     "pmsss",
     "other_supernumerary",
 )
@@ -40,6 +41,7 @@ SUPERNUMERARY_TYPES: Final[tuple[str, ...]] = (
     "lateral",
     "tfw",
     "fn_pio_oci",
+    "nri",
     "pmsss",
     "other_supernumerary",
 )

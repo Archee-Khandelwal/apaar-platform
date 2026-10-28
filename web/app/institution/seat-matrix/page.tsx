@@ -110,7 +110,7 @@ export default function SeatMatrixPage() {
   return (
     <>
       <PageHeader
-        title="Seat matrix"
+        title="Seat matrix — Approved Intake vs Actual Student Enrolment"
         description="Whether each programme stayed inside its approved intake — supernumerary seats sit outside it, each with its own cap."
         actions={
           <Select value={year} onChange={(event) => setYear(event.target.value)} className="w-36">
@@ -136,14 +136,14 @@ export default function SeatMatrixPage() {
       ) : (
         <>
           <KpiRow className="xl:grid-cols-5">
-            <KpiCard label="Approved intake" value={data.totals.approved_intake} hint="Across every programme" />
-            <KpiCard label="Regular admitted" value={data.totals.regular_admitted} hint="Counted against intake" />
+            <KpiCard label="Approved Intake" value={data.totals.approved_intake} hint="Across every programme" />
+            <KpiCard label="Actual Student Enrolment (regular)" value={data.totals.regular_admitted} hint="Counted against intake" />
             <KpiCard
-              label="Valid supernumerary"
+              label="Supernumerary Seats (valid)"
               value={data.totals.valid_supernumerary}
               hint="Within their caps, outside intake"
             />
-            <KpiCard label="Total admitted" value={data.totals.total_admitted} hint="Regular plus supernumerary" />
+            <KpiCard label="Actual Student Enrolment (total)" value={data.totals.total_admitted} hint="Regular plus supernumerary" />
             <KpiCard
               label="Excess"
               value={data.totals.excess}
@@ -187,7 +187,7 @@ export default function SeatMatrixPage() {
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="text-xs uppercase tracking-wide text-muted-foreground">
-                            <th className="py-1 text-left font-semibold">Supernumerary category</th>
+                            <th className="py-1 text-left font-semibold">Supernumerary Seats category</th>
                             <th className="py-1 text-right font-semibold">Admitted</th>
                             <th className="py-1 text-right font-semibold">Cap</th>
                             <th className="py-1 text-right font-semibold">Excess</th>

@@ -14,7 +14,7 @@ import { PageHeader, SectionCard } from "@/components/ui/page";
 import { Button, Spinner } from "@/components/ui/primitives";
 import { useToast } from "@/components/ui/toast";
 import { api, openFile } from "@/lib/api";
-import { dateTime } from "@/lib/format";
+import { dateTime, nationalityLabel } from "@/lib/format";
 import type { StudentChecklist } from "@/lib/types";
 
 type Item = StudentChecklist["items"][number];
@@ -137,7 +137,7 @@ export default function StudentDocumentsPage() {
               <span>
                 {data.admission_type.replace(/_/g, " ")} admission, {data.academic_year}
                 {data.category ? ` · ${data.category}` : ""}
-                {data.nationality_status !== "indian" ? ` · ${data.nationality_status.toUpperCase()}` : ""}
+                {data.nationality_status !== "indian" ? ` · ${nationalityLabel(data.nationality_status)}` : ""}
               </span>
             </span>
           }

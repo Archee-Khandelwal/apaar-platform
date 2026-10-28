@@ -20,6 +20,7 @@ export type AdmissionType =
   | "lateral"
   | "tfw"
   | "fn_pio_oci"
+  | "nri"
   | "pmsss"
   | "other_supernumerary";
 export type ConsentStatus = "pending" | "approved" | "denied" | "revoked" | "expired";
@@ -736,4 +737,41 @@ export interface MasterStatus {
   approvals: Record<string, number>;
   programme_records: Record<string, number>;
   imports: MasterImport[];
+}
+
+// ----------------------------------------------------------------- degree certificates
+
+export interface DegreeCertificateRow {
+  enrolment_id: number;
+  student_number: string;
+  apaar_masked: string;
+  name_masked: string;
+  program: string;
+  academic_year: string;
+  certificate: { serial: string; status: string; issued_at: string } | null;
+}
+
+export interface DegreeCertificateList {
+  items: DegreeCertificateRow[];
+  identity_display: string;
+}
+
+export interface DegreeCertificateOut {
+  serial: string;
+  status: string;
+  created: boolean;
+  issued_at: string;
+  verify_url: string;
+  pdf_url: string;
+  html_url: string;
+}
+
+export interface DocumentCheck {
+  state: "genuine" | "revoked" | "invalid";
+  kind?: string | null;
+  serial?: string | null;
+  issued_at?: string | null;
+  revoked_at?: string | null;
+  claims?: Record<string, unknown> | null;
+  checked_at: string;
 }

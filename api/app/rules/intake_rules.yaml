@@ -37,6 +37,11 @@ supernumerary:
     cap_percent: 15.0         # VERIFY against AICTE Approval Process Handbook 2026-27
     applies_to_year: 1
     notes: Supernumerary quota for foreign nationals, PIO and OCI candidates.
+  nri:
+    label: NRI category
+    cap_percent: 15.0         # VERIFY against AICTE Approval Process Handbook 2026-27
+    applies_to_year: 1
+    notes: NRI quota seats, counted outside approved intake up to this cap.
   pmsss:
     label: PM Special Scholarship Scheme (J&K / Ladakh)
     cap_percent: 5.0          # VERIFY against AICTE Approval Process Handbook 2026-27

@@ -87,7 +87,7 @@ def bucket(result, admission_type: str):
 
 def test_caps_come_from_the_rule_file(program, db: Session) -> None:
     caps = supernumerary_caps(300)
-    assert caps == {"tfw": 15, "lateral": 30, "fn_pio_oci": 45, "pmsss": 15, "other_supernumerary": 6}
+    assert caps == {"tfw": 15, "lateral": 30, "fn_pio_oci": 45, "nri": 45, "pmsss": 15, "other_supernumerary": 6}
 
 
 def test_exactly_at_intake_is_not_excess(db: Session, program) -> None:
@@ -139,6 +139,17 @@ def test_over_only_because_a_supernumerary_bucket_exceeds_its_cap(db: Session, p
     assert bucket(result, "tfw").excess == 4
     assert result.excess == 4
     assert "Tuition Fee Waiver 19/15" in result.explanation()
+
+
+def test_nri_quota_is_counted_outside_intake_and_capped(db: Session, program) -> None:
+    admit(db, program, 300)
+    admit(db, program, 50, admission_type="nri")  # cap is 15% of 300 = 45
+    result = matrix(db, program)
+    assert result.regular_excess == 0
+    assert bucket(result, "nri").label == "NRI category"
+    assert bucket(result, "nri").cap == 45
+    assert bucket(result, "nri").excess == 5
+    assert result.excess == 5
 
 
 def test_excess_sums_regular_and_supernumerary_breaches(db: Session, program) -> None:

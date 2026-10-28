@@ -44,6 +44,9 @@ import type {
   StudentMe,
   StudentRow,
   TokenCheck,
+  DegreeCertificateList,
+  DegreeCertificateOut,
+  DocumentCheck,
   Trends,
   UploadCreated,
   TamperResult,
@@ -354,6 +357,12 @@ export const api = {
     request<PasswordReset>(`/admin/users/${userId}/reset-password`, { method: "POST" }),
 
   // public
+  degreeCertificates: () => request<DegreeCertificateList>("/institution/degree-certificates"),
+  issueDegreeCertificate: (enrolment_id: number) =>
+    request<DegreeCertificateOut>("/institution/degree-certificates", { method: "POST", body: { enrolment_id } }),
+  openDegreeCertificate: (serial: string) =>
+    openFile(`/institution/degree-certificates/${encodeURIComponent(serial)}?format=pdf`),
+  checkDocument: (token: string) => request<DocumentCheck>(`/verify/document/${encodeURIComponent(token)}`),
   checkToken: (token: string) => request<TokenCheck>(`/verify/token/${encodeURIComponent(token)}`),
 };
 

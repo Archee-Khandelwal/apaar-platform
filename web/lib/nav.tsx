@@ -48,6 +48,7 @@ export const NAV: Record<Role, NavItem[]> = {
     { href: "/institution/documents", label: "Documents", icon: FileCheck2 },
     { href: "/institution/reconciliation", label: "Reconciliation", icon: Scale },
     { href: "/institution/seat-matrix", label: "Seat matrix", icon: Table2 },
+    { href: "/institution/certificates", label: "Degree certificates", icon: BadgeCheck },
     { href: "/institution/flags", label: "Flags", icon: Flag },
   ],
   aicte_officer: [

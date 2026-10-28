@@ -37,8 +37,8 @@ function SeatSummaryChart({
   const scale = Math.max(intake, regular + supernumerary + excess, 1);
   const width = (value: number) => `${(value / scale) * 100}%`;
   const segments = [
-    { label: "Regular admitted", value: regular, className: "bg-primary" },
-    { label: "Valid supernumerary", value: supernumerary, className: "bg-sky-400" },
+    { label: "Actual Student Enrolment (regular)", value: regular, className: "bg-primary" },
+    { label: "Supernumerary Seats", value: supernumerary, className: "bg-sky-400" },
     { label: "Excess", value: excess, className: "bg-severity-critical" },
   ].filter((segment) => segment.value > 0);
 
@@ -73,7 +73,7 @@ function SeatSummaryChart({
         ))}
         <li className="inline-flex items-center gap-1.5">
           <span className="h-3.5 w-0.5 bg-slate-900" />
-          <span className="text-muted-foreground">Approved intake</span>
+          <span className="text-muted-foreground">Approved Intake</span>
           <span className="font-semibold tabular-nums">{intake}</span>
         </li>
       </ul>

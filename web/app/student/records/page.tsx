@@ -9,7 +9,7 @@ import { Badge, Button, Input, Label, Select, Spinner, Textarea } from "@/compon
 import { useToast } from "@/components/ui/toast";
 import { ChecklistBadge } from "@/components/DocumentStatusBadge";
 import { api, openFile } from "@/lib/api";
-import { dateOnly, dateTime } from "@/lib/format";
+import { dateOnly, dateTime, nationalityLabel } from "@/lib/format";
 
 const CORRECTABLE = [
   { value: "category", label: "Category" },
@@ -73,7 +73,7 @@ export default function MyRecordsPage() {
               { label: "Date of birth", value: dateOnly(student.dob) },
               { label: "Category", value: student.category ?? "not reported" },
               { label: "Gender", value: student.gender ?? "not reported" },
-              { label: "Nationality", value: student.nationality_status },
+              { label: "Nationality", value: nationalityLabel(student.nationality_status) },
             ]}
           />
           <p className="mt-6 rounded-md bg-secondary/60 p-4 text-xs leading-relaxed text-muted-foreground">

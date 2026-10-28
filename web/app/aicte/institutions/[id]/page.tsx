@@ -118,7 +118,7 @@ export default function InstitutionProfilePage() {
                   <th className="px-5 py-3 text-left type-label">Programme</th>
                   <th className="px-4 py-3 text-right type-label">Intake</th>
                   <th className="px-4 py-3 text-right type-label">Regular</th>
-                  <th className="px-4 py-3 text-right type-label">Valid supernumerary</th>
+                  <th className="px-4 py-3 text-right type-label">Supernumerary Seats</th>
                   <th className="px-5 py-3 text-right type-label">Excess</th>
                 </tr>
               </thead>
