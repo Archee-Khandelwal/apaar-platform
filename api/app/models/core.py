@@ -78,8 +78,64 @@ class ApprovedIntake(Base, TimestampMixin):
     intake: Mapped[int] = mapped_column(Integer)
     # {"tfw": 15, "lateral": 30, ...} resolved from intake_rules.yaml at seed time.
     supernumerary_caps: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    # AICTE master record: approved | withdrawn (closed for fresh admission that year).
+    status: Mapped[str] = mapped_column(String(16), default="approved")
+    source: Mapped[str] = mapped_column(String(16), default="seed")  # seed | import
 
     program: Mapped[Program] = relationship(back_populates="intakes")
+
+
+class InstitutionApproval(Base, TimestampMixin):
+    """AICTE's own record of an institution's approval for one academic year (the
+    Extension of Approval), imported by AICTE — never supplied by the institution."""
+
+    __tablename__ = "institution_approvals"
+    __table_args__ = (UniqueConstraint("institution_id", "academic_year", name="uq_approval_year"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    institution_id: Mapped[int] = mapped_column(ForeignKey("institutions.id"), index=True)
+    academic_year: Mapped[str] = mapped_column(String(16))
+    # approved | no_admission (no fresh admissions; continuing students only) | not_approved
+    status: Mapped[str] = mapped_column(String(16), default="approved")
+    reference: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    source: Mapped[str] = mapped_column(String(16), default="seed")
+
+
+class MasterImport(Base, TimestampMixin):
+    """One AICTE master-records import (CSV/Excel), with its per-row outcome."""
+
+    __tablename__ = "master_imports"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    kind: Mapped[str] = mapped_column(String(16))  # institutions | programmes
+    filename: Mapped[str] = mapped_column(String(255))
+    rows_total: Mapped[int] = mapped_column(Integer, default=0)
+    rows_ok: Mapped[int] = mapped_column(Integer, default=0)
+    rows_error: Mapped[int] = mapped_column(Integer, default=0)
+    issues: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    actor: Mapped[str] = mapped_column(String(64))
+
+
+class Reconciliation(Base):
+    """Phase 6: one submitted enrolment checked against AICTE's own records.
+
+    ``overall`` is confirmed | needs_review | rejected; ``checks`` holds each check's
+    result (pass | review | fail), its explanation and what the institution should do.
+    """
+
+    __tablename__ = "reconciliation"
+    __table_args__ = (
+        Index("ix_reconciliation_scope", "institution_id", "academic_year", "overall"),
+    )
+
+    enrolment_id: Mapped[int] = mapped_column(ForeignKey("enrolments.id"), primary_key=True)
+    student_id: Mapped[int] = mapped_column(ForeignKey("students.id"), index=True)
+    institution_id: Mapped[int] = mapped_column(ForeignKey("institutions.id"))
+    program_id: Mapped[int] = mapped_column(ForeignKey("programs.id"))
+    academic_year: Mapped[str] = mapped_column(String(16))
+    overall: Mapped[str] = mapped_column(String(16))
+    checks: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    computed_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
 # ----------------------------------------------------------------- students & the vault

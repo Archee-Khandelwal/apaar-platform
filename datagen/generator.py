@@ -27,7 +27,10 @@ from app.models.core import (
     Flag,
     FlagHistory,
     Institution,
+    InstitutionApproval,
+    MasterImport,
     Program,
+    Reconciliation,
     Student,
     StudentDocument,
     Upload,
@@ -48,6 +51,9 @@ BASE_COHORT_SHARE = 0.70
 
 # Tables wiped by a reseed, children first.
 WIPE_ORDER = (
+    Reconciliation,
+    MasterImport,
+    InstitutionApproval,
     StudentDocument,
     FlagHistory,
     Flag,
@@ -124,6 +130,7 @@ class SyntheticDataGenerator:
         self.build_uploads()
         self.build_base_cohorts()
         self.inject_scenarios()
+        self.inject_master_discrepancies()
         self.persist()
         self.build_documents()
         ground_truth = self.write_ground_truth()
@@ -494,6 +501,57 @@ class SyntheticDataGenerator:
 
         scenarios.inject_all(self)
 
+    def inject_master_discrepancies(self) -> None:
+        """AICTE's master records for every institution and year, with two deliberate
+        disagreements the reconciliation must catch (labelled in the ground truth):
+
+        * an institution whose approval for the current year allows no fresh admission,
+          though it reported first-year admissions;
+        * a programme withdrawn for the current year that still reported entrants.
+
+        Both are picked away from every injected scenario and the clean institution.
+        """
+        year = self.years[-1]
+        self.approvals = [
+            {
+                "institution_id": institution["id"],
+                "academic_year": academic_year,
+                "status": "approved",
+                "reference": f"EOA/{academic_year}/{institution['id']:04d}",
+                "source": "seed",
+            }
+            for institution in self.b.institutions
+            for academic_year in self.years
+        ]
+        busy = {case.institution_id for case in self.b.cases} | {self.clean_institution_id}
+        free = [institution for institution in self.b.institutions if institution["id"] not in busy]
+        self.master_labels: dict[str, Any] = {}
+        if len(free) < 2:
+            return
+        no_admission, other = self.rng.sample(free, 2)
+        for row in self.approvals:
+            if row["institution_id"] == no_admission["id"] and row["academic_year"] == year:
+                row["status"] = "no_admission"
+        entrants = {
+            program["id"]
+            for program in self.programs_by_institution[other["id"]]
+            if any(
+                enrolment["program_id"] == program["id"] and enrolment["academic_year"] == year
+                and enrolment["year_of_study"] == 1
+                for enrolment in self.b.enrolments
+            )
+        }
+        withdrawn_program = self.rng.choice(sorted(entrants)) if entrants else None
+        for intake in self.b.intakes:
+            if intake["program_id"] == withdrawn_program and intake["academic_year"] == year:
+                intake["status"] = "withdrawn"
+        self.master_labels = {
+            "academic_year": year,
+            "no_admission_institution": {"id": no_admission["id"], "name": no_admission["name"]},
+            "withdrawn_programme": {"program_id": withdrawn_program, "institution_id": other["id"],
+                                    "institution_name": other["name"]},
+        }
+
     # ---------------------------------------------------------------- persistence
 
     def persist(self) -> None:
@@ -501,6 +559,7 @@ class SyntheticDataGenerator:
         self.db.bulk_insert_mappings(Institution, self.b.institutions)
         self.db.bulk_insert_mappings(Program, self.b.programs)
         self.db.bulk_insert_mappings(ApprovedIntake, self.b.intakes)
+        self.db.bulk_insert_mappings(InstitutionApproval, self.approvals)
         self.db.bulk_insert_mappings(Upload, self.b.uploads)
         self.db.bulk_insert_mappings(Student, self.b.students)
         self.db.bulk_insert_mappings(Vault, self.b.vault_rows)
@@ -527,7 +586,10 @@ class SyntheticDataGenerator:
         from datagen.documents import build_documents
 
         count = max(10, min(120, self.student_target // 125))
-        self.document_labels = build_documents(self, students=count)
+        # Only the full-size demo dataset documents the clean college completely: it is
+        # about a thousand more files, which small test runs do not need.
+        complete = self.clean_institution_id if self.student_target >= 10000 else None
+        self.document_labels = build_documents(self, students=count, complete_institution_id=complete)
 
     def populate_registry(self) -> None:
         """Insert every issued APAAR into the mock registry's own database.
@@ -605,6 +667,8 @@ class SyntheticDataGenerator:
             "scenarios": by_scenario,
             # Labelled document cases, scored by `make eval` (Phase 5).
             "documents": getattr(self, "document_labels", []),
+            # Master-record disagreements the reconciliation must catch (Phase 6).
+            "reconciliation": getattr(self, "master_labels", {}),
         }
         self.ground_truth_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
         return payload

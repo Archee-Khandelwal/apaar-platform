@@ -173,6 +173,19 @@ def compute_seat_matrix(
         intake = row.intake if row else 0
 
     counts = _admission_counts(db, program.id, academic_year)
+    return seat_matrix_from_counts(program=program, academic_year=academic_year, intake=intake, counts=counts)
+
+
+def entry_year(admission_type: str) -> int:
+    """The year of study in which a supernumerary seat is consumed (2 for lateral)."""
+    return int(supernumerary_rules().get(admission_type, {}).get("applies_to_year", 1))
+
+
+def seat_matrix_from_counts(
+    *, program: Program, academic_year: str, intake: int, counts: dict[tuple[str, int], int]
+) -> SeatMatrix:
+    """The arithmetic of compute_seat_matrix on counts the caller already has, so the
+    reconciliation can rank every programme's admissions without a query each."""
     within_intake = counts_within_intake()
 
     # Only year-1 entrants of an intake-counting type consume approved intake.

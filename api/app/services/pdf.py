@@ -245,6 +245,33 @@ class PdfDocument:
         ops.append("f")
         self.page.ops.append("\n".join(ops).encode("ascii"))
 
+    def qr_image(self, x: float, y: float, size: float, data: str) -> None:
+        """The same QR as a single 1-bit inline image rather than hundreds of rectangles.
+
+        Text extractors (pdfplumber) parse each vector rectangle as an object, which
+        makes a vector QR ~30x slower to read; an image is one object.
+        """
+        code = qrcode.QRCode(border=0, error_correction=qrcode.constants.ERROR_CORRECT_M)
+        code.add_data(data)
+        code.make(fit=True)
+        matrix = code.get_matrix()
+        side = len(matrix)
+        rows: list[str] = []
+        for row in matrix:
+            bits = "".join("0" if dark else "1" for dark in row)  # DeviceGray: 0 is black
+            bits += "1" * (-len(bits) % 8)
+            rows.append("".join(f"{int(bits[i:i + 8], 2):02x}" for i in range(0, len(bits), 8)))
+        self.page.ops.append(
+            (
+                f"q {_num(size)} 0 0 {_num(size)} {_num(x)} {_num(self._y(y + size))} cm
+"
+                f"BI /W {side} /H {side} /BPC 1 /CS /G /F /AHx ID
+{''.join(rows)}>
+EI
+Q"
+            ).encode("ascii")
+        )
+
     # ------------------------------------------------------------------ output
 
     def to_bytes(self) -> bytes:

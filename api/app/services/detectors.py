@@ -9,6 +9,7 @@ Detectors, one per validation the problem statement asks for:
   intake compliance  EXCESS_INTAKE (supernumerary-aware)
   duplicates         CROSS_INSTITUTION_DUPLICATE, POSSIBLE_DUAL_DEGREE, IDENTITY_DUPLICATE
   heuristics         LATE_ADMISSION, INVALID_APAAR, APAAR_NOT_FOUND, APAAR_MISMATCH
+and then the reconciliation of every record against AICTE's own records (Phase 6).
 """
 from __future__ import annotations
 
@@ -42,6 +43,11 @@ def run_all_detectors(
 
     summary.update(run_duplicate_detection(db, academic_year=academic_year))
     summary.update(run_heuristics(db, academic_year=academic_year))
+
+    # Reconciliation reads the flags above, so it runs last.
+    from app.services.reconciliation import reconcile
+
+    summary.update(reconcile(db, academic_year=academic_year))
 
     if commit:
         db.commit()

@@ -144,7 +144,7 @@ class PrintedDocument:
         lines += [f"Issued by: {self.issuer_name}", f"Issued on: {self.issued_on:%d/%m/%Y}"]
         for index, line in enumerate(lines):
             pdf.text(48, 132 + index * 22, line, size=11)
-        pdf.qr(447, 120, 100, f"APAARDOC|ref={self.reference_no}|issuer={self.issuer_name}")
+        pdf.qr_image(447, 120, 100, f"APAARDOC|ref={self.reference_no}|issuer={self.issuer_name}")
         pdf.text(447, 232, "Scan to verify with issuer", size=7)
         return pdf.to_bytes()
 
@@ -237,20 +237,28 @@ def in_process_issuer() -> Any:
 
 
 def load_holders(db: Session, *, institution_ids: list[int] | None = None, limit: int | None = None,
-                 academic_year: str = "2026-27", rng: random.Random | None = None) -> list[Holder]:
+                 academic_year: str = "2026-27", rng: random.Random | None = None,
+                 everyone: bool = False) -> list[Holder]:
+    """Students to print documents for. By default first-year students of one year whose
+    APAAR matched; ``everyone`` takes every student with an active enrolment, once."""
     statement = (
         select(Student, Enrolment, Institution, Program, Vault)
         .join(Enrolment, Enrolment.student_id == Student.id)
         .join(Institution, Institution.id == Enrolment.institution_id)
         .join(Program, Program.id == Enrolment.program_id)
         .join(Vault, Vault.student_id == Student.id)
-        .where(Enrolment.academic_year == academic_year, Enrolment.status == "admitted",
-               Enrolment.year_of_study == 1, Student.registry_status == "match")
-        .order_by(Student.id)
+        .order_by(Student.id, Enrolment.academic_year.desc())
     )
+    if everyone:
+        statement = statement.where(Enrolment.status.in_(("admitted", "completed")))
+    else:
+        statement = statement.where(Enrolment.academic_year == academic_year, Enrolment.status == "admitted",
+                                    Enrolment.year_of_study == 1, Student.registry_status == "match")
     if institution_ids is not None:
         statement = statement.where(Enrolment.institution_id.in_(institution_ids))
     rows = list(db.execute(statement).all())
+    seen: set[int] = set()
+    rows = [row for row in rows if not (row[0].id in seen or seen.add(row[0].id))]
     if rng is not None and limit is not None and len(rows) > limit:
         rows = sorted(rng.sample(rows, limit), key=lambda row: row[0].id)
     elif limit is not None:
@@ -308,8 +316,12 @@ def _breakable(doc_type: str, case: str) -> bool:
 # --------------------------------------------------------------------------- seeding
 
 
-def build_documents(gen: Any, *, students: int = 120) -> list[dict[str, Any]]:
-    """Seed documents for a sample of students and return their ground-truth labels."""
+def build_documents(gen: Any, *, students: int = 120, complete_institution_id: int | None = None) -> list[dict[str, Any]]:
+    """Seed documents for a sample of students and return their ground-truth labels.
+
+    ``complete_institution_id``: also give every student of that institution all their
+    genuine documents, so one college shows what fully confirmed looks like.
+    """
     from app.services.document_verification import verify_document
     from app.services.student_documents import store_document
 
@@ -322,6 +334,13 @@ def build_documents(gen: Any, *, students: int = 120) -> list[dict[str, Any]]:
     holders = load_holders(db, institution_ids=eligible, limit=students, rng=rng)
 
     plan: list[tuple[Holder, str, str]] = [(holder, doc_type, "genuine") for holder in holders for doc_type in holder.required]
+    complete: list[tuple[Holder, str, str]] = []
+    if complete_institution_id is not None:
+        complete = [
+            (holder, doc_type, "genuine")
+            for holder in load_holders(db, institution_ids=[complete_institution_id], everyone=True)
+            for doc_type in holder.required
+        ]
     for case, count in CASE_COUNTS.items():
         candidates = [index for index, (_, doc_type, current) in enumerate(plan)
                       if current == "genuine" and _breakable(doc_type, case)]
@@ -331,7 +350,7 @@ def build_documents(gen: Any, *, students: int = 120) -> list[dict[str, Any]]:
 
     issued: list[dict[str, Any]] = []
     submissions: list[tuple[Holder, str, str, bytes]] = []
-    for holder, doc_type, case in plan:
+    for holder, doc_type, case in plan + complete:
         genuine = print_document(rng, doc_type, holder.name, holder.dob, holder.academic_year)
         submitted, at_issuer = _break(case, genuine, holder, rng, faker)
         if at_issuer is not None:
