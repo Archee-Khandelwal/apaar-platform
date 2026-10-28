@@ -55,13 +55,13 @@ Start each service in its own PowerShell window (all from the repo root):
 
 ```powershell
 # 1. Mock APAAR registry  :8001
-$env:PYTHONPATH = "$PWDpi;$PWD"; .\.venv\Scripts\python.exe -m uvicorn registry.app.main:app --port 8001
+$env:PYTHONPATH = "$PWD\api;$PWD"; .\.venv\Scripts\python.exe -m uvicorn registry.app.main:app --port 8001
 
 # 2. Issuer & DigiLocker registry  :8002
-$env:PYTHONPATH = "$PWDpi;$PWD"; .\.venv\Scripts\python.exe -m uvicorn issuer.app.main:app --port 8002
+$env:PYTHONPATH = "$PWD\api;$PWD"; .\.venv\Scripts\python.exe -m uvicorn issuer.app.main:app --port 8002
 
 # 3. API  :8000
-$env:PYTHONPATH = "$PWDpi;$PWD"; .\.venv\Scripts\python.exe -m uvicorn app.main:app --port 8000
+$env:PYTHONPATH = "$PWD\api;$PWD"; .\.venv\Scripts\python.exe -m uvicorn app.main:app --port 8000
 
 # 4. Web app  :3000
 cd web; npm run dev
