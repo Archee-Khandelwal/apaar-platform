@@ -35,7 +35,7 @@ make dev        # api :8000, mock registry :8001, web :3000
 | API health | http://localhost:8000/health |
 | Mock registry health | http://localhost:8001/health |
 
-Every demo password is `demo1234`, and the login page lists the accounts with one-click sign-in.
+Every account has its own password. After a reset they are in `demo_credentials.csv` at the repo root (gitignored); the login page lists the accounts, and you type the password.
 
 ## Make targets
 
@@ -156,28 +156,29 @@ come from seed 42; `make reset` reproduces them.
 
 ---
 
-## Privacy and security, in one page
+## Security
 
-These are product requirements, not extras (CLAUDE.md section 5), and the tests enforce them:
+Security is one of the three things this platform is about, so every control below is
+enforced in code **and proved by a named test** (`api/tests/…`). Run `make test` (or the
+Windows command in *Quick start*) to re-prove all of them.
 
-| Rule | How it is implemented |
-|---|---|
-| No raw contact details | Phone, email and guardian phone exist only as `HMAC-SHA256(HMAC_KEY, normalised_value)`. Matching happens on the hashes; nothing in the API ever returns one |
-| Raw identifiers encrypted | APAAR ID, full name and DOB live only in a Fernet-encrypted `vault` table; main tables hold `apaar_hash` and masked values |
-| Keyed, not salted | An APAAR ID is 12 digits, so a plain digest is brute-forceable in seconds. We use a keyed HMAC |
-| Secrets from the environment | `HMAC_KEY`, `VAULT_KEY`, `JWT_SECRET`, `REGISTRY_API_KEY` come from `.env`, which is gitignored. `make keys` generates real ones |
-| RBAC everywhere | Every route carries `require_role(...)`; only `/health`, `/auth/login`, `/auth/demo-users` and the public token check are open |
-| Tenant isolation | For an institution user, `institution_id` comes from the JWT alone. Passing another institution's id returns 404, not 403 |
-| Masked by default | `XXXX-XXXX-1234` and `R***** S.` everywhere. Full details only via `POST /aicte/reveal`, officer only, with a mandatory reason |
-| Access log | Every reveal and case-file view is logged with actor, role, action, target, reason and time — and the student can read their own entries |
-| Hash-chained audit log | Each row stores `prev_hash` and `hash = sha256(prev_hash + canonical_json(row))`. `make test` includes tamper, delete and re-hash attempts |
-| Small-count suppression | For `aicte_viewer`, any breakdown count below 5 is returned as `"<5"` |
-| Colleges never learn about each other | A cross-institution finding shown to an institution reads "Possible duplicate enrolment — contact AICTE" and names no one |
-| Verifier minimalism | A verifier gets `verified`, programme and academic year. Nothing else, ever |
-| Minors | Under-18 students are marked, and verification against them says *parental consent required* |
-| Synthetic data | Invented institution names only, and a banner on every page |
-
----
+| Control | How it works | Proved by |
+|---|---|---|
+| Unique password per account | Every institution (and every other demo account) gets its own random 12-character password at seed time. Only a bcrypt hash is stored. The plain passwords are written once to `demo_credentials.csv`, which is gitignored and never served by the API | `test_security.py::test_each_institution_gets_its_own_random_password`, `::test_credentials_are_written_only_to_a_gitignored_file`, `::test_no_route_or_schema_hands_out_a_password` |
+| Login throttling | 5 failed attempts per account, or 20 per client, inside 15 minutes → `429 TOO_MANY_ATTEMPTS` with a retry time. Success clears the account's counter | `test_security.py::test_repeated_failures_lock_the_account_for_a_while`, `::test_one_client_guessing_many_accounts_is_throttled` |
+| Password change | `POST /auth/change-password` needs the current password and a policy-compliant new one; it bumps a token version so **every older JWT stops working** | `test_security.py::test_changing_a_password_ends_every_other_session`, `::test_weak_passwords_are_refused` |
+| Admin reset | `POST /admin/users/{id}/reset-password` issues a one-time password shown once; the account can only change it, and all its sessions end | `test_security.py::test_admin_reset_issues_a_one_time_password` |
+| RBAC on every route | One `require_role(...)` dependency. An explicit route × role matrix is tested exhaustively (403 for every disallowed role, 401 with no token), and a new route without a matrix entry fails the build | `test_security.py::test_the_matrix_covers_every_route`, `::test_every_route_refuses_every_role_it_does_not_allow`, `::test_every_protected_route_refuses_a_missing_token`, `test_qa_invariants.py::test_every_route_is_guarded_or_documented_public` |
+| Tenant isolation | An institution's `institution_id` comes only from its JWT. Another college's id in the URL returns 404; an `institution_id` smuggled into the query or body is ignored | `test_tenant_isolation.py` (uploads, flags, enrolments, certificates; URL, query and body attacks) |
+| Hash-chained audit log | Each row stores `prev_hash` and `hash = sha256(prev_hash + canonical_json(row))`. Logins, failed logins, uploads, reveals, consent decisions and password events are recorded; the admin page verifies the chain and runs a tamper test on a copy | `test_audit.py` (tamper, delete, re-hash), `test_security.py::test_security_relevant_events_land_in_a_valid_audit_chain` |
+| No raw contact details | Phone, email and guardian phone exist only as `HMAC-SHA256(HMAC_KEY, normalised_value)` | `test_crypto.py::test_hmac_hash_is_keyed_not_plain_sha256`, `test_qa_invariants.py::test_no_response_schema_exposes_a_hash_or_a_raw_contact` |
+| Raw identifiers encrypted | APAAR ID, full name and DOB live only in the Fernet-encrypted `vault` table | `test_crypto.py::test_vault_ciphertext_is_not_the_plaintext`, `test_student_verifier.py::test_the_raw_apaar_is_never_stored_by_a_request` |
+| Secrets from the environment | `HMAC_KEY`, `VAULT_KEY`, `JWT_SECRET`, `REGISTRY_API_KEY` come from the gitignored `.env` | `test_qa_invariants.py::test_env_example_lists_every_secret_and_commits_none` |
+| Masked by default, reveal with a reason | `XXXX-XXXX-1234` and `R***** S.` everywhere. Full details only via `POST /aicte/reveal`, officer only, with a mandatory reason that is access-logged | `test_aicte.py::test_reveal_demands_a_real_reason`, `::test_reveal_returns_raw_identifiers_and_logs_the_access` |
+| Access log visible to the student | Every reveal and case-file view is logged with actor, role, action, target, reason and time; the student can read their own entries | `test_audit.py::test_access_log_records_actor_role_action_target_reason`, `test_student_verifier.py::test_student_sees_who_accessed_their_data_with_role_labels` |
+| Small-count suppression | For `aicte_viewer`, any breakdown count below 5 is returned as `"<5"` | `test_aicte.py::test_overview_suppresses_small_counts_for_the_viewer` |
+| Colleges never learn about each other | A cross-institution finding shown to a college reads "Possible duplicate enrolment — contact AICTE" | `test_duplicates.py::test_the_institution_view_never_names_the_other_college` |
+| Consent and minimal verification | A verifier learns nothing until the student approves, then only `verified`, programme and year; minors are marked *parental consent required* | `test_student_verifier.py::test_verifier_learns_nothing_before_the_student_approves`, `::test_approval_gives_the_verifier_the_minimal_result_only`, `::test_a_minor_is_marked_as_needing_parental_consent` |
 
 ## Repository layout
 

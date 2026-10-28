@@ -15,7 +15,7 @@ from app.core.security import (
     suppress_small_counts,
 )
 from app.models.core import Enrolment, Institution, Program, Student
-from app.services.users import DEMO_PASSWORD
+from tests.conftest import TEST_PASSWORD as DEMO_PASSWORD
 
 
 # ------------------------------------------------------------------ login
@@ -59,7 +59,8 @@ def test_demo_users_lists_one_account_per_role(client: TestClient, users) -> Non
     assert body["demo_mode"] is True
     roles = {entry["role"] for entry in body["users"]}
     assert {"institution", "aicte_viewer", "aicte_officer", "student", "verifier", "admin"} <= roles
-    assert all(entry["password"] for entry in body["users"])
+    # Passwords never leave the server; they live only in the gitignored credentials file.
+    assert all("password" not in entry for entry in body["users"])
 
 
 # ------------------------------------------------------------------ RBAC / tenant isolation

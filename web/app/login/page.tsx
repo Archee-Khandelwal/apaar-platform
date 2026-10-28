@@ -5,10 +5,11 @@
  *
  *   1. Pick a role from six tiles.
  *   2. The best demo account for that role is preselected; the rest are in a
- *      dropdown. One button signs in.
+ *      dropdown. Type that account's password and sign in.
  *
- * Typing a username and password by hand is still possible, behind a disclosure,
- * because the platform is not really password-less — it just has demo accounts.
+ * Every account has its own password. The API never sends one: they are written to
+ * the gitignored demo_credentials.csv when the data is seeded. ``/login?u=<username>``
+ * opens step 2 with that account selected (the account switcher uses it).
  */
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
@@ -70,7 +71,9 @@ export default function LoginPage() {
   const router = useRouter();
   const [role, setRole] = useState<Role | null>(null);
   const [username, setUsername] = useState("");
-  const [manual, setManual] = useState({ username: "", password: "demo1234" });
+  const [password, setPassword] = useState("");
+  const [requested, setRequested] = useState<string | null>(null);
+  const [manual, setManual] = useState({ username: "", password: "" });
   const [error, setError] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
@@ -80,8 +83,27 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
-    if (ready && user) router.replace(ROLE_HOME[user.role]);
+    if (ready && user) router.replace(user.must_change_password ? "/account/password" : ROLE_HOME[user.role]);
   }, [ready, user, router]);
+
+  // ?u=<username> preselects an account. Read once, on the client.
+  useEffect(() => {
+    try {
+      setRequested(new URLSearchParams(window.location.search).get("u"));
+    } catch {
+      setRequested(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!requested || !data) return;
+    const match = data.users.find((account) => account.username === requested);
+    if (match) {
+      setRole(match.role);
+      setUsername(match.username);
+    }
+    setRequested(null);
+  }, [requested, data]);
 
   const accounts = useMemo(
     () => (data?.users ?? []).filter((account) => account.role === role),
@@ -105,13 +127,15 @@ export default function LoginPage() {
       setError(null);
       return login(credentials.username, credentials.password);
     },
-    onSuccess: (next) => router.replace(ROLE_HOME[next.role]),
+    onSuccess: (next) =>
+      router.replace(next.must_change_password ? "/account/password" : ROLE_HOME[next.role]),
     onError: (failure: Error) => setError(failure.message),
   });
 
   function chooseRole(next: Role) {
     setRole(next);
     setUsername("");
+    setPassword("");
     setError(null);
   }
 
@@ -195,7 +219,7 @@ export default function LoginPage() {
                 className="mt-5 space-y-4"
                 onSubmit={(event) => {
                   event.preventDefault();
-                  mutation.mutate({ username, password: "demo1234" });
+                  mutation.mutate({ username, password });
                 }}
               >
                 <div className="space-y-1.5">
@@ -203,7 +227,10 @@ export default function LoginPage() {
                   <Select
                     id="account"
                     value={username}
-                    onChange={(event) => setUsername(event.target.value)}
+                    onChange={(event) => {
+                      setUsername(event.target.value);
+                      setPassword("");
+                    }}
                     className="h-10"
                   >
                     {accounts.map((account) => (
@@ -233,6 +260,22 @@ export default function LoginPage() {
                   )}
                 </div>
 
+                <div className="space-y-1.5">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    className="h-10"
+                  />
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    Each account has its own password, listed in{" "}
+                    <code className="font-mono">demo_credentials.csv</code> after a reset.
+                  </p>
+                </div>
+
                 {error && (
                   <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
                     {error}
@@ -243,10 +286,10 @@ export default function LoginPage() {
                   type="submit"
                   size="lg"
                   className="w-full"
-                  disabled={mutation.isPending || !username}
+                  disabled={mutation.isPending || !username || !password}
                 >
                   {mutation.isPending && <Spinner />}
-                  Enter
+                  Sign in
                 </Button>
               </form>
 
@@ -298,8 +341,10 @@ export default function LoginPage() {
 
         <p className="mt-6 flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1 text-center text-xs text-muted-foreground">
           <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
-          <span>All demo passwords:</span>
-          <code className="rounded bg-secondary px-1.5 py-0.5 font-mono text-foreground">demo1234</code>
+          <span>
+            Passwords are bcrypt-hashed, unique per account, and five wrong guesses lock an
+            account for 15 minutes.
+          </span>
         </p>
         <p className="mt-2 text-center text-xs text-muted-foreground">
           Contact details are never stored in this system — only keyed hashes.

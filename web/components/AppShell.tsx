@@ -12,7 +12,7 @@
  * Below md the sidebar becomes a drawer. The student portal is mobile-first and
  * gets a bottom tab bar instead, because that is where it will actually be used.
  */
-import { ChevronRight, LogOut, Menu, X } from "lucide-react";
+import { ChevronRight, KeyRound, LogOut, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
@@ -127,6 +127,12 @@ export function AppShell({ children }: { children: ReactNode }) {
             </p>
             <p className="truncate text-[11px] text-muted-foreground">{user.username}</p>
           </div>
+          <Button asChild variant="ghost" size="sm" className="w-full justify-start">
+            <Link href="/account/password">
+              <KeyRound className="h-3.5 w-3.5" />
+              Change password
+            </Link>
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -164,6 +170,12 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
             <div className="space-y-3 border-t border-border p-3">
               <SyntheticBanner />
+              <Button asChild variant="ghost" size="sm" className="w-full justify-start">
+                <Link href="/account/password">
+                  <KeyRound className="h-3.5 w-3.5" />
+                  Change password
+                </Link>
+              </Button>
               <Button
                 variant="outline"
                 size="sm"

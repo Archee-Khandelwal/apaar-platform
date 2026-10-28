@@ -26,13 +26,32 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--no-detectors", action="store_true", help="skip running the detectors after seeding"
     )
+    parser.add_argument(
+        "--fresh",
+        action="store_true",
+        help="drop every table first (use when the schema changed and the database file "
+        "cannot be deleted, e.g. while the API holds it open on Windows)",
+    )
     return parser
+
+
+def drop_all_tables() -> None:
+    """Drop every table in the database, including ones no model defines any more."""
+    from sqlalchemy import MetaData
+
+    from app.core.db import engine
+
+    reflected = MetaData()
+    reflected.reflect(bind=engine)
+    reflected.drop_all(bind=engine)
 
 
 def main() -> int:
     args = build_parser().parse_args()
     started = time.perf_counter()
 
+    if args.fresh:
+        drop_all_tables()
     init_db()
     db = SessionLocal()
     try:

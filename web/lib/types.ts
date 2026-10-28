@@ -64,6 +64,8 @@ export interface User {
   role: Role;
   institution_id?: number | null;
   student_id?: number | null;
+  /** Set after an admin reset: the only thing this session may do is change it. */
+  must_change_password?: boolean;
 }
 
 export interface LoginResponse {
@@ -73,11 +75,31 @@ export interface LoginResponse {
   user: User;
 }
 
+/** A demo account's name. Passwords are never sent; they are in demo_credentials.csv. */
 export interface DemoUser {
   username: string;
-  password: string;
   role: Role;
   label: string;
+}
+
+export interface AdminUser {
+  id: number;
+  username: string;
+  role: Role;
+  display_name: string;
+  institution_id?: number | null;
+  is_active: boolean;
+  must_change_password: boolean;
+  last_login_at?: string | null;
+  password_changed_at?: string | null;
+}
+
+export interface PasswordReset {
+  user_id: number;
+  username: string;
+  temporary_password: string;
+  must_change_password: boolean;
+  audit_log_id: number;
 }
 
 // ----------------------------------------------------------------- institution

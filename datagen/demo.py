@@ -11,10 +11,11 @@ from app.core.audit import log_audit
 from app.core.config import settings
 from app.models.core import Consent, Enrolment, Institution, Student, User, VerificationRequest
 from app.services.users import (
-    DEMO_PASSWORD,
+    Credential,
     ensure_base_demo_users,
     ensure_institution_users,
     ensure_student_user,
+    write_credentials,
 )
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -34,8 +35,7 @@ def _first_case_student(
 
 def create_users_and_demo_data(gen: SyntheticDataGenerator) -> None:
     db = gen.db
-    ensure_base_demo_users(db)
-    ensure_institution_users(db)
+    credentials: list[Credential] = [*ensure_base_demo_users(db), *ensure_institution_users(db)]
     db.commit()
 
     institutions = {row.id: row for row in db.execute(select(Institution)).scalars()}
@@ -125,17 +125,17 @@ def create_users_and_demo_data(gen: SyntheticDataGenerator) -> None:
         student = db.get(Student, student_id)
         if student is None:
             continue
-        ensure_student_user(
+        credential = ensure_student_user(
             db,
             student=student,
             username=username,
             label=f"{label} — {institution_name_for(student_id)}",
             display_name=f"{student.name_masked} ({student.apaar_masked})",
         )
+        credentials.append(credential)
         gen.demo_students.append(
             {
                 "username": username,
-                "password": DEMO_PASSWORD,
                 "student_id": student_id,
                 "label": label,
                 "apaar_masked": student.apaar_masked,
@@ -144,6 +144,7 @@ def create_users_and_demo_data(gen: SyntheticDataGenerator) -> None:
             }
         )
     db.commit()
+    write_credentials(credentials, gen.credentials_path)
 
     _create_consent_state(gen, resolved)
 

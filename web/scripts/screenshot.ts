@@ -12,14 +12,35 @@
  * Nothing here is part of the shipped app: it exists so a design change can be
  * reviewed as pixels rather than as diffs.
  */
-import { mkdir, rm } from "node:fs/promises";
+import { mkdir, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { chromium, type Browser, type Page } from "playwright";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const WEB_URL = process.env.WEB_URL ?? "http://localhost:3000";
 const OUT_DIR = path.join(__dirname, "..", "screenshots");
-const PASSWORD = "demo1234";
+// Every account has its own password, written by `make reset` to this gitignored file.
+const CREDENTIALS_CSV = path.join(__dirname, "..", "..", "demo_credentials.csv");
+let passwords: Map<string, string> | null = null;
+
+async function passwordFor(username: string): Promise<string> {
+  if (!passwords) {
+    const text = await readFile(CREDENTIALS_CSV, "utf-8").catch(() => {
+      throw new Error(`${CREDENTIALS_CSV} not found — run the reset first.`);
+    });
+    passwords = new Map(
+      text
+        .trim()
+        .split(/\r?\n/)
+        .slice(1)
+        .map((line) => line.split(","))
+        .map(([user, , password]) => [user, password] as [string, string]),
+    );
+  }
+  const password = passwords.get(username);
+  if (!password) throw new Error(`no password for ${username} in demo_credentials.csv`);
+  return password;
+}
 
 /** 1440 is the judging laptop, 768 a tablet, 390 a phone (student portal). */
 const DESKTOP = [1440, 768];
@@ -165,7 +186,7 @@ async function signIn(username: string): Promise<Session> {
   const response = await fetch(`${API_URL}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password: PASSWORD }),
+    body: JSON.stringify({ username, password: await passwordFor(username) }),
   });
   if (!response.ok) throw new Error(`login failed for ${username}: ${response.status}`);
   const body = (await response.json()) as { access_token: string; user: unknown };

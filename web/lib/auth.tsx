@@ -11,6 +11,8 @@ interface AuthState {
   ready: boolean;
   login: (username: string, password: string) => Promise<User>;
   logout: () => void;
+  /** After a password change: every older token is dead, so carry on with the new one. */
+  passwordChanged: (nextToken: string) => void;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -47,7 +49,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
-  const value = useMemo(() => ({ user, ready, login, logout }), [user, ready, login, logout]);
+  const passwordChanged = useCallback(
+    (nextToken: string) => {
+      if (!user) return;
+      const next = { ...user, must_change_password: false };
+      setSession(nextToken, next);
+      setUser(next);
+    },
+    [user],
+  );
+
+  const value = useMemo(
+    () => ({ user, ready, login, logout, passwordChanged }),
+    [user, ready, login, logout, passwordChanged],
+  );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
@@ -71,8 +86,16 @@ export function useRequireRole(roles: Role[]) {
       router.replace("/login");
       return;
     }
+    if (user.must_change_password) {
+      router.replace("/account/password");
+      return;
+    }
     if (!roles.includes(user.role)) router.replace(ROLE_HOME[user.role]);
   }, [ready, user, roles, router]);
 
-  return { user, allowed: Boolean(user && roles.includes(user.role)), ready };
+  return {
+    user,
+    allowed: Boolean(user && !user.must_change_password && roles.includes(user.role)),
+    ready,
+  };
 }

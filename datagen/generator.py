@@ -35,6 +35,7 @@ from app.models.core import (
     VerificationRequest,
 )
 from app.services.rules import supernumerary_caps, year_calendar
+from app.services.users import CREDENTIALS_PATH
 from datagen import vocab
 from datagen.builder import DataBuilder, GroundTruthCase
 
@@ -80,6 +81,15 @@ class SyntheticDataGenerator:
     ) -> None:
         self.db = db
         self.ground_truth_path = ground_truth_path or GROUND_TRUTH_PATH
+        # The demo seed writes the sign-in sheet at the repo root; any other run (tests,
+        # the robustness dataset) writes its own beside its ground truth, so it can never
+        # overwrite the demo operator's passwords.
+        if self.ground_truth_path == GROUND_TRUTH_PATH:
+            self.credentials_path = CREDENTIALS_PATH
+        else:
+            self.credentials_path = self.ground_truth_path.with_name(
+                f"{self.ground_truth_path.stem}_credentials.csv"
+            )
         self.scenario_module = scenario_module
         self.seed = seed
         self.institution_count = institutions

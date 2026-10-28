@@ -46,6 +46,10 @@ class Settings(BaseSettings):
     registry_timeout_seconds: float = 3.0
     bcrypt_rounds: int = 12  # lowered in tests for speed
     max_upload_mb: int = 10
+    # Login throttling: failed attempts allowed per window, per account and per client.
+    login_max_failures_per_account: int = 5
+    login_max_failures_per_client: int = 20
+    login_window_seconds: int = 900
     log_level: str = "info"
     # How a degree certificate prints the APAAR ID and name: "masked" (default,
     # XXXX-XXXX-1234 / R***** S.) or "full" for a degree-awarding body's final print.

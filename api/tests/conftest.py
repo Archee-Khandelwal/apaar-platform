@@ -30,7 +30,19 @@ from sqlalchemy.orm import Session, sessionmaker  # noqa: E402
 from app.core.db import Base, get_db  # noqa: E402
 from app.main import app as fastapi_app  # noqa: E402
 from app.models.core import Institution, Program, Student  # noqa: E402
-from app.services.users import DEMO_PASSWORD, DemoAccount, ensure_base_demo_users, upsert_user  # noqa: E402
+from app.core.ratelimit import login_throttle  # noqa: E402
+from app.services.users import BASE_ACCOUNTS, DemoAccount, upsert_user  # noqa: E402
+
+# Every test account shares this password; seeded demo accounts each get a random one.
+TEST_PASSWORD = "Test-Pass-2026"
+
+
+@pytest.fixture(autouse=True)
+def _fresh_login_throttle() -> Iterator[None]:
+    """Failed logins in one test must not throttle the next."""
+    login_throttle.reset()
+    yield
+    login_throttle.reset()
 
 
 @pytest.fixture()
@@ -103,7 +115,8 @@ def two_institutions(db: Session) -> tuple[Institution, Institution]:
 def users(db: Session, two_institutions: tuple[Institution, Institution]) -> dict[str, str]:
     """Create one account per role (two institution accounts) and return username per role."""
     first, second = two_institutions
-    ensure_base_demo_users(db)
+    for account in BASE_ACCOUNTS:
+        upsert_user(db, account, password=TEST_PASSWORD)
 
     student = Student(apaar_masked="XXXX-XXXX-1234", name_masked="R**** S.", dob_year=2006)
     db.add(student)
@@ -118,6 +131,7 @@ def users(db: Session, two_institutions: tuple[Institution, Institution]) -> dic
             label=first.name,
             institution_id=first.id,
         ),
+        password=TEST_PASSWORD,
     )
     upsert_user(
         db,
@@ -128,6 +142,7 @@ def users(db: Session, two_institutions: tuple[Institution, Institution]) -> dic
             label=second.name,
             institution_id=second.id,
         ),
+        password=TEST_PASSWORD,
     )
     upsert_user(
         db,
@@ -138,6 +153,7 @@ def users(db: Session, two_institutions: tuple[Institution, Institution]) -> dic
             label="Student",
             student_id=student.id,
         ),
+        password=TEST_PASSWORD,
     )
     db.commit()
     return {
@@ -158,7 +174,7 @@ def auth(client: TestClient, users: dict[str, str]):
     def _auth(role_or_username: str) -> dict[str, str]:
         username = users.get(role_or_username, role_or_username)
         response = client.post(
-            "/auth/login", json={"username": username, "password": DEMO_PASSWORD}
+            "/auth/login", json={"username": username, "password": TEST_PASSWORD}
         )
         assert response.status_code == 200, response.text
         return {"Authorization": f"Bearer {response.json()['access_token']}"}

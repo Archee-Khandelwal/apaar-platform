@@ -135,7 +135,7 @@ Role: **public**
 
 Request:
 ```json
-{ "username": "vit_admin", "password": "demo1234" }
+{ "username": "vit_admin", "password": "<from demo_credentials.csv>" }
 ```
 
 Response `200`:
@@ -150,11 +150,23 @@ Response `200`:
     "display_name": "Vindhyashree Institute — Data Cell",
     "role": "institution",
     "institution_id": 12,
-    "student_id": null
+    "student_id": null,
+    "must_change_password": false
   }
 }
 ```
-Errors: `401 BAD_CREDENTIALS`.
+Errors: `401 BAD_CREDENTIALS` (same code for an unknown user and a wrong password); `429 TOO_MANY_ATTEMPTS` with `details.retry_after_seconds` after 5 failures per account or 20 per client within 15 minutes (`LOGIN_*` settings). Successes and failures are written to the audit chain (`login`, `login_failed`, `login_throttled`); the password never is.
+
+The JWT carries `ver`, the account's token version. A password change or admin reset bumps it, so every earlier token fails with `401 TOKEN_REVOKED`. After an admin reset `must_change_password` is true and every role route answers `403 PASSWORD_CHANGE_REQUIRED` until the password is changed.
+
+### POST /auth/change-password
+Role: any authenticated (including an account that must change its password)
+
+Request: `{ "current_password": "…", "new_password": "…" }` — at least 10 characters, three of lower/upper/digit/symbol, not containing the username, not the current one.
+
+Response `200`: `{ "status": "changed", "access_token": "<new JWT>", "expires_in": 28800 }`
+
+Errors: `400 BAD_CREDENTIALS` (wrong current password; counts toward the throttle), `400 WEAK_PASSWORD` with `details.problems`, `429 TOO_MANY_ATTEMPTS`.
 
 ### GET /auth/me
 Role: any authenticated
@@ -164,18 +176,18 @@ Role: any authenticated
 ```
 
 ### GET /auth/demo-users
-Role: **public** (demo only; documented as such and disabled when `DEMO_MODE=false`)
+Role: **public** (demo only; documented as such and disabled when `DEMO_MODE=false`). Returns account names and labels only — **never passwords**, which exist in plain text only in the gitignored `demo_credentials.csv` written at seed time.
 
 ```json
 {
   "demo_mode": true,
   "users": [
-    { "username": "aicte_officer1", "password": "demo1234", "role": "aicte_officer", "label": "AICTE Officer (full powers)" },
-    { "username": "aicte_viewer1", "password": "demo1234", "role": "aicte_viewer", "label": "AICTE Analyst (aggregates only)" },
-    { "username": "vit_admin", "password": "demo1234", "role": "institution", "label": "Vindhyashree Institute of Technology" },
-    { "username": "student_demo1", "password": "demo1234", "role": "student", "label": "Student — APAAR registry mismatch" },
-    { "username": "verifier_demo", "password": "demo1234", "role": "verifier", "label": "Employer — Nilgiri Softworks" },
-    { "username": "admin", "password": "demo1234", "role": "admin", "label": "Demo operator" }
+    { "username": "aicte_officer1", "role": "aicte_officer", "label": "AICTE Officer (full powers)" },
+    { "username": "aicte_viewer1", "role": "aicte_viewer", "label": "AICTE Analyst (aggregates only)" },
+    { "username": "vit_admin", "role": "institution", "label": "Vindhyashree Institute of Technology" },
+    { "username": "student_demo1", "role": "student", "label": "Student — APAAR registry mismatch" },
+    { "username": "verifier_demo", "role": "verifier", "label": "Employer — Nilgiri Softworks" },
+    { "username": "admin", "role": "admin", "label": "Demo operator" }
   ]
 }
 ```
@@ -715,6 +727,20 @@ Tampers one row in a **copy** of the audit table and shows that the chain check 
 { "copy_rows": 8861, "tampered_row_id": 4412, "detected": true, "first_broken_row_id": 4412, "message": "Tamper detected at row 4412 — the stored hash no longer matches sha256(prev_hash + canonical_json(row))." }
 ```
 
+### GET /admin/users
+Role: admin. Query: `q` (username), `role`, pagination. Student accounts show `display_name: "Student account"` — no name or APAAR.
+
+```json
+{ "items": [ { "id": 7, "username": "vit_admin", "role": "institution", "display_name": "Vindhyashree Institute — Data Cell", "institution_id": 12, "is_active": true, "must_change_password": false, "last_login_at": "2026-10-28T09:12:00", "password_changed_at": "2026-10-28T08:00:00" } ], "page": 1, "page_size": 25, "total": 54, "total_pages": 3, "sort": null }
+```
+
+### POST /admin/users/{user_id}/reset-password
+Role: admin. Issues a one-time temporary password, shown only in this response; sets `must_change_password`, ends all the account's sessions, writes `password_reset` to the audit chain (without the password).
+
+```json
+{ "user_id": 7, "username": "vit_admin", "temporary_password": "Kx7m-Q2pf-9Rtz", "must_change_password": true, "audit_log_id": 4512 }
+```
+
 ---
 
 ## 8. Mock APAAR registry (port 8001) — `/registry`
@@ -765,7 +791,8 @@ Uploads must never fail because of this. Rows are stored with `registry_status: 
 
 | Route | institution | aicte_viewer | aicte_officer | student | verifier | admin |
 |---|---|---|---|---|---|---|
-| `POST /auth/login`, `GET /auth/demo-users`, `GET /health`, `GET /verify/token/{t}` | public | public | public | public | public | public |
+| `POST /auth/login`, `GET /auth/demo-users`, `GET /health`, `GET /verify/token/{t}`, `GET /verify/document/{t}` | public | public | public | public | public | public |
+| `GET /auth/me`, `POST /auth/change-password` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `GET /auth/me` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `/institution/*` | ✓ (own only) | — | — | — | — | — |
 | `/aicte/overview`, `/institutions*`, `/reports/*` | — | ✓ (masked + `<5`) | ✓ | — | — | — |
@@ -797,3 +824,4 @@ All ten Step-0 questions are now decided — see the decision table in `docs/PLA
 | 2026-10-26 | Step-0 decisions applied: viewer flag fields narrowed, role matrix split for flag list/detail, `reporting_calendar.yaml` noted, `inspection-shortlist.csv` documented | Claude Code |
 | 2026-10-26 | Step 13: verifier request status gains `revoked` (a student withdrawing an approved consent is not the same as denying it); `GET /aicte/reports/trends` gains `new_admissions_only`; `GET /aicte/non-reporting` rows gain `days_to_deadline` and `reporting_deadline`; `GET /institution/compliance-certificate` gains `format=json` for an eligibility check without issuing | Claude Code |
 | 2026-10-28 | Refocus: removed `/aicte/risk`, `/aicte/inspection-shortlist(.csv)`, `/aicte/non-reporting`, `/aicte/remind/{id}`, `/aicte/graph/*`, `/institution/compliance-certificate`, `/student/enrolments/{id}/confirm` and `/dispute`, `/admin/scenarios`, `/admin/load-scenario/{name}`, `/admin/run-detectors`. Flag types `GHOST_CLUSTER`, `SEQUENTIAL_APAAR`, `LAST_MINUTE_BULK`, `PHANTOM_PROGRESSION`, `STUDENT_DISPUTE`, `STATISTICAL_ANOMALY` and the flag `cluster_id` field removed; student corrections now raise `STUDENT_CORRECTION`. Institution rows lose `risk_score`/`risk_band` and gain `open_flags_total` | Claude Code |
+| 2026-10-28 | Security: per-account random passwords (no `password` in `/auth/demo-users`), login throttling (`429 TOO_MANY_ATTEMPTS`), `POST /auth/change-password`, token versioning (`401 TOKEN_REVOKED`), `GET /admin/users`, `POST /admin/users/{id}/reset-password`, `403 PASSWORD_CHANGE_REQUIRED`; `user.must_change_password` added | Claude Code |

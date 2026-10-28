@@ -1,7 +1,7 @@
 """Authentication, RBAC and tenant isolation (CLAUDE.md section 5 rules 4, 5 and 9).
 
 Every route in this application is wrapped in ``require_role(...)`` — the only exceptions
-are ``/health``, ``/auth/login``, ``/auth/demo-users`` and the public token check.
+are ``/health``, ``/auth/login``, ``/auth/demo-users`` and the public document checks.
 """
 from __future__ import annotations
 
@@ -58,6 +58,7 @@ class CurrentUser:
     institution_id: int | None = None
     student_id: int | None = None
     display_name: str = ""
+    must_change_password: bool = False
 
     @property
     def is_aicte(self) -> bool:
@@ -75,6 +76,7 @@ def create_access_token(user: User, expires_minutes: int | None = None) -> tuple
         "role": user.role,
         "institution_id": user.institution_id,
         "student_id": user.student_id,
+        "ver": user.token_version or 1,
         "iat": int(now.timestamp()),
         "exp": int((now + ttl).timestamp()),
     }
@@ -108,6 +110,9 @@ def get_current_user(
     if user.role != payload.get("role"):
         # The token's role no longer matches the account; refuse rather than trust the token.
         raise _unauthorized("INVALID_TOKEN", "Token role does not match the account.")
+    if payload.get("ver") != (user.token_version or 1):
+        # Issued before the last password change or reset.
+        raise _unauthorized("TOKEN_REVOKED", "Your password was changed — please log in again.")
 
     return CurrentUser(
         id=user.id,
@@ -116,6 +121,7 @@ def get_current_user(
         institution_id=user.institution_id,
         student_id=user.student_id,
         display_name=user.display_name or user.username,
+        must_change_password=bool(user.must_change_password),
     )
 
 
@@ -126,6 +132,17 @@ def require_role(*roles: str):
         raise ValueError(f"Unknown role(s) in require_role: {unknown}")
 
     def dependency(user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
+        if user.must_change_password:
+            # After an admin reset, the temporary password only unlocks the change form.
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "error": {
+                        "code": "PASSWORD_CHANGE_REQUIRED",
+                        "message": "Set a new password before continuing.",
+                    }
+                },
+            )
         if user.role not in roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

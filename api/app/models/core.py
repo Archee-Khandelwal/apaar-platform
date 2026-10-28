@@ -256,8 +256,13 @@ class User(Base, TimestampMixin):
     verifier_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
     verifier_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
     demo_label: Mapped[str | None] = mapped_column(String(160), nullable=True)
-    demo_password: Mapped[str | None] = mapped_column(String(64), nullable=True)  # demo mode only
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Bumped on every password change or reset; a JWT carrying an older value is refused,
+    # so a changed password logs every existing session out.
+    token_version: Mapped[int] = mapped_column(Integer, default=1)
+    must_change_password: Mapped[bool] = mapped_column(Boolean, default=False)
+    password_changed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class AccessLog(Base, TimestampMixin):

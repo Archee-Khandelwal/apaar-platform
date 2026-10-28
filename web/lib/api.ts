@@ -11,7 +11,9 @@ import type {
   AicteInstitutionProfile,
   ApiErrorBody,
   ConsentRow,
+  AdminUser,
   DemoUser,
+  PasswordReset,
   Flag,
   FlagDetail,
   FlagPage,
@@ -160,6 +162,11 @@ export const api = {
     request<LoginResponse>("/auth/login", { method: "POST", body: { username, password } }),
   me: () => request<User>("/auth/me"),
   demoUsers: () => request<{ demo_mode: boolean; users: DemoUser[] }>("/auth/demo-users"),
+  changePassword: (current_password: string, new_password: string) =>
+    request<{ status: string; access_token: string; expires_in: number }>("/auth/change-password", {
+      method: "POST",
+      body: { current_password, new_password },
+    }),
 
   // ----------------------------------------------------------------- institution
   institutionMe: () => request<InstitutionProfile>("/institution/me"),
@@ -263,6 +270,9 @@ export const api = {
       "/admin/audit/verify",
     ),
   tamperTest: () => request<TamperResult>("/admin/audit/tamper-test", { method: "POST" }),
+  adminUsers: (query?: Query) => request<Page<AdminUser>>("/admin/users", { query }),
+  resetPassword: (userId: number) =>
+    request<PasswordReset>(`/admin/users/${userId}/reset-password`, { method: "POST" }),
 
   // public
   checkToken: (token: string) => request<TokenCheck>(`/verify/token/${encodeURIComponent(token)}`),

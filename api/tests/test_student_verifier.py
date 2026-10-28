@@ -374,6 +374,7 @@ def test_a_verifier_cannot_read_another_verifiers_request(
         json={"apaar": APAAR, "purpose": "employment_verification"},
     ).json()
     from app.services.users import DemoAccount, upsert_user
+    from tests.conftest import TEST_PASSWORD
 
     upsert_user(
         db,
@@ -385,6 +386,7 @@ def test_a_verifier_cannot_read_another_verifiers_request(
             verifier_name="Brahmaputri Analytics LLP",
             verifier_type="employer",
         ),
+        password=TEST_PASSWORD,
     )
     db.commit()
     assert (

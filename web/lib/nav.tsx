@@ -15,6 +15,7 @@ import {
   GraduationCap,
   Home,
   IdCard,
+  KeyRound,
   LayoutDashboard,
   LineChart,
   ListChecks,
@@ -70,6 +71,7 @@ export const NAV: Record<Role, NavItem[]> = {
   admin: [
     { href: "/admin", label: "Demo controls", icon: Settings2 },
     { href: "/admin/audit", label: "Audit log", icon: ScrollText },
+    { href: "/admin/users", label: "Accounts", icon: KeyRound },
   ],
 };
 
@@ -107,7 +109,7 @@ export const ROLE_BLURBS: Record<Role, string> = {
   aicte_viewer: "Aggregates and masked rows, with small counts suppressed.",
   student: "See what was reported about you and control who may verify it.",
   verifier: "Ask a student to confirm an enrolment — with their consent.",
-  admin: "Reseed the demo and check the audit chain.",
+  admin: "Reseed the demo, check the audit chain, reset passwords.",
 };
 
 /** How well an item matches a path: the length of the matching prefix, or 0. */

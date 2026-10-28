@@ -9,6 +9,9 @@ __pycache__/
 # Secrets
 .env
 .env.local
+# Demo sign-in sheets: one random password per account, written at seed time
+demo_credentials.csv
+*_credentials.csv
 
 # Databases
 *.db

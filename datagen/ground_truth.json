@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-28T19:33:49",
+  "generated_at": "2026-10-28T19:53:08",
   "seed": 42,
   "years": [
     "2025-26",
@@ -20,7 +20,6 @@
   "demo_students": [
     {
       "username": "student_mismatch",
-      "password": "demo1234",
       "student_id": 2898,
       "label": "Student \u2014 reported name/DOB does not match the APAAR registry",
       "apaar_masked": "XXXX-XXXX-7629",
@@ -29,7 +28,6 @@
     },
     {
       "username": "student_duplicate",
-      "password": "demo1234",
       "student_id": 16432,
       "label": "Student \u2014 reported by two institutions (duplicate enrolment victim)",
       "apaar_masked": "XXXX-XXXX-0096",
@@ -38,7 +36,6 @@
     },
     {
       "username": "student_dual",
-      "password": "demo1234",
       "student_id": 12499,
       "label": "Student \u2014 legitimate dual degree (regular + online)",
       "apaar_masked": "XXXX-XXXX-7408",
@@ -47,7 +44,6 @@
     },
     {
       "username": "student_minor",
-      "password": "demo1234",
       "student_id": 10178,
       "label": "Student \u2014 under 18 (parental consent required)",
       "apaar_masked": "XXXX-XXXX-3519",
@@ -56,7 +52,6 @@
     },
     {
       "username": "student_fn",
-      "password": "demo1234",
       "student_id": 273,
       "label": "Student \u2014 foreign national, APAAR not applicable",
       "apaar_masked": "XXXX-XXXX-XXXX",
@@ -65,7 +60,6 @@
     },
     {
       "username": "student_clean",
-      "password": "demo1234",
       "student_id": 10759,
       "label": "Student \u2014 clean record at the model institution",
       "apaar_masked": "XXXX-XXXX-1545",
@@ -74,7 +68,6 @@
     },
     {
       "username": "student_pending",
-      "password": "demo1234",
       "student_id": 282,
       "label": "Student \u2014 has a pending verifier request",
       "apaar_masked": "XXXX-XXXX-8755",
@@ -83,7 +76,6 @@
     },
     {
       "username": "student_revoked",
-      "password": "demo1234",
       "student_id": 1703,
       "label": "Student \u2014 revoked a consent earlier",
       "apaar_masked": "XXXX-XXXX-0220",
