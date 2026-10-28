@@ -21,6 +21,4 @@ years:
 
 # Detector thresholds that depend on the calendar.
 thresholds:
-  last_minute_bulk_window_hours: 6       # VERIFY: tuning choice
-  last_minute_bulk_share_percent: 40.0   # VERIFY: tuning choice
   late_admission_institution_share_percent: 2.0  # VERIFY: tuning choice

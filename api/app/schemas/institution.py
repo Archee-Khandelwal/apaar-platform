@@ -161,80 +161,6 @@ class SeatMatrixOut(BaseModel):
     totals: SeatMatrixTotals
 
 
-class ClusterSummaryOut(BaseModel):
-    cluster_id: int
-    score: float
-    severity: str
-    kind: str
-    student_count: Suppressible
-    shared_attributes: dict[str, Suppressible] = Field(default_factory=dict)
-    institutions: list[dict[str, Any]] = Field(default_factory=list)
-    academic_year: str | None = None
-    summary: str
-    flag_id: int | None = None
-    created_at: datetime
-
-
-class ClusterPage(BaseModel):
-    items: list[ClusterSummaryOut]
-    page: int
-    page_size: int
-    total: int
-    total_pages: int
-    sort: str | None = None
-
-
-class ClusterDetailOut(BaseModel):
-    cluster_id: int
-    score: float
-    severity: str
-    kind: str
-    summary: str
-    metrics: dict[str, Any] = Field(default_factory=dict)
-    legend: dict[str, str] = Field(default_factory=dict)
-    nodes: list[dict[str, Any]] = Field(default_factory=list)
-    edges: list[dict[str, Any]] = Field(default_factory=list)
-    access_log_id: int | None = None
-
-
-class RiskRowOut(BaseModel):
-    institution_id: int
-    name: str
-    state: str
-    risk_score: float
-    band: str
-    top_reasons: list[str] = Field(default_factory=list)
-    components: dict[str, float] = Field(default_factory=dict)
-    open_flags: Suppressible = 0
-
-
-class RiskPage(BaseModel):
-    items: list[RiskRowOut]
-    page: int
-    page_size: int
-    total: int
-    total_pages: int
-    sort: str | None = None
-
-
-class ShortlistRowOut(BaseModel):
-    rank: int
-    institution_id: int
-    name: str
-    state: str
-    risk_score: float
-    band: str
-    reasons: list[str] = Field(default_factory=list)
-    suggested_checks: list[str] = Field(default_factory=list)
-
-
-class ShortlistOut(BaseModel):
-    generated_at: datetime
-    academic_year: str
-    items: list[ShortlistRowOut]
-    csv_url: str
-
-
 class InstitutionFlagOut(BaseModel):
     """Institution view of a flag: another college is never named (CLAUDE.md rule 10)."""
 
@@ -247,7 +173,6 @@ class InstitutionFlagOut(BaseModel):
     evidence: dict[str, Any] = Field(default_factory=dict)
     student_id: int | None = None
     enrolment_id: int | None = None
-    cluster_id: int | None = None
     program_id: int | None = None
     academic_year: str | None = None
     created_at: datetime
@@ -291,7 +216,6 @@ class StudentRowOut(BaseModel):
     dob_year: int | None = None
     is_minor: bool
     flag_count: int
-    student_confirmation: str
     enrolment: StudentEnrolmentOut
 
 
@@ -332,8 +256,6 @@ class InstitutionDashboard(BaseModel):
     latest_quality_score: int | None = None
     quality_trend: list[QualityPoint] = Field(default_factory=list)
     seat_matrix_summary: dict[str, Any]
-    compliance_certificate_eligible: bool
-    compliance_certificate_reasons: list[str] = Field(default_factory=list)
     last_upload_at: datetime | None = None
 
 

@@ -2,7 +2,7 @@
 
 /** National overview. Counts come from student-level records, not institution totals. */
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ArrowRight, Building2, ClipboardCheck, Flag, Users } from "lucide-react";
+import { AlertTriangle, ArrowRight, Building2, Flag, Users } from "lucide-react";
 import Link from "next/link";
 import { Bar, BarChart, CartesianGrid, Cell, Tooltip, XAxis, YAxis } from "recharts";
 
@@ -33,16 +33,6 @@ export default function AicteOverviewPage() {
   const isOfficer = user?.role === "aicte_officer";
 
   const query = useQuery({ queryKey: ["aicte-overview"], queryFn: () => api.overview() });
-  const risk = useQuery({
-    queryKey: ["aicte-risk", "top5"],
-    queryFn: () => api.risk({ page: 1, page_size: 5 }),
-    enabled: isOfficer,
-  });
-  const shortlist = useQuery({
-    queryKey: ["aicte-shortlist", 3],
-    queryFn: () => api.shortlist(3),
-    enabled: isOfficer,
-  });
 
   if (query.isError) return <ErrorState error={query.error} onRetry={query.refetch} />;
 
@@ -68,15 +58,15 @@ export default function AicteOverviewPage() {
         title="Overview"
         description={
           data
-            ? `Where the risk is across every AICTE-approved institution for ${data.academic_year}, counted from student-level records.`
-            : "Where the risk is across every AICTE-approved institution."
+            ? `Admissions and findings across every AICTE-approved institution for ${data.academic_year}, counted from student-level records.`
+            : "Admissions and findings across every AICTE-approved institution."
         }
         actions={
           isOfficer && (
             <Button asChild>
-              <Link href="/aicte/shortlist">
-                <ClipboardCheck className="h-4 w-4" />
-                Inspection shortlist
+              <Link href="/aicte/flags">
+                <Flag className="h-4 w-4" />
+                Flag queue
               </Link>
             </Button>
           )
@@ -102,9 +92,7 @@ export default function AicteOverviewPage() {
             <KpiCard
               label="Institutions reporting"
               value={data!.kpis.institutions_reporting}
-              hint={`Of ${count(data!.kpis.institutions_total)} approved · ${count(
-                data!.kpis.institutions_non_reporting,
-              )} have filed nothing`}
+              hint={`Of ${count(data!.kpis.institutions_total)} approved institutions`}
               icon={<Building2 className="h-4 w-4" />}
             />
             <KpiCard
@@ -140,94 +128,6 @@ export default function AicteOverviewPage() {
               icon={<AlertTriangle className="h-4 w-4" />}
             />
           </KpiRow>
-
-          {isOfficer && (
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-              <SectionCard
-                title="Highest-risk institutions"
-                description="Risk is open findings plus the statistical anomaly score. Every row carries its reasons."
-                className="lg:col-span-2"
-                actions={
-                  <Button asChild size="sm" variant="outline">
-                    <Link href="/aicte/risk">Full leaderboard</Link>
-                  </Button>
-                }
-                bodyClassName="p-0"
-              >
-                {risk.isLoading ? (
-                  <div className="p-5">
-                    <Skeleton rows={5} />
-                  </div>
-                ) : (
-                  <ol className="divide-y divide-border">
-                    {(risk.data?.items ?? []).map((row, index) => (
-                      <li key={row.institution_id} className="flex gap-4 px-5 py-4">
-                        <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold tabular-nums">
-                          {index + 1}
-                        </span>
-                        <div className="min-w-0 flex-1 space-y-1.5">
-                          <Link
-                            href={`/aicte/institutions/${row.institution_id}`}
-                            className="block text-sm font-medium hover:underline"
-                          >
-                            {row.name}
-                          </Link>
-                          <p className="text-xs text-muted-foreground">{row.state}</p>
-                          <ul className="space-y-1 text-xs leading-relaxed text-muted-foreground">
-                            {row.top_reasons.slice(0, 2).map((reason, position) => (
-                              <li key={position}>• {reason}</li>
-                            ))}
-                          </ul>
-                        </div>
-                        <span className="flex shrink-0 flex-col items-end gap-1.5">
-                          <span className="text-lg font-semibold tabular-nums">
-                            {row.risk_score.toFixed(1)}
-                          </span>
-                          <SeverityBadge severity={row.band} showDot={false} />
-                        </span>
-                      </li>
-                    ))}
-                  </ol>
-                )}
-              </SectionCard>
-
-              <SectionCard
-                title="Recommended for inspection"
-                description="The top of the shortlist, with what to check on site."
-                bodyClassName="p-0"
-                footer={
-                  <Button asChild size="sm" variant="outline" className="w-full">
-                    <Link href="/aicte/shortlist">
-                      Full shortlist
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </Link>
-                  </Button>
-                }
-              >
-                {shortlist.isLoading ? (
-                  <div className="p-5">
-                    <Skeleton rows={3} />
-                  </div>
-                ) : (
-                  <ul className="divide-y divide-border">
-                    {(shortlist.data?.items ?? []).map((row) => (
-                      <li key={row.institution_id} className="space-y-1.5 px-5 py-4">
-                        <Link
-                          href={`/aicte/institutions/${row.institution_id}`}
-                          className="block text-sm font-medium hover:underline"
-                        >
-                          {row.rank}. {row.name}
-                        </Link>
-                        <p className="text-xs leading-relaxed text-muted-foreground">
-                          {row.suggested_checks[0] ?? row.reasons[0]}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </SectionCard>
-            </div>
-          )}
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
             <SectionCard
@@ -340,7 +240,7 @@ export default function AicteOverviewPage() {
 
           <SectionCard
             title="State by state"
-            description="The same numbers as the chart, with reporting coverage and average risk."
+            description="The same numbers as the chart, with reporting coverage."
             bodyClassName="p-0"
           >
             <div className="overflow-x-auto">
@@ -352,8 +252,7 @@ export default function AicteOverviewPage() {
                     <th className="px-4 py-3 text-right type-label">Reporting</th>
                     <th className="px-4 py-3 text-right type-label">Students</th>
                     <th className="px-4 py-3 text-right type-label">Open findings</th>
-                    <th className="px-4 py-3 text-right type-label">Excess seats</th>
-                    <th className="px-5 py-3 text-right type-label">Avg risk</th>
+                    <th className="px-5 py-3 text-right type-label">Excess seats</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -366,8 +265,7 @@ export default function AicteOverviewPage() {
                       </td>
                       <td className="px-4 py-2.5 text-right tabular-nums">{count(row.students_reported)}</td>
                       <td className="px-4 py-2.5 text-right tabular-nums">{count(row.open_flags)}</td>
-                      <td className="px-4 py-2.5 text-right tabular-nums">{count(row.excess_seats)}</td>
-                      <td className="px-5 py-2.5 text-right tabular-nums">{row.avg_risk.toFixed(1)}</td>
+                      <td className="px-5 py-2.5 text-right tabular-nums">{count(row.excess_seats)}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -1,6 +1,6 @@
 "use client";
 
-/** Institution drill-down: profile, risk with its three reasons, seats, findings. */
+/** Institution drill-down: profile, seats, findings and reporting history. */
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, FileSpreadsheet } from "lucide-react";
 import Link from "next/link";
@@ -8,53 +8,11 @@ import { useParams } from "next/navigation";
 
 import { SeverityBadge, StatusBadge } from "@/components/SeverityBadge";
 import { ErrorState, Skeleton } from "@/components/States";
-import { KpiCard, KpiRow, PageHeader, SectionCard, TechnicalDetails } from "@/components/ui/page";
+import { KpiCard, KpiRow, PageHeader, SectionCard } from "@/components/ui/page";
 import { Button } from "@/components/ui/primitives";
 import { api } from "@/lib/api";
 import { dateTime, flagLabel } from "@/lib/format";
-import type { Severity } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-const BAND_COLOUR: Record<Severity, string> = {
-  low: "text-slate-500",
-  medium: "text-amber-500",
-  high: "text-orange-500",
-  critical: "text-red-600",
-};
-
-function RiskGauge({ score, band }: { score: number; band: Severity }) {
-  const circumference = Math.PI * 44; // half circle
-  return (
-    <div className="relative mx-auto h-28 w-48">
-      <svg viewBox="0 0 100 56" className="h-full w-full" aria-hidden>
-        <path
-          d="M6 50 A44 44 0 0 1 94 50"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="8"
-          strokeLinecap="round"
-          className="text-secondary"
-        />
-        <path
-          d="M6 50 A44 44 0 0 1 94 50"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="8"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={circumference * (1 - score / 100)}
-          className={BAND_COLOUR[band]}
-        />
-      </svg>
-      <div className="absolute inset-x-0 bottom-0 text-center">
-        <p className={cn("text-3xl font-semibold tabular-nums", BAND_COLOUR[band])}>
-          {score.toFixed(0)}
-        </p>
-        <p className="type-label">{band} risk</p>
-      </div>
-    </div>
-  );
-}
 
 export default function InstitutionProfilePage() {
   const params = useParams<{ id: string }>();
@@ -73,7 +31,7 @@ export default function InstitutionProfilePage() {
   if (query.isError) return <ErrorState error={query.error} onRetry={query.refetch} />;
   if (query.isLoading || !query.data) return <Skeleton rows={6} height="h-28" />;
 
-  const { institution, risk, reporting, seat_matrix_summary, flags, upload_timeline } = query.data;
+  const { institution, reporting, seat_matrix_summary, flags, upload_timeline } = query.data;
   const openFlags = flags.filter((flag) => !["resolved", "dismissed"].includes(flag.status));
 
   return (
@@ -87,7 +45,7 @@ export default function InstitutionProfilePage() {
         </Button>
         <PageHeader
           title={institution.name}
-          description={`${institution.state} · ${institution.region} · ${institution.type.replace(/_/g, " ")}`}
+          description={`${institution.state} · ${institution.region} · ${institution.type.replace(/_/g, " ")} · AICTE permanent id ${institution.aicte_permanent_id}`}
         />
       </div>
 
@@ -124,55 +82,32 @@ export default function InstitutionProfilePage() {
         />
       </KpiRow>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <SectionCard title="Risk score">
-          <RiskGauge score={risk.score} band={risk.band} />
-          <p className="mt-5 type-label">Top reasons</p>
-          <ol className="mt-2 space-y-2">
-            {risk.reasons.map((reason, index) => (
-              <li key={index} className="flex gap-2 text-sm leading-relaxed">
-                <span className="text-muted-foreground">{index + 1}.</span>
-                <span>{reason}</span>
+      <SectionCard
+        title={`Findings (${openFlags.length} open of ${flags.length})`}
+        description="Plain-English title first; open the flag queue for the full evidence."
+        bodyClassName="p-0"
+      >
+        {flags.length === 0 ? (
+          <p className="p-5 text-sm text-muted-foreground">
+            Nothing has been flagged against this institution.
+          </p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {flags.map((flag) => (
+              <li key={flag.id} className="flex flex-wrap items-start gap-x-3 gap-y-2 px-5 py-4">
+                <SeverityBadge severity={flag.severity} />
+                <div className="min-w-0 flex-1 space-y-1">
+                  <p className="text-sm font-medium leading-snug">
+                    {flagLabel(flag.type)} — {flag.title}
+                  </p>
+                  <p className="text-xs leading-relaxed text-muted-foreground">{flag.explanation}</p>
+                </div>
+                <StatusBadge status={flag.status} />
               </li>
             ))}
-          </ol>
-          <TechnicalDetails label="Score breakdown" className="mt-4">
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              {risk.components.flags.toFixed(1)} from open findings ·{" "}
-              {risk.components.anomaly.toFixed(1)} from the statistical model. AICTE permanent id{" "}
-              <code className="font-mono text-foreground">{institution.aicte_permanent_id}</code>.
-            </p>
-          </TechnicalDetails>
-        </SectionCard>
-
-        <SectionCard
-          title={`Findings (${openFlags.length} open of ${flags.length})`}
-          description="Plain-English title first; open the flag queue for the full evidence."
-          className="lg:col-span-2"
-          bodyClassName="p-0"
-        >
-          {flags.length === 0 ? (
-            <p className="p-5 text-sm text-muted-foreground">
-              Nothing has been flagged against this institution.
-            </p>
-          ) : (
-            <ul className="divide-y divide-border">
-              {flags.map((flag) => (
-                <li key={flag.id} className="flex flex-wrap items-start gap-x-3 gap-y-2 px-5 py-4">
-                  <SeverityBadge severity={flag.severity} />
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <p className="text-sm font-medium leading-snug">
-                      {flagLabel(flag.type)} — {flag.title}
-                    </p>
-                    <p className="text-xs leading-relaxed text-muted-foreground">{flag.explanation}</p>
-                  </div>
-                  <StatusBadge status={flag.status} />
-                </li>
-              ))}
-            </ul>
-          )}
-        </SectionCard>
-      </div>
+          </ul>
+        )}
+      </SectionCard>
 
       {seatMatrix.data && seatMatrix.data.programs.length > 0 && (
         <SectionCard title="Seat matrix 2026-27" bodyClassName="p-0">

@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import base64
 import io
-from datetime import datetime
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query, status
@@ -33,20 +32,16 @@ from app.models.core import (
     Upload,
     Vault,
 )
-from app.models.enums import OPEN_FLAG_STATUSES
 from app.schemas.common import PageParams, page_params, paginate
 from app.schemas.student import (
     AccessLogPage,
     ApproveConsentRequest,
-    ConfirmResponse,
     ConsentActionResponse,
     ConsentPage,
     CorrectionOut,
     CorrectionPage,
     CorrectionRequestIn,
     DenyConsentRequest,
-    DisputeRequest,
-    DisputeResponse,
     IdCardOut,
     StudentMeOut,
 )
@@ -62,13 +57,6 @@ from app.services.tokens import issue_token
 
 router = APIRouter(prefix="/student", tags=["student"])
 
-DISPUTE_CATEGORIES = (
-    "not_my_enrolment",
-    "wrong_program",
-    "wrong_year",
-    "already_cancelled",
-    "other",
-)
 
 # The access log shows a role label, never another person's username.
 ROLE_LABELS = {
@@ -131,7 +119,6 @@ def me(
                 "status": enrolment.status,
                 "admitted_on": enrolment.admitted_on,
                 "reported_by_upload_at": upload.created_at if upload else None,
-                "confirmation": enrolment.student_confirmation,
                 "version": enrolment.version,
             }
         )
@@ -146,7 +133,7 @@ def me(
         for flag in db.execute(
             select(Flag).where(
                 Flag.student_id == student_id,
-                Flag.type == "STUDENT_DISPUTE",
+                Flag.type == "STUDENT_CORRECTION",
             )
         ).scalars()
     ]
@@ -173,109 +160,6 @@ def me(
         enrolments=enrolments,
         open_cases=open_cases,
         pending_consents=pending,
-    )
-
-
-@router.post("/enrolments/{enrolment_id}/confirm", response_model=ConfirmResponse)
-def confirm_enrolment(
-    enrolment_id: int,
-    user: CurrentUser = Depends(require_role("student")),
-    db: Session = Depends(get_db),
-) -> ConfirmResponse:
-    """"Yes, this is my college." """
-    student_id = _require_student(user)
-    enrolment = _own_enrolment(db, enrolment_id, student_id)
-    enrolment.student_confirmation = "confirmed"
-    entry = log_audit(
-        db,
-        actor=user.username,
-        role="student",
-        action="enrolment_confirmed",
-        target=f"enrolment:{enrolment.id}",
-        payload={"institution_id": enrolment.institution_id},
-    )
-    db.commit()
-    return ConfirmResponse(
-        enrolment_id=enrolment.id,
-        confirmation="confirmed",
-        confirmed_at=entry.created_at,
-        audit_log_id=entry.id,
-    )
-
-
-@router.post("/enrolments/{enrolment_id}/dispute", response_model=DisputeResponse)
-def dispute_enrolment(
-    enrolment_id: int,
-    payload: DisputeRequest,
-    user: CurrentUser = Depends(require_role("student")),
-    db: Session = Depends(get_db),
-) -> DisputeResponse:
-    """"I never enrolled here." Raises a critical flag visible to AICTE and the college.
-
-    The enrolment's status is left untouched until AICTE resolves the case
-    (Step-0 decision 8).
-    """
-    student_id = _require_student(user)
-    if payload.category not in DISPUTE_CATEGORIES:
-        raise api_error(
-            422,
-            "VALIDATION_ERROR",
-            f"category must be one of {', '.join(DISPUTE_CATEGORIES)}.",
-        )
-    enrolment = _own_enrolment(db, enrolment_id, student_id)
-    program = db.get(Program, enrolment.program_id)
-    institution = db.get(Institution, enrolment.institution_id)
-    student = db.get(Student, student_id)
-
-    enrolment.student_confirmation = "disputed"
-    flag, _created = upsert_flag(
-        db,
-        type="STUDENT_DISPUTE",
-        dedupe_key=f"enrolment:{enrolment.id}:STUDENT_DISPUTE",
-        severity="critical",
-        title="Student disputes reported enrolment",
-        explanation=(
-            f"The student holding {student.apaar_masked if student else 'this APAAR ID'} states "
-            f"that the enrolment reported by {institution.name if institution else 'the institution'} "
-            f"in {program.course if program else ''} {program.branch if program else ''} for "
-            f"{enrolment.academic_year} is not correct. Reason given: {payload.reason.strip()}"
-        ),
-        evidence={
-            "category": payload.category,
-            "reason": payload.reason.strip(),
-            "academic_year": enrolment.academic_year,
-            "apaar_masked": student.apaar_masked if student else None,
-            "reported_by_upload_id": enrolment.upload_id,
-            "raised_by": "student",
-        },
-        institution_id=enrolment.institution_id,
-        student_id=student_id,
-        enrolment_id=enrolment.id,
-        academic_year=enrolment.academic_year,
-    )
-    entry = log_audit(
-        db,
-        actor=user.username,
-        role="student",
-        action="enrolment_disputed",
-        target=f"enrolment:{enrolment.id}",
-        payload={"flag_id": flag.id, "category": payload.category},
-    )
-    db.commit()
-
-    return DisputeResponse(
-        enrolment_id=enrolment.id,
-        confirmation="disputed",
-        flag={
-            "id": flag.id,
-            "type": flag.type,
-            "severity": flag.severity,
-            "status": flag.status,
-            "title": flag.title,
-            "explanation": flag.explanation,
-        },
-        message="AICTE has been notified. You can track this case here.",
-        audit_log_id=entry.id,
     )
 
 
@@ -316,7 +200,7 @@ def request_correction(
     student = db.get(Student, student_id)
     upsert_flag(
         db,
-        type="STUDENT_DISPUTE",
+        type="STUDENT_CORRECTION",
         dedupe_key=f"correction:{correction.id}",
         severity="low",
         title=f"Student correction request: {correction.field}",

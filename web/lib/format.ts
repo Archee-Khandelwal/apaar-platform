@@ -53,7 +53,7 @@ export function relative(value?: string | null): string {
   return dateOnly(value);
 }
 
-/** Human label for a flag type, e.g. GHOST_CLUSTER -> "Ghost cluster". */
+/** Human label for a flag type, e.g. EXCESS_INTAKE -> "Excess intake". */
 export function flagLabel(type: string): string {
   const words = type.toLowerCase().split("_");
   const special: Record<string, string> = { apaar: "APAAR", tfw: "TFW", oci: "OCI", pio: "PIO" };

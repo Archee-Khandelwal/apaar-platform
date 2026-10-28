@@ -78,7 +78,6 @@ def flag_to_dict(
         "student_id": flag.student_id,
         "enrolment_id": flag.enrolment_id,
         "program_id": flag.program_id,
-        "cluster_id": flag.cluster_id,
         "academic_year": flag.academic_year,
         "assigned_to": flag.assigned_to,
         "notes": flag.notes or [],
@@ -98,7 +97,6 @@ def build_flag_query(
     institution_id: int | None = None,
     academic_year: str | None = None,
     assigned_to: str | None = None,
-    cluster_id: int | None = None,
     student_id: int | None = None,
     created_from: datetime | None = None,
     created_to: datetime | None = None,
@@ -125,8 +123,6 @@ def build_flag_query(
         statement = statement.where(Flag.academic_year == academic_year)
     if assigned_to:
         statement = statement.where(Flag.assigned_to == assigned_to)
-    if cluster_id is not None:
-        statement = statement.where(Flag.cluster_id == cluster_id)
     if student_id is not None:
         statement = statement.where(Flag.student_id == student_id)
     if created_from is not None:

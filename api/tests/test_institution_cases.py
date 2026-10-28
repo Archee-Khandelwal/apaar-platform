@@ -1,4 +1,4 @@
-"""Step 12 (institution side): own flags, versioned status changes, certificate."""
+"""Step 12 (institution side): own flags, versioned status changes, dashboard."""
 from __future__ import annotations
 
 import json
@@ -369,75 +369,6 @@ def test_another_institution_cannot_change_our_enrolment(
     assert response.status_code == 404
 
 
-# ------------------------------------------------------------------ certificate
-
-
-def test_certificate_is_issued_when_nothing_serious_is_open(
-    client: TestClient, auth, setup, db: Session
-) -> None:
-    add_flag(db, institution_id=setup["first"].id, severity="medium")  # medium does not block
-    response = client.get(
-        f"/institution/compliance-certificate?academic_year={YEAR}", headers=auth("institution")
-    )
-    assert response.status_code == 200
-    assert "text/html" in response.headers["content-type"]
-    assert "Data Compliance Certificate" in response.text
-    assert setup["first"].name in response.text
-    assert "all data is synthetic" in response.text
-    assert "cert:" in response.text  # the verification reference
-
-    audit = db.execute(
-        select(AuditLog).where(AuditLog.action == "certificate_issued")
-    ).scalars().one()
-    assert audit.payload["academic_year"] == YEAR
-
-
-def test_certificate_is_refused_with_an_open_high_flag(
-    client: TestClient, auth, setup, db: Session
-) -> None:
-    add_flag(db, institution_id=setup["first"].id, severity="high", type="EXCESS_INTAKE")
-    response = client.get(
-        f"/institution/compliance-certificate?academic_year={YEAR}", headers=auth("institution")
-    )
-    assert response.status_code == 409
-    error = response.json()["error"]
-    assert error["code"] == "CERTIFICATE_NOT_ELIGIBLE"
-    assert error["details"]["blocking_flags"][0]["type"] == "EXCESS_INTAKE"
-
-
-def test_certificate_eligibility_can_be_checked_without_issuing(
-    client: TestClient, auth, setup, db: Session
-) -> None:
-    add_flag(db, institution_id=setup["first"].id, severity="critical", type="GHOST_CLUSTER")
-    body = client.get(
-        f"/institution/compliance-certificate?academic_year={YEAR}&format=json",
-        headers=auth("institution"),
-    ).json()
-    assert body["eligible"] is False
-    assert body["reasons"]
-    assert body["students_reported"] == 3
-
-
-def test_a_resolved_flag_no_longer_blocks_the_certificate(
-    client: TestClient, auth, setup, db: Session
-) -> None:
-    flag = add_flag(db, institution_id=setup["first"].id, severity="high")
-    assert (
-        client.get(
-            f"/institution/compliance-certificate?academic_year={YEAR}", headers=auth("institution")
-        ).status_code
-        == 409
-    )
-    flag.status = "resolved"
-    db.commit()
-    assert (
-        client.get(
-            f"/institution/compliance-certificate?academic_year={YEAR}", headers=auth("institution")
-        ).status_code
-        == 200
-    )
-
-
 # ------------------------------------------------------------------ dashboard
 
 
@@ -449,8 +380,6 @@ def test_dashboard_summarises_the_institution(client: TestClient, auth, setup, d
     assert body["latest_quality_score"] == 88
     assert body["quality_trend"]
     assert body["seat_matrix_summary"]["approved_intake"] == 120
-    assert body["compliance_certificate_eligible"] is False
-    assert body["compliance_certificate_reasons"]
 
 
 def test_institution_routes_refuse_other_roles(client: TestClient, auth, setup) -> None:
@@ -458,7 +387,6 @@ def test_institution_routes_refuse_other_roles(client: TestClient, auth, setup) 
         "/institution/flags",
         "/institution/students",
         "/institution/dashboard",
-        f"/institution/compliance-certificate?academic_year={YEAR}",
     ):
         for role in ("aicte_officer", "aicte_viewer", "student", "verifier", "admin"):
             assert client.get(path, headers=auth(role)).status_code == 403, f"{path} {role}"

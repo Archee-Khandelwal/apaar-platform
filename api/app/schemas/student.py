@@ -30,7 +30,6 @@ class StudentEnrolmentView(BaseModel):
     status: str
     admitted_on: date | None = None
     reported_by_upload_at: datetime | None = None
-    confirmation: str
     version: int
 
 
@@ -39,26 +38,6 @@ class StudentMeOut(BaseModel):
     enrolments: list[StudentEnrolmentView]
     open_cases: list[dict[str, Any]] = Field(default_factory=list)
     pending_consents: int = 0
-
-
-class ConfirmResponse(BaseModel):
-    enrolment_id: int
-    confirmation: str
-    confirmed_at: datetime
-    audit_log_id: int | None = None
-
-
-class DisputeRequest(BaseModel):
-    reason: str = Field(min_length=10, max_length=2000)
-    category: str = "other"
-
-
-class DisputeResponse(BaseModel):
-    enrolment_id: int
-    confirmation: str
-    flag: dict[str, Any]
-    message: str
-    audit_log_id: int | None = None
 
 
 class CorrectionRequestIn(BaseModel):

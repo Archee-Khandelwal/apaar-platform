@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
   ArrowRight,
-  BadgeCheck,
   CheckCircle2,
   FileSpreadsheet,
   Flag,
@@ -217,63 +216,28 @@ export default function InstitutionDashboardPage() {
             />
           </KpiRow>
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            <SectionCard
-              title="Seats against approved intake"
-              description="Supernumerary seats sit outside approved intake, each with its own cap."
-              className="lg:col-span-2"
-              actions={
-                <Button asChild size="sm" variant="outline">
-                  <Link href="/institution/seat-matrix">Open seat matrix</Link>
-                </Button>
-              }
-            >
-              {seats ? (
-                <SeatSummaryChart
-                  intake={seats.approved_intake}
-                  regular={seats.regular_admitted}
-                  supernumerary={seats.valid_supernumerary}
-                  excess={seats.excess}
-                />
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No approved intake on record for {CURRENT_YEAR}.
-                </p>
-              )}
-            </SectionCard>
-
-            <SectionCard title="Compliance certificate">
-              {data?.compliance_certificate_eligible ? (
-                <div className="space-y-4">
-                  <p className="flex items-start gap-2 text-sm font-medium text-emerald-700">
-                    <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0" />
-                    Eligible for {CURRENT_YEAR}
-                  </p>
-                  <p className="text-sm leading-relaxed text-muted-foreground">
-                    No high or critical finding is open against you for this year.
-                  </p>
-                  <Button asChild size="sm" className="w-full">
-                    <Link href="/institution/certificate">View certificate</Link>
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <p className="flex items-start gap-2 text-sm font-medium text-amber-700">
-                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                    Not available yet
-                  </p>
-                  <ul className="space-y-2 text-sm leading-relaxed text-muted-foreground">
-                    {(data?.compliance_certificate_reasons ?? []).map((reason) => (
-                      <li key={reason}>{reason}</li>
-                    ))}
-                  </ul>
-                  <Button asChild size="sm" variant="outline" className="w-full">
-                    <Link href="/institution/certificate">What is blocking it</Link>
-                  </Button>
-                </div>
-              )}
-            </SectionCard>
-          </div>
+          <SectionCard
+            title="Seats against approved intake"
+            description="Supernumerary seats sit outside approved intake, each with its own cap."
+            actions={
+              <Button asChild size="sm" variant="outline">
+                <Link href="/institution/seat-matrix">Open seat matrix</Link>
+              </Button>
+            }
+          >
+            {seats ? (
+              <SeatSummaryChart
+                intake={seats.approved_intake}
+                regular={seats.regular_admitted}
+                supernumerary={seats.valid_supernumerary}
+                excess={seats.excess}
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No approved intake on record for {CURRENT_YEAR}.
+              </p>
+            )}
+          </SectionCard>
 
           <SectionCard
             title="Needs your attention"

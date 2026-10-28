@@ -48,14 +48,14 @@ const PREFERRED: Partial<Record<Role, string>> = {
   institution: "rathnapura1_admin",
   aicte_officer: "aicte_officer1",
   aicte_viewer: "aicte_viewer1",
-  student: "student_ghost",
+  student: "student_mismatch",
   verifier: "verifier_demo",
   admin: "admin",
 };
 
 /**
  * Demo labels arrive as one long sentence, e.g.
- * "Student — member of a ghost cluster (use this one to dispute) — Trivendri …".
+ * "Student — reported name/DOB does not match the APAAR registry — Trivendri …".
  * The dropdown wants "username — what makes this account interesting", so we
  * take the middle clause and drop the role prefix and the institution tail.
  */

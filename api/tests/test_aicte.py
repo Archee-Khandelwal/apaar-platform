@@ -16,10 +16,7 @@ from app.models.core import (
     AuditLog,
     Enrolment,
     Flag,
-    Institution,
-    InstitutionRisk,
     Program,
-    ReminderLog,
     Student,
     Upload,
     Vault,
@@ -34,22 +31,17 @@ AICTE_ROUTES = (
     ("GET", "/aicte/overview"),
     ("GET", "/aicte/institutions"),
     ("GET", "/aicte/flags"),
-    ("GET", "/aicte/non-reporting"),
     ("GET", "/aicte/reports/trends"),
     ("GET", "/aicte/reports/trends.csv"),
-    ("GET", "/aicte/risk"),
-    ("GET", "/aicte/inspection-shortlist"),
-    ("GET", "/aicte/graph/clusters"),
 )
 OFFICER_ONLY_ROUTES = (
     ("POST", "/aicte/reveal"),
-    ("POST", "/aicte/remind/1"),
 )
 
 
 @pytest.fixture()
 def dataset(db: Session, two_institutions) -> dict:
-    """Two institutions, one student each, one flag each, risk rows and an upload."""
+    """Two institutions, one student each, open flags and an upload each."""
     first, second = two_institutions
     programs = {
         institution.id: db.execute(
@@ -116,28 +108,19 @@ def dataset(db: Session, two_institutions) -> dict:
                 quality_score=90 - index * 20,
             )
         )
-        db.add(
-            InstitutionRisk(
-                institution_id=institution.id,
-                academic_year=YEAR,
-                score=80.0 - index * 40,
-                band="critical" if index == 0 else "medium",
-                reasons=[f"Reason for {institution.name}."],
-            )
-        )
 
     db.add_all(
         [
             Flag(
-                type="GHOST_CLUSTER",
+                type="IDENTITY_DUPLICATE",
                 severity="critical",
                 status="open",
                 institution_id=first.id,
                 student_id=students[first.id].id,
-                title="Cluster of 30 students sharing 2 contacts",
-                explanation="30 students share only 2 guardian contacts.",
-                evidence={"score": 90, "student_count": 30, "institutions": [first.name]},
-                dedupe_key="cluster:test-1",
+                title="One person reported under two APAAR IDs",
+                explanation="Two records share name, date of birth and guardian phone.",
+                evidence={"student_count": 2, "institutions": [first.name]},
+                dedupe_key="identity:test-1",
                 academic_year=YEAR,
                 notes=[],
             ),
@@ -200,7 +183,6 @@ def test_officer_only_routes_refuse_the_viewer(client: TestClient, auth, dataset
         ).status_code
         == 403
     )
-    assert client.post(f"/aicte/remind/{dataset['first'].id}", headers=auth("aicte_viewer")).status_code == 403
     assert (
         client.patch("/aicte/flags/1", headers=auth("aicte_viewer"), json={"status": "under_review"}).status_code
         == 403
@@ -225,7 +207,7 @@ def test_overview_counts_from_student_level_records(client: TestClient, auth, da
     assert body["kpis"]["open_flags"]["high"] == 2
     assert body["suppression_applied"] is False
     types = {row["type"] for row in body["flags_by_type"]}
-    assert {"GHOST_CLUSTER", "EXCESS_INTAKE", "CROSS_INSTITUTION_DUPLICATE"} == types
+    assert {"IDENTITY_DUPLICATE", "EXCESS_INTAKE", "CROSS_INSTITUTION_DUPLICATE"} == types
     assert len(body["by_state"]) == 2
 
 
@@ -255,7 +237,8 @@ def test_institution_list_search_filter_and_sort(client: TestClient, auth, datas
     headers = auth("aicte_officer")
     body = client.get("/aicte/institutions", headers=headers).json()
     assert body["total"] == 2
-    assert body["items"][0]["risk_score"] >= body["items"][1]["risk_score"]  # -risk_score default
+    # Default sort: most open findings first.
+    assert body["items"][0]["open_flags_total"] >= body["items"][1]["open_flags_total"]
 
     searched = client.get("/aicte/institutions?q=Vindhyashree", headers=headers).json()
     assert searched["total"] == 1
@@ -264,26 +247,20 @@ def test_institution_list_search_filter_and_sort(client: TestClient, auth, datas
     assert by_state["total"] == 1
     assert by_state["items"][0]["state"] == "Odisha"
 
-    risky = client.get("/aicte/institutions?risk_min=60", headers=headers).json()
-    assert risky["total"] == 1
-    assert risky["items"][0]["risk_score"] == 80.0
-
     by_flag = client.get("/aicte/institutions?has_flag_type=EXCESS_INTAKE", headers=headers).json()
     assert by_flag["total"] == 1
     assert by_flag["items"][0]["excess_seats"] == 10
 
 
-def test_institution_profile_has_risk_reasons_and_flags(client: TestClient, auth, dataset) -> None:
+def test_institution_profile_has_reporting_seats_and_flags(client: TestClient, auth, dataset) -> None:
     first = dataset["first"]
     body = client.get(
         f"/aicte/institutions/{first.id}?academic_year={YEAR}", headers=auth("aicte_officer")
     ).json()
     assert body["institution"]["name"] == first.name
-    assert body["risk"]["score"] == 80.0
-    assert body["risk"]["reasons"]
     assert body["reporting"]["uploads"] == 1
     assert body["seat_matrix_summary"]["approved_intake"] == 120
-    assert {flag["type"] for flag in body["flags"]} == {"GHOST_CLUSTER", "CROSS_INSTITUTION_DUPLICATE"}
+    assert {flag["type"] for flag in body["flags"]} == {"IDENTITY_DUPLICATE", "CROSS_INSTITUTION_DUPLICATE"}
     assert body["upload_timeline"]
 
 
@@ -348,15 +325,15 @@ def test_officer_sees_full_evidence(client: TestClient, auth, dataset) -> None:
 
 
 def test_flag_detail_gives_the_officer_the_case_file(client: TestClient, auth, dataset, db) -> None:
-    flag = db.execute(select(Flag).where(Flag.type == "GHOST_CLUSTER")).scalars().one()
+    flag = db.execute(select(Flag).where(Flag.type == "IDENTITY_DUPLICATE")).scalars().one()
     body = client.get(f"/aicte/flags/{flag.id}", headers=auth("aicte_officer")).json()
-    assert body["evidence"]["student_count"] == 30
+    assert body["evidence"]["student_count"] == 2
     assert body["students"][0]["apaar_masked"].startswith("XXXX-XXXX-")
     assert any(item["type"] == "CROSS_INSTITUTION_DUPLICATE" for item in body["related_flags"])
 
 
 def test_flag_detail_for_a_viewer_hides_the_case_file(client: TestClient, auth, dataset, db) -> None:
-    flag = db.execute(select(Flag).where(Flag.type == "GHOST_CLUSTER")).scalars().one()
+    flag = db.execute(select(Flag).where(Flag.type == "IDENTITY_DUPLICATE")).scalars().one()
     body = client.get(f"/aicte/flags/{flag.id}", headers=auth("aicte_viewer")).json()
     assert body["evidence"] is None
     assert body["history"] == []
@@ -366,7 +343,7 @@ def test_flag_detail_for_a_viewer_hides_the_case_file(client: TestClient, auth, 
 def test_viewing_a_student_case_file_is_access_logged(
     client: TestClient, auth, dataset, db: Session
 ) -> None:
-    flag = db.execute(select(Flag).where(Flag.type == "GHOST_CLUSTER")).scalars().one()
+    flag = db.execute(select(Flag).where(Flag.type == "IDENTITY_DUPLICATE")).scalars().one()
     client.get(f"/aicte/flags/{flag.id}", headers=auth("aicte_officer"))
     entry = db.execute(
         select(AccessLog).where(AccessLog.action == "view_flag_detail")
@@ -512,48 +489,6 @@ def test_reveal_of_an_unknown_student_is_404(client: TestClient, auth, dataset) 
     assert response.status_code == 404
 
 
-# ------------------------------------------------------------------ non-reporting
-
-
-def test_non_reporting_lists_institutions_with_no_data(
-    client: TestClient, auth, dataset, db: Session
-) -> None:
-    # A third institution that never reported.
-    silent = Institution(
-        aicte_permanent_id="1-7777777777",
-        name="Tamravati College of Engineering",
-        state="Kerala",
-        region="South",
-        type="private_unaided",
-    )
-    db.add(silent)
-    db.commit()
-
-    body = client.get(f"/aicte/non-reporting?academic_year={YEAR}", headers=auth("aicte_officer")).json()
-    assert body["total"] == 1
-    assert body["items"][0]["institution_id"] == silent.id
-    assert body["items"][0]["reminders_sent"] == 0
-
-
-def test_reminder_is_mocked_logged_and_officer_only(
-    client: TestClient, auth, dataset, db: Session
-) -> None:
-    institution = dataset["first"]
-    response = client.post(f"/aicte/remind/{institution.id}", headers=auth("aicte_officer"))
-    assert response.status_code == 200
-    body = response.json()
-    assert body["status"] == "queued_mock"
-    assert body["audit_log_id"]
-
-    assert db.execute(select(ReminderLog)).scalars().one().institution_id == institution.id
-    audit = db.execute(select(AuditLog).where(AuditLog.action == "reminder_sent")).scalars().one()
-    assert audit.payload["mock"] is True
-
-
-def test_reminder_for_an_unknown_institution_is_404(client: TestClient, auth, dataset) -> None:
-    assert client.post("/aicte/remind/9999", headers=auth("aicte_officer")).status_code == 404
-
-
 # ------------------------------------------------------------------ trends
 
 
@@ -618,22 +553,3 @@ def test_trends_can_compare_new_admissions_like_for_like(
     assert new_only["series"][0]["values"][YEAR] < total["series"][0]["values"][YEAR]
 
 
-def test_non_reporting_says_how_long_until_the_deadline(
-    client: TestClient, auth, dataset, db: Session
-) -> None:
-    silent = Institution(
-        aicte_permanent_id="1-8888888888",
-        name="Kaladgi Institute of Technology",
-        state="Goa",
-        region="West",
-        type="private_unaided",
-    )
-    db.add(silent)
-    db.commit()
-
-    row = client.get(
-        f"/aicte/non-reporting?academic_year={YEAR}", headers=auth("aicte_officer")
-    ).json()["items"][0]
-    assert row["days_overdue"] >= 0
-    assert row["days_to_deadline"] is not None
-    assert row["reporting_deadline"]

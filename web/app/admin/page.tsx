@@ -1,8 +1,8 @@
 "use client";
 
-/** Demo control panel: reseed the dataset and inject one scenario live. */
+/** Demo control panel: reseed the dataset and check the audit chain. */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Database, PlayCircle, RefreshCw, Rows3, ShieldCheck } from "lucide-react";
+import { Database, RefreshCw, Rows3, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
 import { ErrorState, KpiSkeleton, Skeleton } from "@/components/States";
@@ -11,7 +11,6 @@ import { Button, Spinner } from "@/components/ui/primitives";
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
 import { flagLabel } from "@/lib/format";
-import { useState } from "react";
 
 /** The four counts a judge actually asks about, in plain English. */
 const HEADLINE_COUNTS: { key: string; label: string; hint: string }[] = [
@@ -47,10 +46,8 @@ function ControlAction({
 export default function AdminPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [busyScenario, setBusyScenario] = useState<string | null>(null);
 
   const status = useQuery({ queryKey: ["admin-status"], queryFn: api.adminStatus });
-  const scenarios = useQuery({ queryKey: ["admin-scenarios"], queryFn: api.adminScenarios });
 
   function refreshAll() {
     queryClient.invalidateQueries();
@@ -68,29 +65,6 @@ export default function AdminPage() {
     onError: (error: Error) => toast(error.message, "danger"),
   });
 
-  const detectors = useMutation({
-    mutationFn: api.runDetectors,
-    onSuccess: () => {
-      toast("Detectors re-run. Flags are updated in place, never duplicated.", "success");
-      refreshAll();
-    },
-    onError: (error: Error) => toast(error.message, "danger"),
-  });
-
-  const loadScenario = useMutation({
-    mutationFn: (name: string) => api.loadScenario(name),
-    onMutate: (name) => setBusyScenario(name),
-    onSuccess: (result) => {
-      const gained = Object.entries(result.flags_after)
-        .map(([type, after]) => `${flagLabel(type)} ${result.flags_before[type]} → ${after}`)
-        .join(", ");
-      toast(`${result.label}: added ${result.added.students} students. ${gained}`, "success");
-      refreshAll();
-    },
-    onError: (error: Error) => toast(error.message, "danger"),
-    onSettled: () => setBusyScenario(null),
-  });
-
   if (status.isError) return <ErrorState error={status.error} onRetry={status.refetch} />;
 
   const counts = status.data?.counts ?? {};
@@ -99,7 +73,7 @@ export default function AdminPage() {
     <>
       <PageHeader
         title="Demo controls"
-        description="Reset the dataset, re-run the detectors, or inject one fraud scenario live during a demo."
+        description="Reset the dataset and check the audit chain."
         actions={
           <Button variant="outline" onClick={() => status.refetch()} disabled={status.isFetching}>
             <RefreshCw className="h-4 w-4" />
@@ -134,25 +108,11 @@ export default function AdminPage() {
             <div className="divide-y divide-border">
               <ControlAction
                 title="Reset and reseed the demo data"
-                description="Wipes every table and regenerates 40 institutions and roughly 15,000 students from seed 42, then runs every detector. Takes about 15 seconds, and anything you injected during the demo is lost."
+                description="Wipes every table and regenerates 40 institutions and roughly 15,000 students from seed 42, then runs every detector. Takes about 15 seconds, and anything uploaded during the demo is lost."
                 button={
                   <Button onClick={() => reseed.mutate()} disabled={reseed.isPending}>
                     {reseed.isPending ? <Spinner /> : <Database className="h-4 w-4" />}
                     Reset &amp; reseed
-                  </Button>
-                }
-              />
-              <ControlAction
-                title="Re-run the detectors"
-                description="Re-scores every institution and refreshes the findings against the data that is already there. Existing flags are updated in place, never duplicated, so it is safe to press twice."
-                button={
-                  <Button
-                    variant="outline"
-                    onClick={() => detectors.mutate()}
-                    disabled={detectors.isPending}
-                  >
-                    {detectors.isPending ? <Spinner /> : <RefreshCw className="h-4 w-4" />}
-                    Re-run detectors
                   </Button>
                 }
               />
@@ -169,39 +129,6 @@ export default function AdminPage() {
                 }
               />
             </div>
-          </SectionCard>
-
-          <SectionCard
-            title="Inject a scenario live"
-            description="Each one adds its students to the current database and re-runs the detectors, so a finding appears while you are presenting."
-          >
-            {scenarios.isLoading ? (
-              <Skeleton rows={3} />
-            ) : (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {(scenarios.data?.scenarios ?? []).map((scenario) => (
-                  <button
-                    key={scenario.name}
-                    type="button"
-                    onClick={() => loadScenario.mutate(scenario.name)}
-                    disabled={loadScenario.isPending}
-                    className="flex h-full flex-col gap-2 rounded-md border border-border bg-card p-4 text-left transition-colors hover:border-primary hover:bg-primary/[0.03] disabled:opacity-60"
-                  >
-                    <span className="flex items-start justify-between gap-2">
-                      <span className="text-sm font-medium leading-snug">{scenario.label}</span>
-                      {busyScenario === scenario.name ? (
-                        <Spinner className="mt-0.5 shrink-0" />
-                      ) : (
-                        <PlayCircle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                      )}
-                    </span>
-                    <span className="text-xs leading-relaxed text-muted-foreground">
-                      Raises {scenario.flag_types.map(flagLabel).join(", ")}.
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
           </SectionCard>
 
           <SectionCard

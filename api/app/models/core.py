@@ -9,7 +9,6 @@ from sqlalchemy import (
     Boolean,
     Date,
     DateTime,
-    Float,
     ForeignKey,
     Index,
     Integer,
@@ -154,7 +153,6 @@ class Enrolment(Base, TimestampMixin):
     admitted_on: Mapped[date | None] = mapped_column(Date, nullable=True)
     upload_id: Mapped[int | None] = mapped_column(ForeignKey("uploads.id"), nullable=True, index=True)
     version: Mapped[int] = mapped_column(Integer, default=1)
-    student_confirmation: Mapped[str] = mapped_column(String(16), default="unconfirmed")
     registry_status: Mapped[str | None] = mapped_column(String(24), nullable=True)
 
     student: Mapped[Student] = relationship(back_populates="enrolments")
@@ -216,7 +214,6 @@ class Flag(Base, TimestampMixin):
     institution_id: Mapped[int | None] = mapped_column(ForeignKey("institutions.id"), nullable=True)
     student_id: Mapped[int | None] = mapped_column(ForeignKey("students.id"), nullable=True, index=True)
     enrolment_id: Mapped[int | None] = mapped_column(ForeignKey("enrolments.id"), nullable=True)
-    cluster_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     program_id: Mapped[int | None] = mapped_column(ForeignKey("programs.id"), nullable=True)
     academic_year: Mapped[str | None] = mapped_column(String(16), nullable=True, index=True)
     title: Mapped[str] = mapped_column(String(255))
@@ -241,44 +238,6 @@ class FlagHistory(Base, TimestampMixin):
     actor: Mapped[str | None] = mapped_column(String(64), nullable=True)
     reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     audit_log_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
-
-
-class Cluster(Base, TimestampMixin):
-    """A connected component from the ghost-student graph (Step 9)."""
-
-    __tablename__ = "clusters"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    score: Mapped[float] = mapped_column(Float, default=0.0, index=True)
-    severity: Mapped[str] = mapped_column(String(16), default="medium")
-    student_count: Mapped[int] = mapped_column(Integer, default=0)
-    attribute_count: Mapped[int] = mapped_column(Integer, default=0)
-    institutions_involved: Mapped[int] = mapped_column(Integer, default=0)
-    kind: Mapped[str] = mapped_column(String(24), default="suspicious")  # suspicious | normal
-    academic_year: Mapped[str | None] = mapped_column(String(16), nullable=True)
-    summary: Mapped[str] = mapped_column(Text, default="")
-    metrics: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
-    graph: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
-    member_student_ids: Mapped[list[int]] = mapped_column(JSON, default=list)
-    institution_ids: Mapped[list[int]] = mapped_column(JSON, default=list)
-
-
-class InstitutionRisk(Base, TimestampMixin):
-    """Computed risk score per institution (Step 11)."""
-
-    __tablename__ = "institution_risk"
-    __table_args__ = (UniqueConstraint("institution_id", name="uq_risk_institution"),)
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    institution_id: Mapped[int] = mapped_column(ForeignKey("institutions.id"), index=True)
-    academic_year: Mapped[str] = mapped_column(String(16))
-    score: Mapped[float] = mapped_column(Float, default=0.0, index=True)
-    band: Mapped[str] = mapped_column(String(16), default="low")
-    flag_component: Mapped[float] = mapped_column(Float, default=0.0)
-    anomaly_component: Mapped[float] = mapped_column(Float, default=0.0)
-    reasons: Mapped[list[str]] = mapped_column(JSON, default=list)
-    features: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
-    computed_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
 # ----------------------------------------------------------------- users, logs, consent
@@ -410,14 +369,3 @@ class CorrectionRequest(Base, TimestampMixin):
     response_note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
-class ReminderLog(Base, TimestampMixin):
-    """Mocked non-reporting reminders (Step 12)."""
-
-    __tablename__ = "reminder_log"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    institution_id: Mapped[int] = mapped_column(ForeignKey("institutions.id"), index=True)
-    academic_year: Mapped[str] = mapped_column(String(16))
-    channel: Mapped[str] = mapped_column(String(24), default="email")
-    message: Mapped[str] = mapped_column(Text, default="")
-    actor: Mapped[str | None] = mapped_column(String(64), nullable=True)

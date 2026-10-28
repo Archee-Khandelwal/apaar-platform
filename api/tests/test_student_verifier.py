@@ -16,8 +16,6 @@ from app.models.core import (
     Consent,
     CorrectionRequest,
     Enrolment,
-    Flag,
-    Institution,
     Program,
     Student,
     User,
@@ -90,7 +88,6 @@ def test_student_sees_what_the_college_reported(client: TestClient, auth, studen
     assert len(body["enrolments"]) == 1
     row = body["enrolments"][0]
     assert row["institution_name"] == student_setup["first"].name
-    assert row["confirmation"] == "unconfirmed"
     assert row["program"].startswith("B.Tech")
 
 
@@ -115,100 +112,12 @@ def test_a_student_cannot_touch_another_students_enrolment(
     db.add(foreign)
     db.commit()
 
-    headers = auth("student")
-    assert client.post(f"/student/enrolments/{foreign.id}/confirm", headers=headers).status_code == 404
-    assert (
-        client.post(
-            f"/student/enrolments/{foreign.id}/dispute",
-            headers=headers,
-            json={"reason": "This is not mine at all.", "category": "not_my_enrolment"},
-        ).status_code
-        == 404
-    )
-
-
-# ------------------------------------------------------------------ confirm / dispute
-
-
-def test_confirming_an_enrolment(client: TestClient, auth, student_setup, db: Session) -> None:
-    enrolment = student_setup["enrolment"]
-    body = client.post(f"/student/enrolments/{enrolment.id}/confirm", headers=auth("student")).json()
-    assert body["confirmation"] == "confirmed"
-    assert body["audit_log_id"]
-    db.expire_all()
-    assert db.get(Enrolment, enrolment.id).student_confirmation == "confirmed"
-
-
-def test_disputing_raises_a_critical_flag_for_aicte_and_the_college(
-    client: TestClient, auth, student_setup, db: Session
-) -> None:
-    enrolment = student_setup["enrolment"]
     response = client.post(
-        f"/student/enrolments/{enrolment.id}/dispute",
+        "/student/corrections",
         headers=auth("student"),
-        json={"reason": "I never applied to or joined this institution.", "category": "not_my_enrolment"},
+        json={"enrolment_id": foreign.id, "field": "category", "correct_value": "EWS"},
     )
-    assert response.status_code == 200
-    body = response.json()
-    assert body["confirmation"] == "disputed"
-    assert body["flag"]["type"] == "STUDENT_DISPUTE"
-    assert body["flag"]["severity"] == "critical"
-    assert "AICTE has been notified" in body["message"]
-
-    flag = db.execute(select(Flag).where(Flag.type == "STUDENT_DISPUTE")).scalars().one()
-    assert flag.institution_id == student_setup["first"].id
-    assert flag.student_id == student_setup["student"].id
-    assert flag.evidence["raised_by"] == "student"
-    assert "never applied" in flag.explanation
-
-
-def test_a_dispute_does_not_change_the_enrolment_status(
-    client: TestClient, auth, student_setup, db: Session
-) -> None:
-    """Step-0 decision 8: AICTE resolves it; the record is not silently altered."""
-    enrolment = student_setup["enrolment"]
-    client.post(
-        f"/student/enrolments/{enrolment.id}/dispute",
-        headers=auth("student"),
-        json={"reason": "I never joined this college at all.", "category": "not_my_enrolment"},
-    )
-    db.expire_all()
-    refreshed = db.get(Enrolment, enrolment.id)
-    assert refreshed.status == "admitted"
-    assert refreshed.student_confirmation == "disputed"
-    assert refreshed.version == 1
-
-
-def test_the_college_sees_the_dispute_in_its_own_inbox(
-    client: TestClient, auth, student_setup
-) -> None:
-    enrolment = student_setup["enrolment"]
-    client.post(
-        f"/student/enrolments/{enrolment.id}/dispute",
-        headers=auth("student"),
-        json={"reason": "This enrolment was never mine.", "category": "not_my_enrolment"},
-    )
-    inbox = client.get("/institution/flags", headers=auth("institution")).json()
-    assert inbox["total"] == 1
-    assert inbox["items"][0]["type"] == "STUDENT_DISPUTE"
-    assert inbox["items"][0]["severity"] == "critical"
-
-
-def test_a_dispute_needs_a_real_reason_and_a_known_category(
-    client: TestClient, auth, student_setup
-) -> None:
-    enrolment = student_setup["enrolment"]
-    headers = auth("student")
-    short = client.post(
-        f"/student/enrolments/{enrolment.id}/dispute", headers=headers, json={"reason": "no"}
-    )
-    assert short.status_code == 422
-    bad_category = client.post(
-        f"/student/enrolments/{enrolment.id}/dispute",
-        headers=headers,
-        json={"reason": "A perfectly adequate reason.", "category": "made_up"},
-    )
-    assert bad_category.status_code == 422
+    assert response.status_code == 404
 
 
 # ------------------------------------------------------------------ corrections

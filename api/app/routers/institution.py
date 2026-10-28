@@ -58,7 +58,6 @@ from app.services.cases import (
     update_flag,
 )
 from app.services import degree_certificate
-from app.services.certificate import eligibility, render_certificate
 from app.services.detectors import run_all_detectors
 from app.services.documents import DocumentError, revoke_document, token_for, verify_url
 from app.services.flags import sanitise_for_institution
@@ -417,7 +416,6 @@ def my_students(
             "dob_year": student.dob_year,
             "is_minor": student.is_minor,
             "flag_count": flag_counts.get(student.id, 0),
-            "student_confirmation": enrolment.student_confirmation,
             "enrolment": {
                 "id": enrolment.id,
                 "program_id": program.id,
@@ -507,49 +505,6 @@ def change_enrolment_status(
         changed_at=entry.created_at,
         audit_log_id=entry.id,
     )
-
-
-# --------------------------------------------------------------------------- certificate
-
-
-@router.get("/compliance-certificate")
-def compliance_certificate(
-    academic_year: Annotated[str, Query(min_length=7, max_length=7)],
-    format: Annotated[str, Query(pattern="^(html|json)$")] = "html",
-    user: CurrentUser = Depends(require_role("institution")),
-    institution_id: int = Depends(require_institution_scope),
-    db: Session = Depends(get_db),
-):
-    """Printable HTML certificate, only when no high or critical finding is open."""
-    status_payload = eligibility(
-        db, institution_id=institution_id, academic_year=academic_year
-    )
-    if format == "json":
-        return status_payload
-    if not status_payload["eligible"]:
-        raise api_error(
-            status.HTTP_409_CONFLICT,
-            "CERTIFICATE_NOT_ELIGIBLE",
-            " ".join(status_payload["reasons"]),
-            {"blocking_flags": status_payload["blocking_flags"]},
-        )
-
-    html = render_certificate(
-        db,
-        institution_id=institution_id,
-        academic_year=academic_year,
-        issued_to=user.display_name or user.username,
-    )
-    log_audit(
-        db,
-        actor=user.username,
-        role="institution",
-        action="certificate_issued",
-        target=f"institution:{institution_id}",
-        payload={"academic_year": academic_year},
-    )
-    db.commit()
-    return HTMLResponse(content=html)
 
 
 # --------------------------------------------------------------------------- degree certificates
@@ -690,7 +645,6 @@ def dashboard(
         ).scalars()
     )
     counts = Counter(flag.severity for flag in flags)
-    certificate = eligibility(db, institution_id=institution_id, academic_year=year)
 
     return InstitutionDashboard(
         academic_year=year,
@@ -713,7 +667,5 @@ def dashboard(
             for upload in uploads[-10:]
         ],
         seat_matrix_summary=matrix["totals"],
-        compliance_certificate_eligible=certificate["eligible"],
-        compliance_certificate_reasons=certificate["reasons"],
         last_upload_at=max((upload.created_at for upload in uploads), default=None),
     )

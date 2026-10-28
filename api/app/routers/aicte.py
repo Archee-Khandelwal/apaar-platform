@@ -6,24 +6,19 @@ Step 7 adds the seat-matrix view; the rest of this router lands in Step 12.
 """
 from __future__ import annotations
 
-from typing import Annotated, Any
+from typing import Annotated
 
-import csv
-import io
-from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import PlainTextResponse
-from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.access_log import log_access
-from app.core.audit import log_audit
 from app.core.config import settings
 from app.core.db import get_db
 from app.core.errors import api_error, raise_not_found
 from app.core.security import CurrentUser, require_role, suppress_small_counts
-from app.models.core import Cluster, Flag, Institution, InstitutionRisk, ReminderLog, Student
+from app.models.core import Flag, Institution, Student
 from app.models.enums import FLAG_STATUSES
 from app.schemas.common import PageParams, page_params, paginate
 from app.schemas.aicte import (
@@ -34,27 +29,16 @@ from app.schemas.aicte import (
     FlagUpdateResponse,
     InstitutionPage,
     InstitutionProfileOut,
-    NonReportingPage,
     OverviewOut,
-    ReminderResponse,
     RevealRequest,
     RevealResponse,
     TrendsOut,
 )
-from app.schemas.institution import (
-    ClusterDetailOut,
-    ClusterPage,
-    ClusterSummaryOut,
-    RiskPage,
-    RiskRowOut,
-    SeatMatrixOut,
-    ShortlistOut,
-)
+from app.schemas.institution import SeatMatrixOut
 from app.services.aggregates import (
     institution_profile,
     institution_rows,
     national_overview,
-    non_reporting,
     trends,
     trends_csv,
 )
@@ -68,9 +52,7 @@ from app.services.cases import (
     reveal_student,
     update_flag,
 )
-from app.services.graph import ATTRIBUTE_LABELS
 from app.services.intake import institution_seat_matrix
-from app.services.risk import inspection_shortlist
 from app.services.rules import known_academic_years
 
 router = APIRouter(prefix="/aicte", tags=["aicte"])
@@ -92,237 +74,6 @@ def institution_seat_matrix_view(
     )
 
 
-# --------------------------------------------------------------------------- graph
-
-
-def _institution_names(db: Session, ids: list[int]) -> list[dict[str, Any]]:
-    if not ids:
-        return []
-    rows = db.execute(select(Institution).where(Institution.id.in_(ids))).scalars()
-    return [{"id": row.id, "name": row.name} for row in rows]
-
-
-@router.get("/graph/clusters", response_model=ClusterPage)
-def list_clusters(
-    min_score: Annotated[float | None, Query(ge=0, le=100)] = None,
-    severity: Annotated[str | None, Query()] = None,
-    institution_id: Annotated[int | None, Query()] = None,
-    kind: Annotated[str, Query(pattern="^(suspicious|normal)$")] = "suspicious",
-    params: PageParams = Depends(page_params),
-    user: CurrentUser = Depends(require_role("aicte_viewer", "aicte_officer")),
-    db: Session = Depends(get_db),
-) -> ClusterPage:
-    """Ghost-student clusters, highest score first. Summaries are masked."""
-    conditions = [Cluster.kind == kind]
-    if min_score is not None:
-        conditions.append(Cluster.score >= min_score)
-    if severity:
-        conditions.append(Cluster.severity == severity)
-
-    rows = list(
-        db.execute(select(Cluster).where(*conditions).order_by(Cluster.score.desc())).scalars()
-    )
-    if institution_id is not None:
-        rows = [row for row in rows if institution_id in (row.institution_ids or [])]
-
-    total = len(rows)
-    page_rows = rows[params.offset : params.offset + params.page_size]
-
-    flags = {
-        flag.cluster_id: flag.id
-        for flag in db.execute(select(Flag).where(Flag.type == "GHOST_CLUSTER")).scalars()
-        if flag.cluster_id is not None
-    }
-
-    items = [
-        {
-            "cluster_id": row.id,
-            "score": row.score,
-            "severity": row.severity,
-            "kind": row.kind,
-            "student_count": row.student_count,
-            "shared_attributes": (row.metrics or {}).get("shared_attributes", {}),
-            "institutions": _institution_names(db, row.institution_ids or []),
-            "academic_year": row.academic_year,
-            "summary": row.summary,
-            "flag_id": flags.get(row.id),
-            "created_at": row.created_at,
-        }
-        for row in page_rows
-    ]
-    payload = paginate(items, total, PageParams(page=params.page, page_size=params.page_size, sort="-score"))
-    return ClusterPage(**suppress_small_counts(payload, user.role, keep_keys=("student_count",)))
-
-
-@router.get("/graph/clusters/{cluster_id}", response_model=ClusterDetailOut)
-def cluster_detail(
-    cluster_id: int,
-    user: CurrentUser = Depends(require_role("aicte_viewer", "aicte_officer")),
-    db: Session = Depends(get_db),
-) -> ClusterDetailOut:
-    """Cytoscape-ready graph. Labels are masked and contacts are numbered, never shown."""
-    cluster = db.get(Cluster, cluster_id)
-    if cluster is None:
-        raise_not_found("No such cluster.")
-
-    # CLAUDE.md section 5 rule 7: every detail view is logged.
-    entry = log_access(
-        db,
-        actor=user.username,
-        role=user.role,
-        action="view_cluster",
-        target=f"cluster:{cluster_id}",
-    )
-    db.commit()
-
-    graph = cluster.graph or {"nodes": [], "edges": []}
-    return ClusterDetailOut(
-        cluster_id=cluster.id,
-        score=cluster.score,
-        severity=cluster.severity,
-        kind=cluster.kind,
-        summary=cluster.summary,
-        metrics=cluster.metrics or {},
-        legend={
-            "student": "Student (colour = institution)",
-            **{key: f"Shared {label.lower()}" for key, label in ATTRIBUTE_LABELS.items()},
-        },
-        nodes=graph.get("nodes", []),
-        edges=graph.get("edges", []),
-        access_log_id=entry.id,
-    )
-
-
-@router.get("/graph/clusters/{cluster_id}/normal-comparison", response_model=ClusterDetailOut)
-def normal_comparison(
-    cluster_id: int,
-    user: CurrentUser = Depends(require_role("aicte_viewer", "aicte_officer")),
-    db: Session = Depends(get_db),
-) -> ClusterDetailOut:
-    """A healthy family cluster, for the side-by-side comparison (Step 17.3)."""
-    cluster = db.get(Cluster, cluster_id)
-    if cluster is None:
-        raise_not_found("No such cluster.")
-
-    normal = db.execute(
-        select(Cluster)
-        .where(Cluster.kind == "normal")
-        .order_by(Cluster.student_count.desc())
-        .limit(1)
-    ).scalar_one_or_none()
-    if normal is None:
-        raise_not_found("No healthy cluster available for comparison.")
-
-    graph = normal.graph or {"nodes": [], "edges": []}
-    return ClusterDetailOut(
-        cluster_id=normal.id,
-        score=normal.score,
-        severity=normal.severity,
-        kind=normal.kind,
-        summary=normal.summary,
-        metrics=normal.metrics or {},
-        legend={"student": "Student (colour = institution)", **{
-            key: f"Shared {label.lower()}" for key, label in ATTRIBUTE_LABELS.items()
-        }},
-        nodes=graph.get("nodes", []),
-        edges=graph.get("edges", []),
-    )
-
-
-# --------------------------------------------------------------------------- risk
-
-
-@router.get("/risk", response_model=RiskPage)
-def risk_leaderboard(
-    state: Annotated[str | None, Query()] = None,
-    band: Annotated[str | None, Query(pattern="^(low|medium|high|critical)$")] = None,
-    params: PageParams = Depends(page_params),
-    user: CurrentUser = Depends(require_role("aicte_viewer", "aicte_officer")),
-    db: Session = Depends(get_db),
-) -> RiskPage:
-    """Institutions ranked by risk, each with the top three reasons in plain English."""
-    statement = (
-        select(InstitutionRisk, Institution)
-        .join(Institution, Institution.id == InstitutionRisk.institution_id)
-        .order_by(InstitutionRisk.score.desc(), Institution.name.asc())
-    )
-    if state:
-        statement = statement.where(Institution.state == state)
-    if band:
-        statement = statement.where(InstitutionRisk.band == band)
-
-    rows = list(db.execute(statement).all())
-    total = len(rows)
-    page_rows = rows[params.offset : params.offset + params.page_size]
-
-    items = [
-        {
-            "institution_id": institution.id,
-            "name": institution.name,
-            "state": institution.state,
-            "risk_score": risk.score,
-            "band": risk.band,
-            "top_reasons": risk.reasons or [],
-            "components": {"flags": risk.flag_component, "anomaly": risk.anomaly_component},
-            "open_flags": (risk.features or {}).get("open_flags", 0),
-        }
-        for risk, institution in page_rows
-    ]
-    payload = paginate(
-        items, total, PageParams(page=params.page, page_size=params.page_size, sort="-risk_score")
-    )
-    return RiskPage(**suppress_small_counts(payload, user.role))
-
-
-@router.get("/inspection-shortlist", response_model=ShortlistOut)
-def shortlist(
-    limit: Annotated[int, Query(ge=1, le=50)] = 10,
-    state: Annotated[str | None, Query()] = None,
-    user: CurrentUser = Depends(require_role("aicte_viewer", "aicte_officer")),
-    db: Session = Depends(get_db),
-) -> ShortlistOut:
-    """Recommended for physical inspection, with the reason and what to check on site."""
-    items = inspection_shortlist(db, limit=limit if state is None else 50)
-    if state:
-        items = [item for item in items if item["state"] == state][:limit]
-        for rank, item in enumerate(items, start=1):
-            item["rank"] = rank
-    return ShortlistOut(
-        generated_at=datetime.now(),
-        academic_year=settings.current_academic_year,
-        items=items,
-        csv_url="/aicte/inspection-shortlist.csv",
-    )
-
-
-@router.get("/inspection-shortlist.csv", response_class=PlainTextResponse)
-def shortlist_csv(
-    limit: Annotated[int, Query(ge=1, le=50)] = 10,
-    user: CurrentUser = Depends(require_role("aicte_viewer", "aicte_officer")),
-    db: Session = Depends(get_db),
-) -> PlainTextResponse:
-    buffer = io.StringIO()
-    writer = csv.writer(buffer)
-    writer.writerow(["rank", "institution_id", "name", "state", "risk_score", "band", "reasons"])
-    for item in inspection_shortlist(db, limit=limit):
-        writer.writerow(
-            [
-                item["rank"],
-                item["institution_id"],
-                item["name"],
-                item["state"],
-                item["risk_score"],
-                item["band"],
-                " | ".join(item["reasons"]),
-            ]
-        )
-    return PlainTextResponse(
-        content=buffer.getvalue(),
-        media_type="text/csv",
-        headers={"Content-Disposition": 'attachment; filename="inspection_shortlist.csv"'},
-    )
-
-
 # --------------------------------------------------------------------------- overview
 
 
@@ -338,7 +89,7 @@ def overview(
         db, academic_year=academic_year or settings.current_academic_year, state=state
     )
     payload["suppression_applied"] = user.role == "aicte_viewer"
-    return OverviewOut(**suppress_small_counts(payload, user.role, keep_keys=("avg_risk",)))
+    return OverviewOut(**suppress_small_counts(payload, user.role, keep_keys=()))
 
 
 # --------------------------------------------------------------------------- institutions
@@ -350,8 +101,6 @@ def list_institutions(
     state: Annotated[str | None, Query()] = None,
     region: Annotated[str | None, Query()] = None,
     type: Annotated[str | None, Query()] = None,
-    risk_min: Annotated[float | None, Query(ge=0, le=100)] = None,
-    risk_max: Annotated[float | None, Query(ge=0, le=100)] = None,
     reporting: Annotated[str | None, Query(pattern="^(yes|no)$")] = None,
     has_flag_type: Annotated[str | None, Query()] = None,
     academic_year: Annotated[str | None, Query()] = None,
@@ -366,22 +115,20 @@ def list_institutions(
         state=state,
         region=region,
         type_=type,
-        risk_min=risk_min,
-        risk_max=risk_max,
         reporting=reporting,
         has_flag_type=has_flag_type,
     )
 
-    sort = params.sort or "-risk_score"
+    sort = params.sort or "-open_flags_total"
     field = sort.lstrip("-")
     reverse = sort.startswith("-")
     sort_keys = {
-        "risk_score": lambda row: row["risk_score"],
+        "open_flags_total": lambda row: row["open_flags_total"],
         "name": lambda row: row["name"],
         "students_reported": lambda row: row["students_reported"],
         "excess_seats": lambda row: row["excess_seats"],
     }
-    rows.sort(key=sort_keys.get(field, sort_keys["risk_score"]), reverse=reverse)
+    rows.sort(key=sort_keys.get(field, sort_keys["open_flags_total"]), reverse=reverse)
 
     total = len(rows)
     page_rows = rows[params.offset : params.offset + params.page_size]
@@ -389,7 +136,7 @@ def list_institutions(
         page_rows, total, PageParams(page=params.page, page_size=params.page_size, sort=sort)
     )
     return InstitutionPage(
-        **suppress_small_counts(payload, user.role, keep_keys=("risk_score", "days_overdue"))
+        **suppress_small_counts(payload, user.role, keep_keys=())
     )
 
 
@@ -417,7 +164,7 @@ def institution_detail(
     ]
     profile["flags"] = flags
     return InstitutionProfileOut(
-        **suppress_small_counts(profile, user.role, keep_keys=("score", "risk_score"))
+        **suppress_small_counts(profile, user.role, keep_keys=("score",))
     )
 
 
@@ -433,7 +180,6 @@ def list_flags(
     institution_id: Annotated[int | None, Query()] = None,
     academic_year: Annotated[str | None, Query()] = None,
     assigned_to: Annotated[str | None, Query()] = None,
-    cluster_id: Annotated[int | None, Query()] = None,
     student_id: Annotated[int | None, Query()] = None,
     q: Annotated[str | None, Query(max_length=200)] = None,
     open_only: Annotated[bool, Query()] = False,
@@ -450,7 +196,6 @@ def list_flags(
         institution_id=institution_id,
         academic_year=academic_year,
         assigned_to=assigned_to,
-        cluster_id=cluster_id,
         student_id=student_id,
         search=q,
         open_only=open_only,
@@ -606,76 +351,6 @@ def reveal(
         raise_not_found("No such student.")
     db.commit()
     return RevealResponse(**result)
-
-
-# --------------------------------------------------------------------------- non-reporting
-
-
-@router.get("/non-reporting", response_model=NonReportingPage)
-def list_non_reporting(
-    academic_year: Annotated[str | None, Query()] = None,
-    state: Annotated[str | None, Query()] = None,
-    params: PageParams = Depends(page_params),
-    user: CurrentUser = Depends(require_role("aicte_viewer", "aicte_officer")),
-    db: Session = Depends(get_db),
-) -> NonReportingPage:
-    rows = non_reporting(
-        db, academic_year=academic_year or settings.current_academic_year, state=state
-    )
-    total = len(rows)
-    page_rows = rows[params.offset : params.offset + params.page_size]
-    payload = paginate(
-        page_rows, total, PageParams(page=params.page, page_size=params.page_size, sort="name")
-    )
-    return NonReportingPage(
-        **suppress_small_counts(payload, user.role, keep_keys=("days_overdue",))
-    )
-
-
-@router.post("/remind/{institution_id}", response_model=ReminderResponse)
-def send_reminder(
-    institution_id: int,
-    academic_year: Annotated[str | None, Query()] = None,
-    user: CurrentUser = Depends(require_role("aicte_officer")),
-    db: Session = Depends(get_db),
-) -> ReminderResponse:
-    """Mocked notification. Nothing is sent anywhere; the action is logged."""
-    institution = db.get(Institution, institution_id)
-    if institution is None:
-        raise_not_found("No such institution.")
-    year = academic_year or settings.current_academic_year
-
-    message = (
-        f"Student data for {year} is overdue. Please upload student-level records "
-        f"keyed on APAAR ID."
-    )
-    reminder = ReminderLog(
-        institution_id=institution_id,
-        academic_year=year,
-        channel="email",
-        message=message,
-        actor=user.username,
-    )
-    db.add(reminder)
-    db.flush()
-    entry = log_audit(
-        db,
-        actor=user.username,
-        role=user.role,
-        action="reminder_sent",
-        target=f"institution:{institution_id}",
-        payload={"academic_year": year, "channel": "email", "mock": True},
-    )
-    db.commit()
-
-    return ReminderResponse(
-        institution_id=institution_id,
-        channel="email",
-        status="queued_mock",
-        message=message,
-        sent_at=reminder.created_at,
-        audit_log_id=entry.id,
-    )
 
 
 # --------------------------------------------------------------------------- trends

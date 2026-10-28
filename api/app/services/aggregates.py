@@ -1,4 +1,4 @@
-"""National aggregates, institution profiles, non-reporting and trends (Step 12).
+"""National aggregates, institution profiles and trends (Step 12).
 
 Everything here is counted from student-level records — which is the whole point of the
 platform: AICTE currently receives totals it cannot drill into.
@@ -19,9 +19,7 @@ from app.models.core import (
     Enrolment,
     Flag,
     Institution,
-    InstitutionRisk,
     Program,
-    ReminderLog,
     Student,
     Upload,
 )
@@ -111,7 +109,6 @@ def national_overview(db: Session, *, academic_year: str, state: str | None = No
                 "students_reported": 0,
                 "open_flags": 0,
                 "excess_seats": 0,
-                "avg_risk": 0.0,
             },
         )
         bucket["institutions"] += 1
@@ -141,16 +138,6 @@ def national_overview(db: Session, *, academic_year: str, state: str | None = No
     for state_name, count in flag_rows:
         if state_name in by_state:
             by_state[state_name]["open_flags"] = int(count or 0)
-
-    risk_rows = db.execute(
-        select(Institution.state, func.avg(InstitutionRisk.score))
-        .join(InstitutionRisk, InstitutionRisk.institution_id == Institution.id)
-        .where(Institution.id.in_(institution_ids))
-        .group_by(Institution.state)
-    ).all()
-    for state_name, average in risk_rows:
-        if state_name in by_state:
-            by_state[state_name]["avg_risk"] = round(float(average or 0.0), 1)
 
     states_by_id = {institution.id: institution.state for institution in institutions}
     for flag in db.execute(
@@ -193,8 +180,6 @@ def institution_rows(
     state: str | None = None,
     region: str | None = None,
     type_: str | None = None,
-    risk_min: float | None = None,
-    risk_max: float | None = None,
     reporting: str | None = None,
     has_flag_type: str | None = None,
 ) -> list[dict[str, Any]]:
@@ -235,12 +220,6 @@ def institution_rows(
             .group_by(Upload.institution_id)
         ).all()
     }
-    risk = {
-        row.institution_id: row
-        for row in db.execute(
-            select(InstitutionRisk).where(InstitutionRisk.institution_id.in_(ids))
-        ).scalars()
-    }
 
     flags_by_institution: dict[int, list[Flag]] = {}
     for flag in db.execute(
@@ -252,12 +231,6 @@ def institution_rows(
     for institution in institutions:
         flags = flags_by_institution.get(institution.id, [])
         if has_flag_type and not any(flag.type == has_flag_type for flag in flags):
-            continue
-        risk_row = risk.get(institution.id)
-        score = risk_row.score if risk_row else 0.0
-        if risk_min is not None and score < risk_min:
-            continue
-        if risk_max is not None and score > risk_max:
             continue
         is_reporting = institution.id in students
         if reporting == "yes" and not is_reporting:
@@ -279,9 +252,8 @@ def institution_rows(
                 "region": institution.region,
                 "type": institution.type,
                 "students_reported": students.get(institution.id, 0),
-                "risk_score": score,
-                "risk_band": risk_row.band if risk_row else "low",
                 "open_flags": _severity_counts([flag.severity for flag in flags]),
+                "open_flags_total": len(flags),
                 "excess_seats": excess,
                 "last_upload_at": last_upload.get(institution.id),
             }
@@ -295,10 +267,6 @@ def institution_profile(db: Session, *, institution_id: int, academic_year: str)
     institution = db.get(Institution, institution_id)
     if institution is None:
         raise LookupError("No such institution.")
-
-    risk = db.execute(
-        select(InstitutionRisk).where(InstitutionRisk.institution_id == institution_id)
-    ).scalar_one_or_none()
 
     uploads = list(
         db.execute(
@@ -317,15 +285,6 @@ def institution_profile(db: Session, *, institution_id: int, academic_year: str)
             "state": institution.state,
             "region": institution.region,
             "type": institution.type,
-        },
-        "risk": {
-            "score": risk.score if risk else 0.0,
-            "band": risk.band if risk else "low",
-            "reasons": (risk.reasons if risk else []) or [],
-            "components": {
-                "flags": risk.flag_component if risk else 0.0,
-                "anomaly": risk.anomaly_component if risk else 0.0,
-            },
         },
         "reporting": {
             "uploads": len(uploads),
@@ -360,60 +319,6 @@ def institution_profile(db: Session, *, institution_id: int, academic_year: str)
             for upload in uploads[:20]
         ],
     }
-
-
-def non_reporting(
-    db: Session, *, academic_year: str, state: str | None = None
-) -> list[dict[str, Any]]:
-    """Institutions with no enrolment reported for the year."""
-    from app.services.rules import year_calendar
-
-    conditions = [Institution.state == state] if state else []
-    institutions = list(db.execute(select(Institution).where(*conditions)).scalars())
-
-    reported = {
-        row
-        for row in db.execute(
-            select(Enrolment.institution_id)
-            .where(Enrolment.academic_year == academic_year)
-            .distinct()
-        ).scalars()
-    }
-    reminders: dict[int, list[ReminderLog]] = {}
-    for reminder in db.execute(
-        select(ReminderLog).where(ReminderLog.academic_year == academic_year)
-    ).scalars():
-        reminders.setdefault(reminder.institution_id, []).append(reminder)
-
-    try:
-        deadline = year_calendar(academic_year).reporting_deadline
-    except KeyError:  # pragma: no cover
-        deadline = None
-    now = datetime.utcnow()
-
-    rows: list[dict[str, Any]] = []
-    for institution in institutions:
-        if institution.id in reported:
-            continue
-        sent = sorted(reminders.get(institution.id, []), key=lambda item: item.created_at)
-        last_upload = db.scalar(
-            select(func.max(Upload.created_at)).where(Upload.institution_id == institution.id)
-        )
-        rows.append(
-            {
-                "institution_id": institution.id,
-                "name": institution.name,
-                "state": institution.state,
-                "last_upload_at": last_upload,
-                "days_overdue": max((now - deadline).days, 0) if deadline else 0,
-                # Before the deadline passes, "0 days overdue" is true but unhelpful.
-                "days_to_deadline": max((deadline - now).days, 0) if deadline else None,
-                "reporting_deadline": deadline,
-                "reminders_sent": len(sent),
-                "last_reminder_at": sent[-1].created_at if sent else None,
-            }
-        )
-    return sorted(rows, key=lambda row: row["name"])
 
 
 # --------------------------------------------------------------------------- trends

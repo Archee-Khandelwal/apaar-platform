@@ -23,7 +23,7 @@ from typing import Any
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.models.core import Cluster, Flag
+from app.models.core import Flag
 from datagen.generator import GROUND_TRUTH_PATH
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -35,7 +35,6 @@ ROBUST_REPORT_PATH = REPO_ROOT / "docs" / "EVALUATION_ROBUST.md"
 # key_kind -> how to build the same key from a Flag.
 SCENARIOS: dict[str, dict[str, Any]] = {
     "A_excess_intake": {"flag_types": ["EXCESS_INTAKE"], "label": "Excess admissions beyond intake"},
-    "B_ghost_cluster": {"flag_types": ["GHOST_CLUSTER"], "label": "Ghost-student clusters"},
     "C_cross_institution_duplicate": {
         "flag_types": ["CROSS_INSTITUTION_DUPLICATE"],
         "label": "Same APAAR at two full-time institutions",
@@ -49,27 +48,9 @@ SCENARIOS: dict[str, dict[str, Any]] = {
         "label": "Invalid / unknown / mismatched APAAR",
     },
     "F_late_admission": {"flag_types": ["LATE_ADMISSION"], "label": "Admissions after the cutoff"},
-    "G_sequential_apaar": {
-        "flag_types": ["SEQUENTIAL_APAAR"],
-        "label": "Near-consecutive APAAR ID runs",
-    },
-    "H_last_minute_bulk": {
-        "flag_types": ["LAST_MINUTE_BULK"],
-        "label": "Records filed in a last-minute burst",
-    },
-    "I_phantom_progression": {
-        "flag_types": ["PHANTOM_PROGRESSION"],
-        "label": "Phantom year-to-year progression",
-    },
     "J_identity_duplicate": {
         "flag_types": ["IDENTITY_DUPLICATE"],
         "label": "One person with two APAAR IDs",
-    },
-    "K_supernumerary_misuse": {
-        "flag_types": ["STATISTICAL_ANOMALY"],
-        "label": "Supernumerary share far above peers",
-        # Two detectors share this flag type, so match only this signal's flags.
-        "evidence_signal": "supernumerary_share",
     },
 }
 
@@ -78,27 +59,12 @@ SCENARIOS: dict[str, dict[str, Any]] = {
 # by changing any detector threshold. Each one names the rule that caused the miss and
 # what a fix would be, so the gap is on the record rather than quietly tuned away.
 ROBUST_DIAGNOSES: dict[str, list[str]] = {
-    "B_ghost_cluster": [
-        "**6 students on 4 contacts (ratio 1.5) and 9 students on 5 contacts (ratio 1.8) "
-        "were missed.** The rule needs at least 8 students AND at least 2.0 students per "
-        "shared contact. The 6-student group fails both tests and is genuinely "
-        "indistinguishable from an extended family by contact data alone. The 9-student "
-        "group fails the ratio test by 0.2, which is the honest cost of a threshold that "
-        "keeps 4-7 student families out of the queue.",
-        "**A cross-institution cluster counts as one miss for a measurement reason, not a "
-        "detection failure.** The 16-student cluster spanning two institutions was found, "
-        "but the GHOST_CLUSTER flag carries a single institution_id, so it only matches "
-        "the ground-truth key for one of the two. An officer filtering flags by the other "
-        "institution would not see it. The fix is in flag attribution (raise or index the "
-        "flag for every institution involved), not in the detector; it is left as a known "
-        "gap rather than changed while this set is being scored.",
-    ],
-    "G_sequential_apaar": [
-        "**A run of 16 IDs with gaps of up to 4 was missed.** The detector continues a run "
-        "only while consecutive gaps are 3 or less, so a fabricator who leaves gaps of 4 "
-        "breaks the run into fragments below the 10-ID minimum. This is a real evasion "
-        "path. A density measure over a sliding window (how many of an institution's IDs "
-        "fall inside a narrow numeric band) would not have this cliff.",
+    "F_late_admission": [
+        "**One unlabelled flag, correct by the rule.** A perturbed dual-degree student was "
+        "admitted to an online programme on 20 October, after the regular-programme cutoff. "
+        "The detector applies one admission window to every mode. Online/ODL programmes "
+        "often run a later intake, so production needs a per-mode window in "
+        "`reporting_calendar.yaml` before this rule is applied to ODL enrolments.",
     ],
     "J_identity_duplicate": [
         "**The biggest gap in this run: 6 of 12 records missed.** Identity matching uses an "
@@ -108,22 +74,6 @@ ROBUST_DIAGNOSES: dict[str, list[str]] = {
         "90% threshold; identity matching does not. The fix is to block candidates on "
         "DOB + guardian phone and then compare decrypted names with rapidfuzz inside the "
         "service, which keeps the privacy property intact.",
-    ],
-    "H_last_minute_bulk": [
-        "**One unlabelled flag at 100% share.** A small institution whose single upload "
-        "happened to land inside the 6-hour window trips the rule, because there is no "
-        "minimum record count. On real data this would be a steady source of false "
-        "positives for small colleges; the rule needs a floor on records, like the "
-        "supernumerary signal already has.",
-    ],
-    "I_phantom_progression": [
-        "**Five unlabelled flags, all correct by the rule.** They are students whom the "
-        "perturbed dual-degree scenario enrolled directly into year 2 of an online "
-        "programme with no year-1 record. The rule flags exactly that shape, so these are "
-        "true positives with no injected label — but they also show the real-world blind "
-        "spot: a legitimate transfer or direct second-year entry looks identical to a "
-        "phantom. Production would need a transfer/direct-entry marker in the upload "
-        "template before this rule could be trusted at row level.",
     ],
 }
 
@@ -184,21 +134,10 @@ class ScenarioScore:
         }
 
 
-def _flag_keys(
-    db: Session, flag_types: list[str], key_kind: str, evidence_signal: str | None = None
-) -> set[str]:
+def _flag_keys(db: Session, flag_types: list[str], key_kind: str) -> set[str]:
     """Build the ground-truth key for every produced flag of these types."""
     keys: set[str] = set()
     flags = list(db.execute(select(Flag).where(Flag.type.in_(flag_types))).scalars())
-    if evidence_signal is not None:
-        flags = [
-            flag for flag in flags if (flag.evidence or {}).get("signal") == evidence_signal
-        ]
-
-    cluster_members: dict[int, list[int]] = {}
-    if key_kind == "institution_year" and "GHOST_CLUSTER" in flag_types:
-        for cluster in db.execute(select(Cluster)).scalars():
-            cluster_members[cluster.id] = cluster.member_student_ids or []
 
     for flag in flags:
         if key_kind == "student":
@@ -226,9 +165,7 @@ def score(db: Session, ground_truth: dict[str, Any]) -> list[ScenarioScore]:
             continue
         key_kind = cases[0]["key_kind"]
         expected = {case["key"] for case in cases}
-        predicted = _flag_keys(
-            db, config["flag_types"], key_kind, config.get("evidence_signal")
-        )
+        predicted = _flag_keys(db, config["flag_types"], key_kind)
 
         notes: list[str] = []
         # LATE_ADMISSION produces both per-row and per-institution flags; the ground
@@ -237,11 +174,6 @@ def score(db: Session, ground_truth: dict[str, Any]) -> list[ScenarioScore]:
             notes.append(
                 "Scored on per-enrolment flags; the per-institution aggregate flag is "
                 "reported separately below."
-            )
-        if name == "K_supernumerary_misuse":
-            notes.append(
-                "Matched on STATISTICAL_ANOMALY flags carrying signal=supernumerary_share; "
-                "the IsolationForest ranking uses the same flag type and is excluded."
             )
 
         scores.append(
@@ -300,19 +232,6 @@ def misclassification_checks(db: Session, ground_truth: dict[str, Any]) -> dict[
     }
     dual_called_fraud = sorted(dual & fraud_flagged)
 
-    controls = scenarios.get("B_sibling_control", [])
-    control_students = {
-        student_id
-        for case in controls
-        for student_id in case["details"].get("student_ids", [])
-    }
-    clustered = {
-        student_id
-        for cluster in db.execute(select(Cluster).where(Cluster.kind == "suspicious")).scalars()
-        for student_id in (cluster.member_student_ids or [])
-    }
-    families_flagged = sorted(control_students & clustered)
-
     clean = ground_truth.get("clean_institution") or {}
     clean_flags = []
     if clean.get("id"):
@@ -325,7 +244,6 @@ def misclassification_checks(db: Session, ground_truth: dict[str, Any]) -> dict[
 
     return {
         "dual_degree_called_fraud": dual_called_fraud,
-        "family_controls_flagged_as_clusters": families_flagged,
         "clean_institution": clean,
         "clean_institution_flags": clean_flags,
     }
@@ -336,13 +254,6 @@ def unlabelled_flags(db: Session, scores: list[ScenarioScore]) -> dict[str, int]
     scored_types = {flag_type for item in scores for flag_type in item.flag_types}
     counts: dict[str, int] = {}
     for flag in db.execute(select(Flag)).scalars():
-        signal = (flag.evidence or {}).get("signal")
-        if flag.type == "STATISTICAL_ANOMALY" and signal != "supernumerary_share":
-            # The IsolationForest ranking has no injected label of its own.
-            counts["STATISTICAL_ANOMALY (IsolationForest ranking)"] = (
-                counts.get("STATISTICAL_ANOMALY (IsolationForest ranking)", 0) + 1
-            )
-            continue
         if flag.type in scored_types:
             continue
         counts[flag.type] = counts.get(flag.type, 0) + 1
@@ -415,11 +326,6 @@ def print_report(
         f"  Legal dual degrees called fraud: {len(dual)}"
         + (f"  <-- SERIOUS: {dual}" if dual else "  (none)")
     )
-    families = checks["family_controls_flagged_as_clusters"]
-    print(
-        f"  Normal families flagged as ghost clusters: {len(families)}"
-        + (f"  <-- {families}" if families else "  (none)")
-    )
     clean = checks["clean_institution"]
     clean_flags = checks["clean_institution_flags"]
     print(
@@ -483,9 +389,8 @@ def write_markdown(
         [
             "Generated by `make eval-robust`. This is a **second dataset** with a different",
             "seed, contacts written in varied formats, and deliberately perturbed cases the",
-            "detectors were never built or tuned against: cluster sizes from 6 to 40 students",
-            "on 3-6 contacts (including one split across two institutions), names with typos,",
-            "reorderings and initials, dual degrees in other programme combinations,",
+            "detectors were never built or tuned against: names with typos, reorderings and",
+            "initials, dual degrees in other programme combinations,",
             "admissions one day past the cutoff, and an intake breach of a single seat.",
             "",
             "**No detector threshold was changed after seeing these results.** Every miss is",
@@ -538,15 +443,12 @@ def write_markdown(
 
     lines += ["", "## Critical misclassification checks", ""]
     dual = checks["dual_degree_called_fraud"]
-    families = checks["family_controls_flagged_as_clusters"]
     clean_flags = checks["clean_institution_flags"]
     lines += [
         "| Check | Result |",
         "|---|---|",
         f"| Legal dual degrees wrongly flagged as fraud | {len(dual)}"
         + (f" ({dual})" if dual else " — none") + " |",
-        f"| Normal families wrongly flagged as ghost clusters | {len(families)}"
-        + (f" ({families})" if families else " — none") + " |",
         f"| Flags on the clean model institution "
         f"({checks['clean_institution'].get('name', 'n/a')}) | {len(clean_flags)}"
         + (f" ({[f['type'] for f in clean_flags]})" if clean_flags else " — none") + " |",
@@ -640,12 +542,11 @@ def write_markdown(
         "What the table genuinely demonstrates:",
         "",
         "- the rules are implemented correctly and are reproducible from a fixed seed;",
-        "- the hard negative controls hold: a legal dual degree is never called fraud, a",
-        "  6-student family is never called a ghost cluster, and the clean model institution",
-        "  attracts no flags at all;",
-        "- the subtler injected cases are caught, not just the blatant ones (the 8-student",
-        "  cluster as well as the 33-student one, the 3-seat intake breach as well as the",
-        "  25-seat one);",
+        "- the hard negative controls hold: a legal dual degree is never called fraud, an",
+        "  admission exactly on the cutoff is never called late, and the clean model",
+        "  institution attracts no flags at all;",
+        "- the subtler injected cases are caught, not just the blatant ones (the 3-seat",
+        "  intake breach as well as the 25-seat one);",
         "- any future change that breaks a detector shows up here immediately.",
         "",
         "What it cannot show: performance against real fraud, the false-positive rate on",

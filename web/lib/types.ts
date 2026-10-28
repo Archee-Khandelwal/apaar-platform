@@ -37,13 +37,8 @@ export const FLAG_TYPES = [
   "CROSS_INSTITUTION_DUPLICATE",
   "POSSIBLE_DUAL_DEGREE",
   "IDENTITY_DUPLICATE",
-  "GHOST_CLUSTER",
-  "SEQUENTIAL_APAAR",
   "LATE_ADMISSION",
-  "LAST_MINUTE_BULK",
-  "PHANTOM_PROGRESSION",
-  "STUDENT_DISPUTE",
-  "STATISTICAL_ANOMALY",
+  "STUDENT_CORRECTION",
 ] as const;
 export type FlagType = (typeof FLAG_TYPES)[number];
 
@@ -224,7 +219,6 @@ export interface InstitutionFlag {
   evidence: Record<string, unknown>;
   student_id?: number | null;
   enrolment_id?: number | null;
-  cluster_id?: number | null;
   program_id?: number | null;
   academic_year?: string | null;
   created_at: string;
@@ -241,7 +235,6 @@ export interface StudentRow {
   dob_year?: number | null;
   is_minor: boolean;
   flag_count: number;
-  student_confirmation: string;
   enrolment: {
     id: number;
     program_id: number;
@@ -263,8 +256,6 @@ export interface InstitutionDashboard {
   latest_quality_score?: number | null;
   quality_trend: { upload_id: number; created_at: string; quality_score?: number | null }[];
   seat_matrix_summary: SeatMatrix["totals"];
-  compliance_certificate_eligible: boolean;
-  compliance_certificate_reasons: string[];
   last_upload_at?: string | null;
 }
 
@@ -289,7 +280,6 @@ export interface Overview {
     students_reported: Suppressible;
     open_flags: Suppressible;
     excess_seats: Suppressible;
-    avg_risk: number;
   }[];
   suppression_applied: boolean;
   generated_at: string;
@@ -303,9 +293,8 @@ export interface InstitutionRow {
   region: string;
   type: string;
   students_reported: Suppressible;
-  risk_score: number;
-  risk_band: Severity;
   open_flags: Record<Severity, Suppressible>;
+  open_flags_total: Suppressible;
   excess_seats: Suppressible;
   last_upload_at?: string | null;
 }
@@ -327,7 +316,6 @@ export interface Flag {
   student_id?: number | null;
   enrolment_id?: number | null;
   program_id?: number | null;
-  cluster_id?: number | null;
   assigned_to?: string | null;
   notes?: { author: string; note: string; created_at?: string }[] | null;
 }
@@ -348,98 +336,10 @@ export interface FlagPage extends Page<Flag> {
 
 export interface AicteInstitutionProfile {
   institution: { id: number; aicte_permanent_id: string; name: string; state: string; region: string; type: string };
-  risk: { score: number; band: Severity; reasons: string[]; components: { flags: number; anomaly: number } };
   reporting: { uploads: number; last_upload_at?: string | null; students_reported: number; avg_quality_score?: number | null };
   seat_matrix_summary: SeatMatrix["totals"];
   flags: Flag[];
   upload_timeline: { upload_id: number; filename: string; created_at: string; rows_ok: number; rows_error: number; quality_score?: number | null }[];
-}
-
-export interface RiskRow {
-  institution_id: number;
-  name: string;
-  state: string;
-  risk_score: number;
-  band: Severity;
-  top_reasons: string[];
-  components: { flags: number; anomaly: number };
-  open_flags: Suppressible;
-}
-
-export interface ShortlistRow {
-  rank: number;
-  institution_id: number;
-  name: string;
-  state: string;
-  risk_score: number;
-  band: Severity;
-  reasons: string[];
-  suggested_checks: string[];
-}
-
-export interface Shortlist {
-  generated_at: string;
-  academic_year: string;
-  items: ShortlistRow[];
-  csv_url: string;
-}
-
-export interface ClusterSummary {
-  cluster_id: number;
-  score: number;
-  severity: Severity;
-  kind: "suspicious" | "normal";
-  student_count: Suppressible;
-  shared_attributes: Record<string, Suppressible>;
-  institutions: { id: number; name: string }[];
-  academic_year?: string | null;
-  summary: string;
-  flag_id?: number | null;
-  created_at: string;
-}
-
-export interface GraphNode {
-  data: {
-    id: string;
-    label: string;
-    type: string;
-    student_id?: number;
-    apaar_masked?: string;
-    institution?: string;
-    institution_id?: number;
-    program?: string;
-    academic_year?: string;
-    degree?: number;
-  };
-}
-
-export interface GraphEdge {
-  data: { source: string; target: string; attribute_type: string; label: string };
-}
-
-export interface ClusterDetail {
-  cluster_id: number;
-  score: number;
-  severity: Severity;
-  kind: string;
-  summary: string;
-  metrics: Record<string, unknown>;
-  legend: Record<string, string>;
-  nodes: GraphNode[];
-  edges: GraphEdge[];
-  access_log_id?: number | null;
-}
-
-export interface NonReportingRow {
-  institution_id: number;
-  name: string;
-  state: string;
-  last_upload_at?: string | null;
-  days_overdue: number;
-  days_to_deadline?: number | null;
-  reporting_deadline?: string | null;
-  reminders_sent: Suppressible;
-  last_reminder_at?: string | null;
 }
 
 export interface Trends {
@@ -503,7 +403,6 @@ export interface StudentMe {
     status: EnrolmentStatus;
     admitted_on?: string | null;
     reported_by_upload_at?: string | null;
-    confirmation: "unconfirmed" | "confirmed" | "disputed";
     version: number;
   }[];
   open_cases: { flag_id: number; type: FlagType; status: FlagStatus; created_at: string }[];
@@ -581,12 +480,6 @@ export interface AdminStatus {
   audit: { ok: boolean; rows_checked: number; rows_total: number; first_broken_row?: Record<string, unknown> | null };
   current_academic_year: string;
   demo_mode: boolean;
-}
-
-export interface ScenarioInfo {
-  name: string;
-  label: string;
-  flag_types: FlagType[];
 }
 
 export interface TamperResult {

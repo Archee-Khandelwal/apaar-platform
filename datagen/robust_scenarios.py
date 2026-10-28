@@ -2,21 +2,19 @@
 
 Same scenario names as `datagen/scenarios.py`, so the evaluation harness scores them
 the same way, but every case is deliberately *off* the shape the detectors were built
-against: typo'd names, contacts written in other formats, cluster sizes spanning 6-40
-students on 3-6 contacts, dual degrees in other programme combinations, an admission one
-day late, and an intake breach of a single seat.
+against: typo'd names, contacts written in other formats, dual degrees in other
+programme combinations, an admission one day late, and an intake breach of a single seat.
 
 Nothing here is allowed to influence detector thresholds. Misses are findings.
 """
 from __future__ import annotations
 
 from datetime import date, timedelta
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-from app.services.rules import supernumerary_caps, year_calendar
+from app.services.rules import year_calendar
 from datagen.builder import GroundTruthCase
 from datagen.scenarios import (
-    _count_admission_type,
     _eligible_programs,
     _count_regular_year1,
     _eligible_institutions,
@@ -96,154 +94,6 @@ def scenario_a_one_seat_over(gen: Any) -> None:
                     "perturbation": f"excess of only {excess} seat(s)",
                     "approved_intake": program["intake"],
                     "expected_excess": excess,
-                },
-            )
-        )
-
-
-# --------------------------------------------------------------------------- B: clusters
-
-
-def scenario_b_varied_clusters(gen: Any) -> None:
-    """Clusters of 6-40 students on 3-6 contacts, one spread across two institutions."""
-    year = CURRENT_YEAR
-    calendar = year_calendar(year)
-    candidates = [
-        inst for inst in _eligible_institutions(gen) if _regular_programs(gen, inst["id"])
-    ]
-    specs = [(6, 3), (9, 4), (14, 3), (22, 6), (40, 5)]
-    chosen = _sample(gen, candidates, len(specs) + 2)
-
-    for institution, (size, contacts) in zip(chosen, specs):
-        program = _pick_program(gen, institution["id"], adding=size)
-        if program is None:
-            continue
-        upload = gen.upload_by[(institution["id"], year)]
-        phones = [gen.b.new_phone() for _ in range(contacts)]
-        shared_email = f"cell.{institution['id']}@example.invalid"
-        members: list[int] = []
-        for index in range(size):
-            student_id = gen.b.add_student(
-                guardian_phone=phones[index % len(phones)], email=shared_email
-            )
-            gen.b.add_enrolment(
-                student_id=student_id,
-                program=program,
-                academic_year=year,
-                year_of_study=1,
-                admission_type="regular",
-                admitted_on=gen.b.random_date_in(
-                    calendar.admission_window_start, calendar.admission_window_end
-                ),
-                created_at=upload["created_at"],
-                upload_id=upload["id"],
-            )
-            members.append(student_id)
-        gen.b.label(
-            GroundTruthCase(
-                scenario="B_ghost_cluster",
-                flag_type="GHOST_CLUSTER",
-                key_kind="institution_year",
-                key=f"{institution['id']}|{year}",
-                institution_id=institution["id"],
-                institution_name=institution["name"],
-                details={
-                    "perturbation": f"{size} students on {contacts + 1} shared contacts",
-                    "students": size,
-                    "guardian_contacts": contacts,
-                    "shared_contacts": contacts + 1,
-                    "students_per_contact": round(size / (contacts + 1), 2),
-                    "student_ids": members,
-                    "band": "tiny" if size < 8 else ("medium" if size < 20 else "large"),
-                },
-            )
-        )
-
-    # One cluster split across two institutions, sharing contacts in mixed formats.
-    if len(chosen) >= len(specs) + 2:
-        first, second = chosen[len(specs)], chosen[len(specs) + 1]
-        phones = [gen.b.new_phone() for _ in range(3)]
-        shared_email = "joint.cell@example.invalid"
-        members: list[int] = []
-        for position, institution in enumerate((first, second)):
-            program = _pick_program(gen, institution["id"], adding=8)
-            if program is None:
-                continue
-            upload = gen.upload_by[(institution["id"], year)]
-            for index in range(8):
-                student_id = gen.b.add_student(
-                    guardian_phone=phones[(index + position) % len(phones)],
-                    email=shared_email,
-                )
-                gen.b.add_enrolment(
-                    student_id=student_id,
-                    program=program,
-                    academic_year=year,
-                    year_of_study=1,
-                    admission_type="regular",
-                    admitted_on=gen.b.random_date_in(
-                        calendar.admission_window_start, calendar.admission_window_end
-                    ),
-                    created_at=upload["created_at"],
-                    upload_id=upload["id"],
-                )
-                members.append(student_id)
-        for institution in (first, second):
-            gen.b.label(
-                GroundTruthCase(
-                    scenario="B_ghost_cluster",
-                    flag_type="GHOST_CLUSTER",
-                    key_kind="institution_year",
-                    key=f"{institution['id']}|{year}",
-                    institution_id=institution["id"],
-                    institution_name=institution["name"],
-                    details={
-                        "perturbation": "16 students split across TWO institutions",
-                        "students": 16,
-                        "guardian_contacts": 3,
-                        "student_ids": members,
-                        "band": "cross_institution",
-                    },
-                )
-            )
-
-    # Controls: families of 2-7 on one contact, in varied formats. Must not be flagged.
-    for institution in _sample(gen, candidates, 5):
-        program = _pick_program(gen, institution["id"], adding=7)
-        if program is None:
-            continue
-        upload = gen.upload_by[(institution["id"], year)]
-        shared = gen.b.new_phone()
-        size = gen.rng.randint(2, 7)
-        members = []
-        for _ in range(size):
-            student_id = gen.b.add_student(guardian_phone=shared)
-            gen.b.add_enrolment(
-                student_id=student_id,
-                program=program,
-                academic_year=year,
-                year_of_study=1,
-                admission_type="regular",
-                admitted_on=gen.b.random_date_in(
-                    calendar.admission_window_start, calendar.admission_window_end
-                ),
-                created_at=upload["created_at"],
-                upload_id=upload["id"],
-            )
-            members.append(student_id)
-        gen.b.label(
-            GroundTruthCase(
-                scenario="B_sibling_control",
-                flag_type="NONE",
-                key_kind="institution_year",
-                key=f"{institution['id']}|{year}",
-                institution_id=institution["id"],
-                institution_name=institution["name"],
-                details={
-                    "students": size,
-                    "guardian_contacts": 1,
-                    "student_ids": members,
-                    "perturbation": f"family of {size} with the contact in mixed formats",
                 },
             )
         )
@@ -367,7 +217,7 @@ def scenario_d_dual_degrees(gen: Any) -> None:
         picked += 1
 
 
-# --------------------------------------------------------------------------- E, F, G, H, I
+# --------------------------------------------------------------------------- E and F
 
 
 def scenario_e_apaar_problems(gen: Any) -> None:
@@ -444,91 +294,6 @@ def scenario_f_one_day_late(gen: Any) -> None:
             )
 
 
-def scenario_g_sequential(gen: Any) -> None:
-    """Two runs: one tight block of 11, one looser block of 16 with bigger gaps."""
-    year = CURRENT_YEAR
-    calendar = year_calendar(year)
-    candidates = [
-        inst for inst in _eligible_institutions(gen) if _regular_programs(gen, inst["id"])
-    ]
-    for institution, (length, gap) in zip(_sample(gen, candidates, 2), ((11, 1), (16, 3))):
-        program = _pick_program(gen, institution["id"], adding=length)
-        if program is None:
-            continue
-        upload = gen.upload_by[(institution["id"], year)]
-        run = gen.b.sequential_apaars(length, gap=gap)
-        for apaar in run:
-            student_id = gen.b.add_student(apaar=apaar)
-            gen.b.add_enrolment(
-                student_id=student_id,
-                program=program,
-                academic_year=year,
-                year_of_study=1,
-                admission_type="regular",
-                admitted_on=gen.b.random_date_in(
-                    calendar.admission_window_start, calendar.admission_window_end
-                ),
-                created_at=upload["created_at"],
-                upload_id=upload["id"],
-            )
-        gen.b.label(
-            GroundTruthCase(
-                scenario="G_sequential_apaar",
-                flag_type="SEQUENTIAL_APAAR",
-                key_kind="institution_year",
-                key=f"{institution['id']}|{year}",
-                institution_id=institution["id"],
-                institution_name=institution["name"],
-                details={
-                    "perturbation": f"run of {length} with gaps of up to {gap}",
-                    "run_length": length,
-                },
-            )
-        )
-
-
-def scenario_h_last_minute(gen: Any) -> None:
-    """One institution at 45% in the window (just over threshold), one at 85%."""
-    year = CURRENT_YEAR
-    calendar = year_calendar(year)
-    candidates = [
-        inst for inst in _eligible_institutions(gen) if _regular_programs(gen, inst["id"])
-    ]
-    for institution, share in zip(_sample(gen, candidates, 2), (0.45, 0.85)):
-        rows = [
-            row
-            for row in gen.b.enrolments
-            if row["institution_id"] == institution["id"] and row["academic_year"] == year
-        ]
-        if not rows:
-            continue
-        bulk = gen.rng.sample(rows, int(len(rows) * share))
-        for row in bulk:
-            row["created_at"] = calendar.reporting_deadline - timedelta(
-                hours=gen.rng.uniform(0.1, 5.5)
-            )
-        gen.b.label(
-            GroundTruthCase(
-                scenario="H_last_minute_bulk",
-                flag_type="LAST_MINUTE_BULK",
-                key_kind="institution_year",
-                key=f"{institution['id']}|{year}",
-                institution_id=institution["id"],
-                institution_name=institution["name"],
-                details={
-                    "perturbation": f"{int(share * 100)}% of records in the final 6 hours",
-                    "share_percent": int(share * 100),
-                },
-            )
-        )
-
-
-def scenario_i_phantom(gen: Any) -> None:
-    from datagen.scenarios import scenario_i_phantom_progression as base
-
-    base(gen)
-
-
 # --------------------------------------------------------------------------- J: typo'd names
 
 
@@ -595,27 +360,13 @@ def scenario_j_identity_duplicates(gen: Any) -> None:
             )
 
 
-# --------------------------------------------------------------------------- K
-
-
-def scenario_k_supernumerary(gen: Any) -> None:
-    from datagen.scenarios import scenario_k_supernumerary_misuse as base
-
-    base(gen)
-
-
 SCENARIOS = {
     "A_excess_intake": scenario_a_one_seat_over,
-    "B_ghost_cluster": scenario_b_varied_clusters,
     "C_cross_institution_duplicate": scenario_c_duplicates,
     "D_dual_degree": scenario_d_dual_degrees,
     "E_apaar_problems": scenario_e_apaar_problems,
     "F_late_admission": scenario_f_one_day_late,
-    "G_sequential_apaar": scenario_g_sequential,
-    "H_last_minute_bulk": scenario_h_last_minute,
-    "I_phantom_progression": scenario_i_phantom,
     "J_identity_duplicate": scenario_j_identity_duplicates,
-    "K_supernumerary_misuse": scenario_k_supernumerary,
 }
 
 

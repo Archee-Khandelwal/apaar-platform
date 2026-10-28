@@ -236,10 +236,3 @@ export function SubTabs({ tabs, current }: { tabs: { href: string; label: string
     </nav>
   );
 }
-
-/** The three views that live under "Institutions" in the AICTE sidebar. */
-export const AICTE_INSTITUTION_TABS = [
-  { href: "/aicte/institutions", label: "All institutions" },
-  { href: "/aicte/risk", label: "Risk leaderboard" },
-  { href: "/aicte/non-reporting", label: "Not reporting" },
-];

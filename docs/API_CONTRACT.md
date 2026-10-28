@@ -80,8 +80,7 @@ type FlagStatus = "open" | "under_review" | "escalated" | "dismissed" | "resolve
 type FlagType =
   | "INVALID_APAAR" | "APAAR_NOT_FOUND" | "APAAR_MISMATCH" | "DUPLICATE_IN_UPLOAD"
   | "EXCESS_INTAKE" | "CROSS_INSTITUTION_DUPLICATE" | "POSSIBLE_DUAL_DEGREE"
-  | "IDENTITY_DUPLICATE" | "GHOST_CLUSTER" | "SEQUENTIAL_APAAR" | "LATE_ADMISSION"
-  | "LAST_MINUTE_BULK" | "PHANTOM_PROGRESSION" | "STUDENT_DISPUTE" | "STATISTICAL_ANOMALY";
+  | "IDENTITY_DUPLICATE" | "LATE_ADMISSION" | "STUDENT_CORRECTION";
 type ApaarStatus = "provided" | "pending" | "not_applicable";
 type Nationality = "indian" | "nri" | "oci" | "fn";
 type AdmissionType = "regular" | "lateral" | "tfw" | "fn_pio_oci" | "pmsss" | "other_supernumerary";
@@ -108,7 +107,6 @@ Timestamps are UTC ISO-8601 with `Z` (`"2026-10-26T11:04:12Z"`). Dates are `YYYY
   "institution_name": "Vindhyashree Institute of Technology",
   "student_id": null,
   "enrolment_id": null,
-  "cluster_id": null,
   "assigned_to": null,
   "notes": [],
   "created_at": "2026-10-26T09:12:00Z"
@@ -175,7 +173,7 @@ Role: **public** (demo only; documented as such and disabled when `DEMO_MODE=fal
     { "username": "aicte_officer1", "password": "demo1234", "role": "aicte_officer", "label": "AICTE Officer (full powers)" },
     { "username": "aicte_viewer1", "password": "demo1234", "role": "aicte_viewer", "label": "AICTE Analyst (aggregates only)" },
     { "username": "vit_admin", "password": "demo1234", "role": "institution", "label": "Vindhyashree Institute of Technology" },
-    { "username": "student_demo1", "password": "demo1234", "role": "student", "label": "Student — disputed enrolment" },
+    { "username": "student_demo1", "password": "demo1234", "role": "student", "label": "Student — APAAR registry mismatch" },
     { "username": "verifier_demo", "password": "demo1234", "role": "verifier", "label": "Employer — Nilgiri Softworks" },
     { "username": "admin", "password": "demo1234", "role": "admin", "label": "Demo operator" }
   ]
@@ -214,7 +212,6 @@ Query: `academic_year` (default: current)
   "latest_quality_score": 87,
   "quality_trend": [ { "upload_id": 31, "created_at": "2026-10-20T06:11:00Z", "quality_score": 72 }, { "upload_id": 44, "created_at": "2026-10-26T09:02:00Z", "quality_score": 87 } ],
   "seat_matrix_summary": { "programs": 5, "approved_intake_total": 1080, "admitted_total": 1102, "excess_total": 3 },
-  "compliance_certificate_eligible": false,
   "last_upload_at": "2026-10-26T09:02:00Z"
 }
 ```
@@ -335,8 +332,7 @@ Query: `q` (matches masked name prefix / last 4 of APAAR), `program_id`, `academ
       "student_id": 9931, "apaar_masked": "XXXX-XXXX-1234", "apaar_status": "provided", "name_masked": "R***** S.",
       "gender": "M", "category": "OBC-NCL", "nationality_status": "indian", "dob_year": 2006, "is_minor": false,
       "enrolment": { "id": 20114, "program_id": 77, "course": "B.Tech", "branch": "Computer Science and Engineering", "academic_year": "2026-27", "year_of_study": 1, "admission_type": "regular", "status": "admitted", "admitted_on": "2026-08-05", "version": 1 },
-      "flag_count": 1,
-      "student_confirmation": "unconfirmed"
+      "flag_count": 1
     }
   ],
   "page": 1, "page_size": 25, "total": 1842, "total_pages": 74, "sort": "name_masked"
@@ -368,7 +364,7 @@ Cross-institution flags are sanitised (CLAUDE.md §5.10 — the other college is
       "title": "Possible duplicate enrolment",
       "explanation": "Possible duplicate enrolment — contact AICTE.",
       "evidence": { "student_id": 9931, "apaar_masked": "XXXX-XXXX-1234", "academic_year": "2026-27", "your_program": "B.Tech CSE (regular)" },
-      "student_id": 9931, "enrolment_id": 20114, "cluster_id": null, "created_at": "2026-10-26T09:13:00Z"
+      "student_id": 9931, "enrolment_id": 20114, "created_at": "2026-10-26T09:13:00Z"
     }
   ],
   "page": 1, "page_size": 25, "total": 6, "total_pages": 1, "sort": "-severity"
@@ -383,15 +379,6 @@ Request:
 { "status": "resolved", "note": "Row corrected and re-uploaded in upload #44." }
 ```
 Response: the updated flag object + `"audit_log_id": 8815`.
-
-### GET /institution/compliance-certificate
-Query: `academic_year` (required), `format` (`html` default, `pdf` if available)
-
-Eligible → the certificate document (`text/html` or `application/pdf`), containing institution name, academic year, students reported, "no open high/critical flags as of <timestamp>", a verification token and QR.
-Not eligible → `409`:
-```json
-{ "error": { "code": "CERTIFICATE_NOT_ELIGIBLE", "message": "2 open high/critical flags must be resolved first.", "details": { "blocking_flags": [ { "id": 412, "type": "EXCESS_INTAKE", "severity": "high" }, { "id": 501, "type": "CROSS_INSTITUTION_DUPLICATE", "severity": "high" } ] } } }
-```
 
 ---
 
@@ -414,10 +401,10 @@ Roles: viewer, officer. Query: `academic_year` (default current), `state` (optio
     "open_flags": { "low": 41, "medium": 62, "high": 23, "critical": 4 },
     "avg_data_quality": 84
   },
-  "flags_by_type": [ { "type": "EXCESS_INTAKE", "count": 9, "max_severity": "high" }, { "type": "GHOST_CLUSTER", "count": 2, "max_severity": "critical" }, { "type": "POSSIBLE_DUAL_DEGREE", "count": 10, "max_severity": "low" } ],
+  "flags_by_type": [ { "type": "EXCESS_INTAKE", "count": 9, "max_severity": "high" }, { "type": "CROSS_INSTITUTION_DUPLICATE", "count": 2, "max_severity": "high" }, { "type": "POSSIBLE_DUAL_DEGREE", "count": 10, "max_severity": "low" } ],
   "by_state": [
-    { "state": "Madhya Pradesh", "institutions": 6, "students_reported": 2411, "open_flags": 17, "excess_seats": 31, "avg_risk": 42 },
-    { "state": "Goa", "institutions": 2, "students_reported": 318, "open_flags": "<5", "excess_seats": 0, "avg_risk": 11 }
+    { "state": "Madhya Pradesh", "institutions": 6, "students_reported": 2411, "open_flags": 17, "excess_seats": 31 },
+    { "state": "Goa", "institutions": 2, "students_reported": 318, "open_flags": "<5", "excess_seats": 0 }
   ],
   "suppression_applied": true,
   "generated_at": "2026-10-26T11:30:00Z"
@@ -426,14 +413,14 @@ Roles: viewer, officer. Query: `academic_year` (default current), `state` (optio
 (`suppression_applied: true` only for `aicte_viewer`; cells below 5 become `"<5"`.)
 
 ### GET /aicte/institutions
-Roles: viewer, officer. Query: `q` (name / AICTE permanent id), `state`, `region`, `type`, `risk_min`, `risk_max`, `reporting` (`yes|no`), `academic_year`, `has_flag_type`, pagination (`sort`: `risk_score`, `name`, `students_reported`, `excess_seats`).
+Roles: viewer, officer. Query: `q` (name / AICTE permanent id), `state`, `region`, `type`, `reporting` (`yes|no`), `academic_year`, `has_flag_type`, pagination (`sort`: `open_flags_total` (default, descending), `name`, `students_reported`, `excess_seats`).
 
 ```json
 {
   "items": [
-    { "id": 12, "aicte_permanent_id": "1-4432219876", "name": "Vindhyashree Institute of Technology", "state": "Madhya Pradesh", "region": "Central", "type": "private_unaided", "students_reported": 1842, "risk_score": 78, "open_flags": { "low": 1, "medium": 2, "high": 2, "critical": 0 }, "excess_seats": 6, "last_upload_at": "2026-10-26T09:02:00Z" }
+    { "id": 12, "aicte_permanent_id": "1-4432219876", "name": "Vindhyashree Institute of Technology", "state": "Madhya Pradesh", "region": "Central", "type": "private_unaided", "students_reported": 1842, "open_flags": { "low": 1, "medium": 2, "high": 2, "critical": 0 }, "open_flags_total": 5, "excess_seats": 6, "last_upload_at": "2026-10-26T09:02:00Z" }
   ],
-  "page": 1, "page_size": 25, "total": 40, "total_pages": 2, "sort": "-risk_score"
+  "page": 1, "page_size": 25, "total": 40, "total_pages": 2, "sort": "-open_flags_total"
 }
 ```
 
@@ -443,7 +430,6 @@ Roles: viewer, officer. Query: `academic_year`
 ```json
 {
   "institution": { "id": 12, "aicte_permanent_id": "1-4432219876", "name": "Vindhyashree Institute of Technology", "state": "Madhya Pradesh", "region": "Central", "type": "private_unaided" },
-  "risk": { "score": 78, "band": "high", "reasons": [ "6 excess admissions beyond approved intake and valid supernumerary seats (B.Tech CSE, 2026-27)", "One cluster of 31 students shares only 3 guardian contacts", "19% of records were created in the 6 hours before the reporting deadline (state median 3%)" ] },
   "reporting": { "uploads": 4, "last_upload_at": "2026-10-26T09:02:00Z", "students_reported": 1842, "avg_quality_score": 83 },
   "seat_matrix_summary": { "approved_intake": 1080, "regular_admitted": 1046, "valid_supernumerary": 59, "excess": 6 },
   "flags": [ { "id": 412, "type": "EXCESS_INTAKE", "severity": "high", "status": "open", "title": "Admissions exceed approved intake in B.Tech CSE (2026-27)", "created_at": "2026-10-26T09:12:00Z" } ],
@@ -461,7 +447,7 @@ Roles: viewer (no `evidence`, masked), officer (full). Query: `type` (repeatable
 {
   "items": [ { "id": 412, "type": "EXCESS_INTAKE", "severity": "high", "status": "open", "title": "Admissions exceed approved intake in B.Tech CSE (2026-27)", "explanation": "312 enrolled vs 300 approved intake -> 9 valid supernumerary -> 3 excess.", "evidence": { "program_id": 77, "approved_intake": 300, "regular_admitted": 303, "excess": 6 }, "institution_id": 12, "institution_name": "Vindhyashree Institute of Technology", "state": "Madhya Pradesh", "student_id": null, "enrolment_id": null, "cluster_id": null, "assigned_to": null, "notes": [], "created_at": "2026-10-26T09:12:00Z" } ],
   "page": 1, "page_size": 25, "total": 130, "total_pages": 6, "sort": "-severity",
-  "facets": { "by_type": { "EXCESS_INTAKE": 9, "GHOST_CLUSTER": 2 }, "by_severity": { "high": 23, "critical": 4 }, "by_status": { "open": 101, "under_review": 22 } }
+  "facets": { "by_type": { "EXCESS_INTAKE": 9, "CROSS_INSTITUTION_DUPLICATE": 2 }, "by_severity": { "high": 23, "critical": 4 }, "by_status": { "open": 101, "under_review": 22 } }
 }
 ```
 
@@ -473,7 +459,7 @@ Roles: viewer (masked, no evidence internals), officer (full). Full flag object 
   "title": "Same APAAR ID enrolled full-time at two institutions (2026-27)",
   "explanation": "APAAR XXXX-XXXX-1234 has active full-time regular enrolments at Vindhyashree Institute of Technology (B.Tech CSE, year 1) and Kharapur Technical Institute (B.Tech ECE, year 1) in 2026-27. Neither programme is online/ODL, so this is not a permitted dual degree.",
   "evidence": { "apaar_masked": "XXXX-XXXX-1234", "sides": [ { "institution_id": 12, "institution_name": "Vindhyashree Institute of Technology", "program": "B.Tech CSE", "mode": "regular", "year_of_study": 1, "admitted_on": "2026-08-05" }, { "institution_id": 29, "institution_name": "Kharapur Technical Institute", "program": "B.Tech ECE", "mode": "regular", "year_of_study": 1, "admitted_on": "2026-08-11" } ], "classification_reason": "both_full_time_regular" },
-  "related_flags": [ { "id": 502, "type": "STUDENT_DISPUTE", "severity": "critical" } ],
+  "related_flags": [ { "id": 502, "type": "CROSS_INSTITUTION_DUPLICATE", "severity": "high" } ],
   "students": [ { "student_id": 9931, "apaar_masked": "XXXX-XXXX-1234", "name_masked": "R***** S.", "is_minor": false } ],
   "notes": [ { "author": "aicte_officer1", "note": "Called institution data cell; awaiting response.", "created_at": "2026-10-26T10:40:00Z" } ],
   "assigned_to": "aicte_officer1",
@@ -514,44 +500,6 @@ Response:
 ```
 Contacts are **never** returned, even on reveal.
 
-### GET /aicte/risk
-Roles: viewer, officer. Query: `state`, `academic_year`, `band` (`low|medium|high|critical`), pagination (`sort`: `risk_score`).
-```json
-{
-  "items": [ { "institution_id": 12, "name": "Vindhyashree Institute of Technology", "state": "Madhya Pradesh", "risk_score": 78, "band": "high", "top_reasons": ["6 excess admissions...", "Ghost cluster of 31 students...", "19% of records created in the last 6 hours..."], "components": { "flags": 54, "anomaly": 24 } } ],
-  "page": 1, "page_size": 25, "total": 40, "total_pages": 2, "sort": "-risk_score"
-}
-```
-
-### GET /aicte/inspection-shortlist
-Roles: viewer, officer. Query: `limit` (default 10, max 50), `state`
-```json
-{
-  "generated_at": "2026-10-26T11:45:00Z",
-  "academic_year": "2026-27",
-  "items": [ { "rank": 1, "institution_id": 12, "name": "Vindhyashree Institute of Technology", "state": "Madhya Pradesh", "risk_score": 78, "reasons": ["6 excess admissions beyond intake", "Ghost cluster: 31 students, 3 guardian contacts", "Statistical anomaly: category mix 4.1σ from state median"], "suggested_checks": ["Physical headcount in B.Tech CSE year 1", "Verify guardian contacts for cluster #7"] } ],
-  "csv_url": "/aicte/inspection-shortlist.csv"
-}
-```
-
-### GET /aicte/inspection-shortlist.csv
-Roles: viewer, officer. Same filters as above; returns `text/csv` (`rank,institution_id,name,state,risk_score,reasons`).
-
-### GET /aicte/non-reporting
-Roles: viewer, officer. Query: `academic_year`, `state`, pagination
-```json
-{
-  "items": [ { "institution_id": 33, "name": "Tamravati College of Engineering", "state": "Kerala", "last_upload_at": null, "days_overdue": 26, "reminders_sent": 1, "last_reminder_at": "2026-10-20T07:00:00Z" } ],
-  "page": 1, "page_size": 25, "total": 3, "total_pages": 1, "sort": "-days_overdue"
-}
-```
-
-### POST /aicte/remind/{institution_id}
-Role: `aicte_officer`. Mocked notification, audit-logged.
-```json
-{ "institution_id": 33, "channel": "email", "status": "queued_mock", "message": "Student data for 2026-27 is overdue by 26 days.", "sent_at": "2026-10-26T11:50:00Z", "audit_log_id": 8830 }
-```
-
 ### GET /aicte/reports/trends
 Roles: viewer (suppressed), officer. Query: `dimension` (`state|branch|category|gender|year`, repeatable), `academic_year` (repeatable, default both seeded years), `state`, `institution_id`
 ```json
@@ -569,39 +517,6 @@ Roles: viewer (suppressed), officer. Query: `dimension` (`state|branch|category|
 ### GET /aicte/reports/trends.csv
 Roles: viewer, officer. Same filters; returns `text/csv`.
 
-### GET /aicte/graph/clusters
-Roles: viewer (masked summary), officer. Query: `min_score`, `state`, `institution_id`, `severity`, `status`, pagination (`sort`: `score`, `student_count`)
-```json
-{
-  "items": [
-    { "cluster_id": 7, "score": 91, "severity": "critical", "status": "open", "flag_id": 640, "student_count": 31, "shared_attributes": { "guardian_phone": 3, "phone": 1, "email": 0 }, "institutions": [ { "id": 12, "name": "Vindhyashree Institute of Technology", "students": 31 } ], "summary": "31 students share only 3 guardian contact numbers — typical families share one contact across 1–3 students.", "created_at": "2026-10-26T09:14:00Z" }
-  ],
-  "page": 1, "page_size": 25, "total": 2, "total_pages": 1, "sort": "-score"
-}
-```
-
-### GET /aicte/graph/clusters/{cluster_id}
-Roles: viewer (masked), officer. Cytoscape-ready; writes to the access log. Attribute nodes are labelled, never hashed values.
-```json
-{
-  "cluster_id": 7,
-  "score": 91,
-  "severity": "critical",
-  "summary": "31 students at Vindhyashree Institute of Technology share only 3 guardian contacts — typical families share 1 contact per 1–3 students.",
-  "metrics": { "student_count": 31, "attribute_count": 4, "attributes_per_student": 0.13, "institutions_involved": 1, "max_students_per_contact": 14 },
-  "legend": { "student": "Student (colour = institution)", "guardian_phone": "Shared guardian contact", "phone": "Shared student contact", "email": "Shared email" },
-  "nodes": [
-    { "data": { "id": "s9931", "label": "R***** S.", "type": "student", "institution": "Vindhyashree Institute of Technology", "institution_id": 12, "apaar_masked": "XXXX-XXXX-1234", "program": "B.Tech CSE", "academic_year": "2026-27", "student_id": 9931 } },
-    { "data": { "id": "g1", "label": "Guardian contact #1", "type": "guardian_phone", "degree": 14 } }
-  ],
-  "edges": [ { "data": { "source": "s9931", "target": "g1", "attribute_type": "guardian_phone", "label": "guardian contact" } } ],
-  "access_log_id": 4480
-}
-```
-
-### GET /aicte/graph/clusters/{cluster_id}/normal-comparison
-Roles: viewer, officer. A healthy sibling cluster in the same state, same shape as above, for the side-by-side toggle (Step 17.3).
-
 ---
 
 ## 5. `/student` — routers/student.py
@@ -613,38 +528,14 @@ Role: `student`. `student_id` comes from the JWT only — no student id in any p
 {
   "student": { "student_id": 9931, "apaar_masked": "XXXX-XXXX-1234", "apaar_status": "provided", "name": "Rahul Sharma", "dob": "2006-03-12", "is_minor": false, "nationality_status": "indian", "category": "OBC-NCL", "gender": "M" },
   "enrolments": [
-    { "id": 20114, "institution_name": "Vindhyashree Institute of Technology", "program": "B.Tech — Computer Science and Engineering", "mode": "regular", "academic_year": "2026-27", "year_of_study": 1, "admission_type": "regular", "status": "admitted", "admitted_on": "2026-08-05", "reported_by_upload_at": "2026-10-26T09:02:00Z", "confirmation": "unconfirmed", "version": 1 },
-    { "id": 20115, "institution_name": "Kharapur Technical Institute", "program": "B.Tech — Electronics and Communication", "mode": "regular", "academic_year": "2026-27", "year_of_study": 1, "admission_type": "regular", "status": "admitted", "admitted_on": "2026-08-11", "confirmation": "unconfirmed", "version": 1 }
+    { "id": 20114, "institution_name": "Vindhyashree Institute of Technology", "program": "B.Tech — Computer Science and Engineering", "mode": "regular", "academic_year": "2026-27", "year_of_study": 1, "admission_type": "regular", "status": "admitted", "admitted_on": "2026-08-05", "reported_by_upload_at": "2026-10-26T09:02:00Z", "version": 1 },
+    { "id": 20115, "institution_name": "Kharapur Technical Institute", "program": "B.Tech — Electronics and Communication", "mode": "regular", "academic_year": "2026-27", "year_of_study": 1, "admission_type": "regular", "status": "admitted", "admitted_on": "2026-08-11", "version": 1 }
   ],
-  "open_cases": [ { "flag_id": 502, "type": "STUDENT_DISPUTE", "status": "under_review", "created_at": "2026-10-26T10:05:00Z" } ],
+  "open_cases": [ { "flag_id": 502, "type": "STUDENT_CORRECTION", "status": "open", "created_at": "2026-10-26T10:05:00Z" } ],
   "pending_consents": 1
 }
 ```
 A student sees their own raw name/DOB/APAAR-masked; `apaar_id` in full is available only on the ID card endpoint.
-
-### POST /student/enrolments/{enrolment_id}/confirm
-Request: `{}` (optional `{ "note": "Yes, this is my college." }`)
-```json
-{ "enrolment_id": 20114, "confirmation": "confirmed", "confirmed_at": "2026-10-26T10:02:00Z", "audit_log_id": 8840 }
-```
-
-### POST /student/enrolments/{enrolment_id}/dispute
-Creates a `STUDENT_DISPUTE` flag (severity `critical`) visible to AICTE and that institution.
-
-Request:
-```json
-{ "reason": "I never applied to or joined this institution.", "category": "not_my_enrolment" }
-```
-`category` ∈ `not_my_enrolment | wrong_program | wrong_year | already_cancelled | other`; `reason` min 10 chars.
-```json
-{
-  "enrolment_id": 20115,
-  "confirmation": "disputed",
-  "flag": { "id": 502, "type": "STUDENT_DISPUTE", "severity": "critical", "status": "open", "title": "Student disputes reported enrolment", "explanation": "The student states they never enrolled in B.Tech ECE at Kharapur Technical Institute for 2026-27. Reported by the institution in upload #52." },
-  "message": "AICTE has been notified. You can track this case here.",
-  "audit_log_id": 8841
-}
-```
 
 ### POST /student/corrections
 Goes to the institution's flag inbox.
@@ -666,7 +557,7 @@ Query: `status`, pagination. Items: `{ correction_id, enrolment_id, field, corre
 {
   "items": [
     { "id": 4471, "at": "2026-10-26T11:42:00Z", "actor_role": "aicte_officer", "actor_label": "AICTE Officer", "action": "reveal_student_details", "reason": "Verifying duplicate enrolment case #501 with both institutions.", "target": "student:9931" },
-    { "id": 4480, "at": "2026-10-26T11:48:00Z", "actor_role": "aicte_viewer", "actor_label": "AICTE Analyst", "action": "view_cluster", "reason": null, "target": "cluster:7" }
+    { "id": 4480, "at": "2026-10-26T11:48:00Z", "actor_role": "aicte_viewer", "actor_label": "AICTE Analyst", "action": "view_flag_detail", "reason": null, "target": "flag:412" }
   ],
   "page": 1, "page_size": 25, "total": 2, "total_pages": 1, "sort": "-created_at"
 }
@@ -796,11 +687,6 @@ Role: **public** (QR scan page). Validates HMAC signature + expiry + consent not
 
 Role: `admin` only. Demo tooling, no student-data reads.
 
-### GET /admin/scenarios
-```json
-{ "scenarios": [ { "name": "A_excess_intake", "label": "Excess admissions beyond intake", "flag_types": ["EXCESS_INTAKE"] }, { "name": "B_ghost_cluster", "label": "Ghost student cluster", "flag_types": ["GHOST_CLUSTER"] }, { "name": "C_cross_institution_duplicate", "label": "Same APAAR, two full-time colleges", "flag_types": ["CROSS_INSTITUTION_DUPLICATE"] }, { "name": "D_dual_degree", "label": "Legitimate dual degree (must NOT be fraud)", "flag_types": ["POSSIBLE_DUAL_DEGREE"] } ] }
-```
-
 ### POST /admin/reseed
 Request: `{ "seed": 42, "institutions": 40, "students": 15000, "years": ["2025-26", "2026-27"] }` (all optional)
 ```json
@@ -812,17 +698,6 @@ Request: `{ "seed": 42, "institutions": 40, "students": 15000, "years": ["2025-2
   "ground_truth_path": "datagen/ground_truth.json",
   "detectors_run": true
 }
-```
-
-### POST /admin/load-scenario/{name}
-```json
-{ "scenario": "B_ghost_cluster", "status": "injected", "institution_id": 12, "students_added": 31, "flags_created": [ { "id": 641, "type": "GHOST_CLUSTER", "severity": "critical" } ], "ground_truth_updated": true }
-```
-
-### POST /admin/run-detectors
-Idempotent re-run of `run_all_detectors()`.
-```json
-{ "status": "ok", "duration_ms": 6120, "flags_created": 4, "flags_updated": 11, "flags_unchanged": 119 }
 ```
 
 ### GET /admin/audit/verify
@@ -893,9 +768,9 @@ Uploads must never fail because of this. Rows are stored with `registry_status: 
 | `POST /auth/login`, `GET /auth/demo-users`, `GET /health`, `GET /verify/token/{t}` | public | public | public | public | public | public |
 | `GET /auth/me` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `/institution/*` | ✓ (own only) | — | — | — | — | — |
-| `/aicte/overview`, `/institutions*`, `/risk`, `/inspection-shortlist`, `/non-reporting`, `/reports/*`, `/graph/*` | — | ✓ (masked + `<5`) | ✓ | — | — | — |
+| `/aicte/overview`, `/institutions*`, `/reports/*` | — | ✓ (masked + `<5`) | ✓ | — | — | — |
 | `GET /aicte/flags`, `GET /aicte/flags/{id}` | — | ✓ (masked fields only: type, severity, institution, state, status, counts — no `evidence`/`notes`/`history`) | ✓ (full) | — | — | — |
-| `PATCH /aicte/flags/{id}`, `POST /aicte/reveal`, `POST /aicte/remind/{id}` | — | — | ✓ | — | — | — |
+| `PATCH /aicte/flags/{id}`, `POST /aicte/reveal` | — | — | ✓ | — | — | — |
 | `/student/*` | — | — | — | ✓ (own only) | — | — |
 | `/verifier/*` | — | — | — | — | ✓ (own only) | — |
 | `/admin/*` | — | — | — | — | — | ✓ |
@@ -908,12 +783,11 @@ All ten Step-0 questions are now decided — see the decision table in `docs/PLA
 
 1. `GET /auth/demo-users` is public but gated by `DEMO_MODE=true`, so the role switcher works without a chicken-and-egg login.
 2. Hashes (`apaar_hash`, `phone_hash`, …) are never returned over the API, only masked values — returning a hash would allow offline guessing of a 12-digit space.
-3. `admin` cannot read student data; it only reseeds, loads scenarios and verifies the audit chain.
+3. `admin` cannot read student data; it only reseeds and verifies the audit chain.
 4. **Decided:** `aicte_viewer` lists flags with masked fields only (type, severity, institution, state, status, counts; suppression applies) and gets no `evidence`/`notes`/`history`, no reveal and no case actions. `aicte_officer` sees full detail.
 5. Enrolment status changes are versioned by writing a new version row; the API returns the current version plus `version` number.
 6. Consent validity (how long an approval stays usable) defaults to 72 h for the request and 15 min for an issued token, both config-driven.
-7. The compliance certificate is HTML by default (printable) — `format=pdf` only if we add a renderer without a new heavy dependency.
-8. Trends counts include `admitted` and `completed` enrolments; `cancelled|migrated|dropped` are excluded.
+7. Trends counts include `admitted` and `completed` enrolments; `cancelled|migrated|dropped` are excluded.
 
 ## 11. Changelog
 
@@ -922,3 +796,4 @@ All ten Step-0 questions are now decided — see the decision table in `docs/PLA
 | 2026-10-26 | Initial frozen contract (Step 0) | Claude Code |
 | 2026-10-26 | Step-0 decisions applied: viewer flag fields narrowed, role matrix split for flag list/detail, `reporting_calendar.yaml` noted, `inspection-shortlist.csv` documented | Claude Code |
 | 2026-10-26 | Step 13: verifier request status gains `revoked` (a student withdrawing an approved consent is not the same as denying it); `GET /aicte/reports/trends` gains `new_admissions_only`; `GET /aicte/non-reporting` rows gain `days_to_deadline` and `reporting_deadline`; `GET /institution/compliance-certificate` gains `format=json` for an eligibility check without issuing | Claude Code |
+| 2026-10-28 | Refocus: removed `/aicte/risk`, `/aicte/inspection-shortlist(.csv)`, `/aicte/non-reporting`, `/aicte/remind/{id}`, `/aicte/graph/*`, `/institution/compliance-certificate`, `/student/enrolments/{id}/confirm` and `/dispute`, `/admin/scenarios`, `/admin/load-scenario/{name}`, `/admin/run-detectors`. Flag types `GHOST_CLUSTER`, `SEQUENTIAL_APAAR`, `LAST_MINUTE_BULK`, `PHANTOM_PROGRESSION`, `STUDENT_DISPUTE`, `STATISTICAL_ANOMALY` and the flag `cluster_id` field removed; student corrections now raise `STUDENT_CORRECTION`. Institution rows lose `risk_score`/`risk_band` and gain `open_flags_total` | Claude Code |

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Eye, FileSearch, Network, ShieldCheck, UserCheck } from "lucide-react";
+import { Eye, FileSearch, ShieldCheck, UserCheck } from "lucide-react";
 import { useState } from "react";
 
 import { PageHeader } from "@/components/ui/page";
@@ -13,7 +13,6 @@ import { dateTime } from "@/lib/format";
 const ACTION_ICONS: Record<string, React.ReactNode> = {
   reveal_student_details: <Eye className="h-4 w-4" />,
   view_flag_detail: <FileSearch className="h-4 w-4" />,
-  view_cluster: <Network className="h-4 w-4" />,
   verification_requested: <UserCheck className="h-4 w-4" />,
   verification_result_read: <ShieldCheck className="h-4 w-4" />,
 };
@@ -21,7 +20,6 @@ const ACTION_ICONS: Record<string, React.ReactNode> = {
 const ACTION_LABELS: Record<string, string> = {
   reveal_student_details: "Opened your full details",
   view_flag_detail: "Opened a case file about you",
-  view_cluster: "Viewed a cluster you appear in",
   verification_requested: "Asked you for consent to verify",
   verification_result_read: "Read your verification result",
 };

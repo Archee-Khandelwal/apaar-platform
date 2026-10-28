@@ -10,8 +10,6 @@ import type {
   AdminStatus,
   AicteInstitutionProfile,
   ApiErrorBody,
-  ClusterDetail,
-  ClusterSummary,
   ConsentRow,
   DemoUser,
   Flag,
@@ -23,20 +21,16 @@ import type {
   InstitutionProfile,
   InstitutionRow,
   LoginResponse,
-  NonReportingRow,
   Overview,
   Page,
   QualityReport,
   Revealed,
-  RiskRow,
   SeatMatrix,
-  Shortlist,
   StudentMe,
   StudentRow,
   TokenCheck,
   Trends,
   UploadCreated,
-  ScenarioInfo,
   TamperResult,
   UploadSummary,
   User,
@@ -203,16 +197,6 @@ export const api = {
       `/institution/enrolments/${enrolmentId}/status`,
       { method: "PATCH", body },
     ),
-  certificateEligibility: (academic_year: string) =>
-    request<{ eligible: boolean; reasons: string[]; blocking_flags: { id: number; type: string }[] }>(
-      "/institution/compliance-certificate",
-      { query: { academic_year, format: "json" } },
-    ),
-  certificateHtml: (academic_year: string) =>
-    request<string>("/institution/compliance-certificate", {
-      raw: true,
-      query: { academic_year },
-    }),
 
   // ----------------------------------------------------------------- aicte
   overview: (query?: Query) => request<Overview>("/aicte/overview", { query }),
@@ -229,25 +213,10 @@ export const api = {
   ) => request<{ flag: Flag; audit_log_id?: number }>(`/aicte/flags/${id}`, { method: "PATCH", body }),
   reveal: (student_id: number, reason: string) =>
     request<Revealed>("/aicte/reveal", { method: "POST", body: { student_id, reason } }),
-  risk: (query?: Query) => request<Page<RiskRow>>("/aicte/risk", { query }),
-  shortlist: (limit = 10) => request<Shortlist>("/aicte/inspection-shortlist", { query: { limit } }),
-  clusters: (query?: Query) => request<Page<ClusterSummary>>("/aicte/graph/clusters", { query }),
-  cluster: (id: number) => request<ClusterDetail>(`/aicte/graph/clusters/${id}`),
-  normalCluster: (id: number) => request<ClusterDetail>(`/aicte/graph/clusters/${id}/normal-comparison`),
-  nonReporting: (query?: Query) => request<Page<NonReportingRow>>("/aicte/non-reporting", { query }),
-  remind: (institutionId: number) =>
-    request<{ status: string; message: string }>(`/aicte/remind/${institutionId}`, { method: "POST" }),
   trends: (query?: Query) => request<Trends>("/aicte/reports/trends", { query }),
 
   // ----------------------------------------------------------------- student
   studentMe: () => request<StudentMe>("/student/me"),
-  confirmEnrolment: (id: number) =>
-    request<{ confirmation: string }>(`/student/enrolments/${id}/confirm`, { method: "POST" }),
-  disputeEnrolment: (id: number, body: { reason: string; category: string }) =>
-    request<{ confirmation: string; flag: Flag; message: string }>(
-      `/student/enrolments/${id}/dispute`,
-      { method: "POST", body },
-    ),
   requestCorrection: (body: {
     enrolment_id?: number;
     field: string;
@@ -284,27 +253,16 @@ export const api = {
 
   // ----------------------------------------------------------------- admin
   adminStatus: () => request<AdminStatus>("/admin/status"),
-  adminScenarios: () => request<{ scenarios: ScenarioInfo[] }>("/admin/scenarios"),
   reseed: (body?: { seed?: number; institutions?: number; students?: number }) =>
     request<{ status: string; seed: number; duration_ms: number; counts: Record<string, number> }>(
       "/admin/reseed",
       { method: "POST", body: body ?? {} },
     ),
-  loadScenario: (name: string) =>
-    request<{
-      scenario: string;
-      label: string;
-      status: string;
-      added: Record<string, number>;
-      flags_before: Record<string, number>;
-      flags_after: Record<string, number>;
-    }>(`/admin/load-scenario/${name}`, { method: "POST" }),
   verifyAudit: () =>
     request<{ ok: boolean; rows_checked: number; rows_total: number; first_broken_row?: unknown; checked_at: string }>(
       "/admin/audit/verify",
     ),
   tamperTest: () => request<TamperResult>("/admin/audit/tamper-test", { method: "POST" }),
-  runDetectors: () => request<Record<string, unknown>>("/admin/run-detectors", { method: "POST" }),
 
   // public
   checkToken: (token: string) => request<TokenCheck>(`/verify/token/${encodeURIComponent(token)}`),

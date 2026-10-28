@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { AICTE_INSTITUTION_TABS, PageHeader, SubTabs, TechnicalDetails } from "@/components/ui/page";
+import { PageHeader } from "@/components/ui/page";
 import { DataTable, TableFilters, type Column } from "@/components/DataTable";
 import { SeverityBadge } from "@/components/SeverityBadge";
 import { Input, Select } from "@/components/ui/primitives";
@@ -15,7 +15,7 @@ import { FLAG_TYPES, type InstitutionRow } from "@/lib/types";
 export default function InstitutionsPage() {
   const router = useRouter();
   const [page, setPage] = useState(1);
-  const [sort, setSort] = useState("-risk_score");
+  const [sort, setSort] = useState("-open_flags_total");
   const [search, setSearch] = useState("");
   const [state, setState] = useState("");
   const [flagType, setFlagType] = useState("");
@@ -51,20 +51,6 @@ export default function InstitutionsPage() {
       cell: (row) => row.state,
     },
     {
-      key: "risk",
-      header: "Risk",
-      sortKey: "risk_score",
-      width: "w-[8.5rem]",
-      align: "right",
-      nowrap: true,
-      cell: (row) => (
-        <span className="inline-flex items-center gap-2">
-          <span className="font-semibold tabular-nums">{row.risk_score.toFixed(1)}</span>
-          <SeverityBadge severity={row.risk_band} showDot={false} />
-        </span>
-      ),
-    },
-    {
       key: "students",
       header: "Students",
       sortKey: "students_reported",
@@ -76,6 +62,7 @@ export default function InstitutionsPage() {
     {
       key: "flags",
       header: "Open flags",
+      sortKey: "open_flags_total",
       width: "w-[12rem]",
       align: "right",
       cell: (row) => (
@@ -119,13 +106,11 @@ export default function InstitutionsPage() {
     <>
       <PageHeader
         title="Institutions"
-        description="Which AICTE-approved institutions carry the most risk. Select a row for the full profile."
+        description="Every AICTE-approved institution with its reported students and open findings. Select a row for the full profile."
       />
 
-      <SubTabs tabs={AICTE_INSTITUTION_TABS} current="/aicte/institutions" />
-
       <DataTable
-        minWidth="min-w-[70rem]"
+        minWidth="min-w-[62rem]"
         columns={columns}
         rows={query.data?.items ?? []}
         loading={query.isLoading}
@@ -195,13 +180,6 @@ export default function InstitutionsPage() {
         }
       />
 
-      <TechnicalDetails label="What the risk score is made of">
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          Risk is a weighted sum of open findings plus a statistical anomaly score, rescaled to
-          0–100. A legal dual degree carries weight zero, so it never raises a score. Each
-          institution&rsquo;s profile lists its own top reasons.
-        </p>
-      </TechnicalDetails>
     </>
   );
 }

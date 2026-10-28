@@ -31,11 +31,11 @@ It is a hackathon prototype: it must run reliably on one laptop, be demoable in 
 ## 3. Tech stack (do not change without asking)
 
 - **Backend:** Python 3.11+, FastAPI, Pydantic v2, SQLAlchemy 2.0, SQLite by default (`DATABASE_URL` env var allows Postgres later)
-- **Data / ML:** pandas, openpyxl, rapidfuzz, networkx, scikit-learn, PyYAML, Faker (`en_IN` locale)
+- **Data:** pandas, openpyxl, rapidfuzz, PyYAML, Faker (`en_IN` locale)
 - **Security:** PyJWT, passlib[bcrypt], `cryptography` (Fernet) for the encrypted vault, `hmac` + `hashlib` (HMAC-SHA256)
 - **Other:** qrcode, pytest, httpx (tests)
 - **Mock APAAR registry:** separate small FastAPI app
-- **Frontend:** Next.js (App Router) + TypeScript, Tailwind CSS, shadcn/ui, TanStack Query, Recharts, Cytoscape.js (`react-cytoscapejs`)
+- **Frontend:** Next.js (App Router) + TypeScript, Tailwind CSS, shadcn/ui, TanStack Query, Recharts
 - **Ports:** API `8000`, registry `8001`, web `3000`
 
 ## 4. Repository layout
@@ -47,8 +47,8 @@ It is a hackathon prototype: it must run reliably on one laptop, be demoable in 
     /models     SQLAlchemy models
     /schemas    Pydantic schemas
     /routers    institution.py, aicte.py, student.py, verifier.py, admin.py, auth.py
-    /services   upload.py, validation.py, intake.py, duplicates.py, graph.py,
-                heuristics.py, risk.py, flags.py, consent.py, tokens.py
+    /services   upload.py, validation.py, intake.py, duplicates.py, heuristics.py,
+                detectors.py, flags.py, cases.py, consent.py, tokens.py
     /rules      intake_rules.yaml
   /tests
 /registry       Mock APAAR registry (FastAPI)
@@ -98,12 +98,14 @@ These are part of the product, not optional extras. Never violate them, even to 
 - `vault` (student_id, apaar_enc, name_enc, dob_enc)
 - `enrolments` (id, student_id, program_id, academic_year, year_of_study, admission_type: regular|lateral|tfw|fn_pio_oci|pmsss|other_supernumerary, status, admitted_on, created_at, upload_id, version)
 - `uploads` (id, institution_id, filename, rows_total, rows_ok, rows_error, quality_score, column_mapping JSON, created_at)
-- `flags` (id, type, severity, institution_id, student_id nullable, enrolment_id nullable, cluster_id nullable, title, explanation, evidence JSON, status: open|under_review|escalated|dismissed|resolved, assigned_to, notes JSON, created_at)
+- `flags` (id, type, severity, institution_id, student_id nullable, enrolment_id nullable, title, explanation, evidence JSON, status: open|under_review|escalated|dismissed|resolved, assigned_to, notes JSON, created_at)
 - `access_log`, `audit_log` (hash-chained), `consents`, `verification_requests`, `users`
 
 ## 8. Flag types (use exactly these)
 
-`INVALID_APAAR, APAAR_NOT_FOUND, APAAR_MISMATCH, DUPLICATE_IN_UPLOAD, EXCESS_INTAKE, CROSS_INSTITUTION_DUPLICATE, POSSIBLE_DUAL_DEGREE, IDENTITY_DUPLICATE, GHOST_CLUSTER, SEQUENTIAL_APAAR, LATE_ADMISSION, LAST_MINUTE_BULK, PHANTOM_PROGRESSION, STUDENT_DISPUTE, STATISTICAL_ANOMALY`
+`INVALID_APAAR, APAAR_NOT_FOUND, APAAR_MISMATCH, DUPLICATE_IN_UPLOAD, EXCESS_INTAKE, CROSS_INSTITUTION_DUPLICATE, POSSIBLE_DUAL_DEGREE, IDENTITY_DUPLICATE, LATE_ADMISSION, STUDENT_CORRECTION`
+
+Each maps to a PS requirement 3 validation (duplicate records, invalid/missing APAAR, excess intake, data inconsistencies, cross-institution duplicates). `STUDENT_CORRECTION` is a low-severity request from a student to fix a field in their own record.
 
 Severity: `low | medium | high | critical`.
 **Every flag must have a human-readable `explanation` and structured `evidence`.** No unexplained flags — explainability is a core judging point.

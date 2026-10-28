@@ -21,14 +21,14 @@ if TYPE_CHECKING:  # pragma: no cover
     from datagen.generator import SyntheticDataGenerator
 
 
-def _first_case_student(gen: SyntheticDataGenerator, scenario: str) -> int | None:
+def _first_case_student(
+    gen: SyntheticDataGenerator, scenario: str, flag_type: str | None = None
+) -> int | None:
     for case in gen.b.cases:
-        if case.scenario == scenario and case.key_kind == "student":
+        if case.scenario != scenario or case.key_kind != "student":
+            continue
+        if flag_type is None or case.flag_type == flag_type:
             return int(case.key)
-    # Cluster cases carry their members in details.
-    for case in gen.b.cases:
-        if case.scenario == scenario and case.details.get("student_ids"):
-            return int(case.details["student_ids"][0])
     return None
 
 
@@ -53,9 +53,9 @@ def create_users_and_demo_data(gen: SyntheticDataGenerator) -> None:
 
     picks: list[tuple[str, int | None, str]] = [
         (
-            "student_ghost",
-            _first_case_student(gen, "B_ghost_cluster"),
-            "Student — member of a ghost cluster (use this one to dispute)",
+            "student_mismatch",
+            _first_case_student(gen, "E_apaar_problems", "APAAR_MISMATCH"),
+            "Student — reported name/DOB does not match the APAAR registry",
         ),
         (
             "student_duplicate",

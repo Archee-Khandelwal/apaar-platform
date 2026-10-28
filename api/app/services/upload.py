@@ -856,7 +856,7 @@ def compute_quality_score(
     warning_penalty = (rows_warning / rows_total) * 10.0
 
     mapped = {field_name for field_name in mapping.values() if field_name}
-    # These are not required, but without them we cannot detect ghost clusters or
+    # These are not required, but without them we cannot match identity duplicates or
     # report demographics, so an upload that omits them is lower quality.
     useful = ("apaar_id", "guardian_phone", "phone", "email", "category", "gender", "admission_type")
     mapping_penalty = sum(2.0 for field_name in useful if field_name not in mapped)

@@ -58,17 +58,3 @@ excess_severity:
   medium_max_percent: 5.0     # VERIFY: tuning choice, not a handbook rule
   high_max_percent: 15.0      # VERIFY: tuning choice, not a handbook rule
   # above high_max_percent -> critical
-
-# How far above the peer median a supernumerary share has to sit before we raise it
-# as a review signal (possible mislabelling of regular admissions).
-supernumerary_misuse:
-  categories: [tfw, other_supernumerary]   # VERIFY: tuning choice
-  # TFW (5%) + other supernumerary (2%) cap the achievable share at about 7% of
-  # intake, so a 3x-median rule could never fire. 2x the peer median AND an absolute
-  # floor keeps it meaningful without flagging ordinary fee-waiver programmes.
-  min_share_percent: 4.5                   # VERIFY: tuning choice
-  median_multiple: 2.0                     # VERIFY: tuning choice
-  min_admissions: 20                       # VERIFY: tuning choice
-  # A share computed from 5 students is noise, however extreme it looks, so the
-  # signal also needs a minimum number of supernumerary admissions behind it.
-  min_supernumerary_admissions: 10         # VERIFY: tuning choice

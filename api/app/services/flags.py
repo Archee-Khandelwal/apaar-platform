@@ -41,7 +41,6 @@ def upsert_flag(
     student_id: int | None = None,
     enrolment_id: int | None = None,
     program_id: int | None = None,
-    cluster_id: int | None = None,
     academic_year: str | None = None,
 ) -> tuple[Flag, bool]:
     """Create or update one flag. Returns ``(flag, created)``.
@@ -67,7 +66,6 @@ def upsert_flag(
         existing.student_id = student_id
         existing.enrolment_id = enrolment_id
         existing.program_id = program_id
-        existing.cluster_id = cluster_id
         existing.academic_year = academic_year
         db.flush()
         return existing, False
@@ -84,7 +82,6 @@ def upsert_flag(
         student_id=student_id,
         enrolment_id=enrolment_id,
         program_id=program_id,
-        cluster_id=cluster_id,
         academic_year=academic_year,
         notes=[],
     )
@@ -106,9 +103,8 @@ def resolve_stale_flags(
     Used by idempotent detector re-runs: if a college fixes its data, the flag closes
     itself with a note rather than lingering in the queue.
 
-    ``key_suffix`` limits reconciliation to one detector's dedupe-key namespace. Two
-    detectors share the STATISTICAL_ANOMALY type (the IsolationForest ranking and the
-    supernumerary-share signal), and without this each would close the other's flags.
+    ``key_suffix`` limits reconciliation to one detector's dedupe-key namespace, for
+    detectors that share a flag type.
     """
     statement = select(Flag).where(Flag.type == type, Flag.status.in_(OPEN_FLAG_STATUSES))
     if institution_id is not None:
@@ -150,7 +146,6 @@ def sanitise_for_institution(flag: Flag | dict[str, Any]) -> dict[str, Any]:
             "evidence": copy.deepcopy(flag.evidence or {}),
             "student_id": flag.student_id,
             "enrolment_id": flag.enrolment_id,
-            "cluster_id": flag.cluster_id,
             "academic_year": flag.academic_year,
             "program_id": flag.program_id,
             "created_at": flag.created_at,

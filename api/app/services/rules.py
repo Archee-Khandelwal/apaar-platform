@@ -93,18 +93,6 @@ def excess_severity(excess: int, intake: int) -> str:
     return "critical"
 
 
-def supernumerary_misuse_config() -> dict[str, Any]:
-    """Thresholds for the supernumerary-share review signal."""
-    raw = intake_rules().get("supernumerary_misuse", {})
-    return {
-        "categories": tuple(raw.get("categories", ("tfw", "other_supernumerary"))),
-        "min_share_percent": float(raw.get("min_share_percent", 4.0)),
-        "median_multiple": float(raw.get("median_multiple", 3.0)),
-        "min_admissions": int(raw.get("min_admissions", 20)),
-        "min_supernumerary_admissions": int(raw.get("min_supernumerary_admissions", 10)),
-    }
-
-
 @dataclass(frozen=True)
 class YearCalendar:
     academic_year: str

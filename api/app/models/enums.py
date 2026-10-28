@@ -55,8 +55,6 @@ ENROLMENT_STATUSES: Final[tuple[str, ...]] = (
 # Statuses that occupy a seat / count as an active enrolment.
 ACTIVE_ENROLMENT_STATUSES: Final[tuple[str, ...]] = ("admitted", "completed")
 
-StudentConfirmation = Literal["unconfirmed", "confirmed", "disputed"]
-STUDENT_CONFIRMATIONS: Final[tuple[str, ...]] = ("unconfirmed", "confirmed", "disputed")
 
 UploadState = Literal["pending_mapping", "validating", "completed", "failed"]
 UPLOAD_STATES: Final[tuple[str, ...]] = ("pending_mapping", "validating", "completed", "failed")
@@ -85,13 +83,8 @@ FlagType = Literal[
     "CROSS_INSTITUTION_DUPLICATE",
     "POSSIBLE_DUAL_DEGREE",
     "IDENTITY_DUPLICATE",
-    "GHOST_CLUSTER",
-    "SEQUENTIAL_APAAR",
     "LATE_ADMISSION",
-    "LAST_MINUTE_BULK",
-    "PHANTOM_PROGRESSION",
-    "STUDENT_DISPUTE",
-    "STATISTICAL_ANOMALY",
+    "STUDENT_CORRECTION",
 ]
 FLAG_TYPES: Final[tuple[str, ...]] = (
     "INVALID_APAAR",
@@ -102,13 +95,8 @@ FLAG_TYPES: Final[tuple[str, ...]] = (
     "CROSS_INSTITUTION_DUPLICATE",
     "POSSIBLE_DUAL_DEGREE",
     "IDENTITY_DUPLICATE",
-    "GHOST_CLUSTER",
-    "SEQUENTIAL_APAAR",
     "LATE_ADMISSION",
-    "LAST_MINUTE_BULK",
-    "PHANTOM_PROGRESSION",
-    "STUDENT_DISPUTE",
-    "STATISTICAL_ANOMALY",
+    "STUDENT_CORRECTION",
 )
 
 ConsentStatus = Literal["pending", "approved", "denied", "revoked", "expired"]

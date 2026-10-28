@@ -43,7 +43,7 @@ def test_counts_are_consistent_with_the_ground_truth_file(seeded) -> None:
     db, ground_truth = seeded
     assert db.scalar(select(func.count()).select_from(Institution)) == 8
     students = db.scalar(select(func.count()).select_from(Student))
-    # The injected scenarios have fixed sizes (a 30-student ghost cluster, 15 duplicate
+    # The injected scenarios have fixed sizes (15 duplicate
     # students, 40 late admissions, ...), so on a deliberately small run they dominate
     # the --students target. The default 40-institution seed lands near 15,000.
     assert students >= 600
@@ -159,43 +159,6 @@ def test_apaar_is_masked_in_the_main_table_and_raw_only_in_the_vault(seeded) -> 
     assert "*" in student.name_masked
 
 
-def test_ghost_clusters_share_a_handful_of_guardian_contacts(seeded) -> None:
-    db, ground_truth = seeded
-    cases = ground_truth["scenarios"].get("B_ghost_cluster", [])
-    if not cases:
-        pytest.skip("no ghost cluster injected in this small run")
-
-    for case in cases:
-        member_ids = case["details"]["student_ids"]
-        hashes = {db.get(Student, student_id).guardian_phone_hash for student_id in member_ids}
-        assert len(hashes) == case["details"]["guardian_contacts"]
-        assert len(member_ids) == case["details"]["students"]
-
-    bands = {case["details"]["band"] for case in cases}
-    assert "large" in bands
-    assert "medium" in bands, "a subtler 8-10 student cluster must be injected too"
-
-    large = [case for case in cases if case["details"]["band"] == "large"]
-    medium = [case for case in cases if case["details"]["band"] == "medium"]
-    assert all(25 <= case["details"]["students"] <= 35 for case in large)
-    assert all(8 <= case["details"]["students"] <= 10 for case in medium)
-    # The medium cluster's students-per-contact ratio is deliberately family-sized, so
-    # a ratio-only detector would miss it: size has to count too.
-    assert all(case["details"]["students_per_contact"] < 4 for case in medium)
-    # Clusters are at different institutions.
-    assert len({case["institution_id"] for case in cases}) == len(cases)
-
-
-def test_family_controls_are_smaller_than_the_cluster_threshold(seeded) -> None:
-    """4-6 students on one contact must stay below the ghost-cluster size threshold."""
-    _, ground_truth = seeded
-    controls = ground_truth["scenarios"].get("B_sibling_control", [])
-    assert controls
-    for case in controls:
-        assert case["flag_type"] == "NONE"
-        assert case["details"].get("students", 2) <= 6
-
-
 # ------------------------------------------------------------------ domain rules
 
 
@@ -241,14 +204,10 @@ def test_ground_truth_labels_every_scenario(seeded) -> None:
     scenarios = ground_truth["scenarios"]
     for name in (
         "A_excess_intake",
-        "B_ghost_cluster",
         "C_cross_institution_duplicate",
         "D_dual_degree",
         "E_apaar_problems",
         "F_late_admission",
-        "G_sequential_apaar",
-        "H_last_minute_bulk",
-        "I_phantom_progression",
         "J_identity_duplicate",
     ):
         assert scenarios.get(name), f"scenario {name} produced no labelled cases"
@@ -286,7 +245,7 @@ def test_eight_demo_students_cover_the_required_cases(seeded) -> None:
     _, ground_truth = seeded
     usernames = {entry["username"] for entry in ground_truth["demo_students"]}
     assert {
-        "student_ghost",
+        "student_mismatch",
         "student_duplicate",
         "student_dual",
         "student_minor",
@@ -446,21 +405,15 @@ def test_robust_scenarios_label_their_perturbation(tmp_path: Path) -> None:
         vary_contact_formats=True,
     )
     scenarios = ground_truth["scenarios"]
-    assert scenarios["B_ghost_cluster"]
     assert scenarios["J_identity_duplicate"]
 
-    for name in ("A_excess_intake", "B_ghost_cluster", "F_late_admission", "J_identity_duplicate"):
+    for name in ("A_excess_intake", "F_late_admission", "J_identity_duplicate"):
         for case in scenarios[name]:
             assert case["details"].get("perturbation"), f"{name} case missing a perturbation label"
 
     # The name variations are the point of scenario J here.
     variations = {case["details"]["variation"] for case in scenarios["J_identity_duplicate"]}
     assert {"letter", "reordered", "initial"} <= variations
-
-    # Cluster sizes span the required range, including a sub-threshold one.
-    sizes = {case["details"]["students"] for case in scenarios["B_ghost_cluster"]}
-    assert min(sizes) <= 6
-    assert max(sizes) >= 20
 
 
 def test_robust_run_has_an_on_time_control(tmp_path: Path) -> None:

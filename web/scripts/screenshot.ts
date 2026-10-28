@@ -79,7 +79,6 @@ const TARGETS: Target[] = [
         },
       },
       { label: "uploads", path: "/institution/uploads" },
-      { label: "certificate", path: "/institution/certificate" },
     ],
   },
   {
@@ -98,12 +97,7 @@ const TARGETS: Target[] = [
         },
       },
       { label: "institutions", path: "/aicte/institutions" },
-      { label: "risk", path: "/aicte/risk" },
-      { label: "non-reporting", path: "/aicte/non-reporting" },
       { label: "institution-detail", path: "" },
-      { label: "clusters", path: "/aicte/clusters" },
-      { label: "cluster-detail", path: "" },
-      { label: "shortlist", path: "/aicte/shortlist" },
       { label: "reports", path: "/aicte/reports" },
     ],
   },
@@ -119,7 +113,7 @@ const TARGETS: Target[] = [
   },
   {
     name: "student",
-    username: "student_ghost",
+    username: "student_mismatch",
     widths: WITH_PHONE,
     pages: [
       { label: "home", path: "/student" },
@@ -192,22 +186,14 @@ async function resolveDetailPages(target: Target, token: string) {
 
   const institutions = await apiGet<{ items: { id: number }[] }>(
     token,
-    "/aicte/institutions?page=1&page_size=1&sort=-risk_score",
-  );
-  const clusters = await apiGet<{ items: { cluster_id: number }[] }>(
-    token,
-    "/aicte/graph/clusters?page=1&page_size=1",
+    "/aicte/institutions?page=1&page_size=1&sort=-open_flags_total",
   );
 
   const institutionId = institutions?.items?.[0]?.id;
-  const clusterId = clusters?.items?.[0]?.cluster_id;
 
   for (const page of target.pages) {
     if (page.label === "institution-detail" && institutionId !== undefined) {
       page.path = `/aicte/institutions/${institutionId}`;
-    }
-    if (page.label === "cluster-detail" && clusterId !== undefined) {
-      page.path = `/aicte/clusters/${clusterId}`;
     }
   }
 }
@@ -220,7 +206,7 @@ async function settle(page: Page) {
       timeout: 8000,
     })
     .catch(() => {});
-  // Recharts and Cytoscape animate in; give them a beat to finish.
+  // Recharts animates in; give it a beat to finish.
   await page.waitForTimeout(600);
 }
 

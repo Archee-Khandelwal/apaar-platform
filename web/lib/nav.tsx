@@ -18,7 +18,6 @@ import {
   LayoutDashboard,
   LineChart,
   ListChecks,
-  Network,
   ScrollText,
   Settings2,
   ShieldCheck,
@@ -44,19 +43,16 @@ export const NAV: Record<Role, NavItem[]> = {
     { href: "/institution/students", label: "Students", icon: Users },
     { href: "/institution/seat-matrix", label: "Seat matrix", icon: Table2 },
     { href: "/institution/flags", label: "Flags", icon: Flag },
-    { href: "/institution/certificate", label: "Certificate", icon: BadgeCheck },
   ],
   aicte_officer: [
     { href: "/aicte", label: "Overview", icon: LayoutDashboard },
     { href: "/aicte/flags", label: "Flag queue", icon: Flag },
-    { href: "/aicte/institutions", label: "Institutions", icon: Building2, owns: ["/aicte/risk", "/aicte/non-reporting"] },
-    { href: "/aicte/clusters", label: "Ghost clusters", icon: Network },
-    { href: "/aicte/shortlist", label: "Inspection shortlist", icon: ListChecks },
+    { href: "/aicte/institutions", label: "Institutions", icon: Building2 },
     { href: "/aicte/reports", label: "Reports", icon: LineChart },
   ],
   aicte_viewer: [
     { href: "/aicte", label: "Overview", icon: LayoutDashboard },
-    { href: "/aicte/institutions", label: "Institutions", icon: Building2, owns: ["/aicte/risk", "/aicte/non-reporting"] },
+    { href: "/aicte/institutions", label: "Institutions", icon: Building2 },
     { href: "/aicte/reports", label: "Reports", icon: LineChart },
   ],
   student: [
@@ -111,7 +107,7 @@ export const ROLE_BLURBS: Record<Role, string> = {
   aicte_viewer: "Aggregates and masked rows, with small counts suppressed.",
   student: "See what was reported about you and control who may verify it.",
   verifier: "Ask a student to confirm an enrolment — with their consent.",
-  admin: "Reseed the demo, load scenarios, check the audit chain.",
+  admin: "Reseed the demo and check the audit chain.",
 };
 
 /** How well an item matches a path: the length of the matching prefix, or 0. */
@@ -124,8 +120,8 @@ function matchLength(item: NavItem, pathname: string): number {
 }
 
 /**
- * The one nav item a path belongs to. "/aicte" and "/aicte/clusters" both match
- * /aicte/clusters/1, so the longest match wins and only one item lights up.
+ * The one nav item a path belongs to. "/aicte" and "/aicte/institutions" both match
+ * /aicte/institutions/1, so the longest match wins and only one item lights up.
  */
 export function activeItem(role: Role, pathname: string): NavItem | undefined {
   let best: NavItem | undefined;
@@ -155,8 +151,5 @@ export function breadcrumb(role: Role, pathname: string): string[] {
 
 const DETAIL_CRUMBS: [string, string][] = [
   ["/aicte/institutions/", "Institution profile"],
-  ["/aicte/clusters/", "Cluster"],
-  ["/aicte/risk", "Risk leaderboard"],
-  ["/aicte/non-reporting", "Non-reporting"],
   ["/institution/uploads", "Upload history"],
 ];

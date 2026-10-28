@@ -39,7 +39,6 @@ class StateRow(BaseModel):
     students_reported: Suppressible
     open_flags: Suppressible
     excess_seats: Suppressible
-    avg_risk: float
 
 
 class OverviewOut(BaseModel):
@@ -59,9 +58,8 @@ class InstitutionRow(BaseModel):
     region: str
     type: str
     students_reported: Suppressible
-    risk_score: float
-    risk_band: str
     open_flags: OpenFlagCounts
+    open_flags_total: Suppressible
     excess_seats: Suppressible
     last_upload_at: datetime | None = None
 
@@ -93,7 +91,6 @@ class FlagOut(BaseModel):
     student_id: int | None = None
     enrolment_id: int | None = None
     program_id: int | None = None
-    cluster_id: int | None = None
     assigned_to: str | None = None
     notes: list[dict[str, Any]] | None = None
 
@@ -166,36 +163,6 @@ class RevealResponse(BaseModel):
     notice: str
 
 
-class NonReportingRow(BaseModel):
-    institution_id: int
-    name: str
-    state: str
-    last_upload_at: datetime | None = None
-    days_overdue: int
-    days_to_deadline: int | None = None
-    reporting_deadline: datetime | None = None
-    reminders_sent: Suppressible
-    last_reminder_at: datetime | None = None
-
-
-class NonReportingPage(BaseModel):
-    items: list[NonReportingRow]
-    page: int
-    page_size: int
-    total: int
-    total_pages: int
-    sort: str | None = None
-
-
-class ReminderResponse(BaseModel):
-    institution_id: int
-    channel: str
-    status: str
-    message: str
-    sent_at: datetime
-    audit_log_id: int | None = None
-
-
 class TrendSeries(BaseModel):
     key: str
     values: dict[str, Suppressible]
@@ -213,7 +180,6 @@ class TrendsOut(BaseModel):
 
 class InstitutionProfileOut(BaseModel):
     institution: dict[str, Any]
-    risk: dict[str, Any]
     reporting: dict[str, Any]
     seat_matrix_summary: dict[str, Any]
     flags: list[FlagOut]

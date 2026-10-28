@@ -1,4 +1,4 @@
-"""Labelled fraud / data-quality scenarios A-J (Step 5 of docs/PLAN.md).
+"""Labelled data-quality and fraud scenarios (Step 5 of docs/PLAN.md).
 
 Every injected case is recorded in ``ground_truth.json`` so ``make eval`` can measure
 precision and recall per detector. The clean "model" institution is never touched.
@@ -8,7 +8,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 from typing import TYPE_CHECKING, Any
 
-from app.core.crypto import hash_name, hash_phone, hmac_hash, mask_apaar, vault_encrypt
+from app.core.crypto import hmac_hash, mask_apaar, vault_encrypt
 from app.services.rules import supernumerary_caps, year_calendar
 from datagen.builder import GroundTruthCase
 
@@ -29,8 +29,8 @@ def _sample(gen: SyntheticDataGenerator, population: list[Any], k: int) -> list[
 
 
 def _excluded_institutions(gen: SyntheticDataGenerator) -> set[int]:
-    """Institutions no scenario may touch: the clean model one and the non-reporting ones."""
-    return {gen.clean_institution_id} | getattr(gen, "non_reporting_ids", set())
+    """Institutions no scenario may touch: the clean model one."""
+    return {gen.clean_institution_id}
 
 
 def _eligible_institutions(gen: SyntheticDataGenerator) -> list[dict[str, Any]]:
@@ -185,7 +185,17 @@ def scenario_a_excess_intake(gen: SyntheticDataGenerator) -> None:
     caps = supernumerary_caps(program["intake"])
     cap = caps.get("tfw", 0)
     over_by = 4
-    for _ in range(cap + over_by):
+    # The base cohort may already hold TFW entrants here; they count towards the cap.
+    existing = sum(
+        1
+        for row in gen.b.enrolments
+        if row["program_id"] == program["id"]
+        and row["academic_year"] == year
+        and row["admission_type"] == "tfw"
+        and row["year_of_study"] == 1
+        and row["status"] in ("admitted", "completed")
+    )
+    for _ in range(max(cap - existing, 0) + over_by):
         student_id = gen.b.add_student()
         gen.b.add_enrolment(
             student_id=student_id,
@@ -219,161 +229,6 @@ def scenario_a_excess_intake(gen: SyntheticDataGenerator) -> None:
 
 
 # --------------------------------------------------------------------------- B
-
-
-def scenario_b_ghost_clusters(gen: SyntheticDataGenerator) -> None:
-    """Two institutions with a cluster of 25-35 students sharing 2-3 guardian contacts."""
-    year = CURRENT_YEAR
-    calendar = year_calendar(year)
-    candidates = [
-        inst for inst in _eligible_institutions(gen) if _regular_programs(gen, inst["id"])
-    ]
-    # Two blatant clusters plus one deliberately subtler cluster, so evaluation shows
-    # the detector catches a medium case and not only the obvious ones.
-    cluster_specs: list[tuple[int, int, int, str]] = [
-        (25, 35, 2, "large"),
-        (25, 35, 3, "large"),
-        (8, 10, 3, "medium"),
-    ]
-    for institution, (size_min, size_max, contacts, band) in zip(
-        _sample(gen, candidates, len(cluster_specs)), cluster_specs
-    ):
-        program = _pick_program(gen, institution["id"], adding=size_max)
-        if program is None:
-            continue
-        upload = gen.upload_by[(institution["id"], year)]
-        size = gen.rng.randint(size_min, size_max)
-        guardian_phones = [gen.b.new_phone() for _ in range(contacts)]
-        # Fabricated rows are typically entered by one person, who also reuses a single
-        # contact email. That shared email is what links the guardian-phone groups into
-        # one component rather than two or three unconnected stars.
-        shared_email = f"admissions.cell{institution['id']}@example.invalid"
-        member_ids: list[int] = []
-        for index in range(size):
-            student_id = gen.b.add_student(
-                guardian_phone=guardian_phones[index % len(guardian_phones)],
-                email=shared_email,
-            )
-            gen.b.add_enrolment(
-                student_id=student_id,
-                program=program,
-                academic_year=year,
-                year_of_study=1,
-                admission_type="regular",
-                admitted_on=gen.b.random_date_in(
-                    calendar.admission_window_start, calendar.admission_window_end
-                ),
-                created_at=upload["created_at"],
-                upload_id=upload["id"],
-            )
-            member_ids.append(student_id)
-
-        gen.b.label(
-            GroundTruthCase(
-                scenario="B_ghost_cluster",
-                flag_type="GHOST_CLUSTER",
-                key_kind="institution_year",
-                key=f"{institution['id']}|{year}",
-                institution_id=institution["id"],
-                institution_name=institution["name"],
-                details={
-                    "band": band,
-                    "students": size,
-                    "guardian_contacts": len(guardian_phones),
-                    "shared_contacts": contacts + 1,  # guardian phones + the shared email
-                    "students_per_contact": round(size / (contacts + 1), 1),
-                    "student_ids": member_ids,
-                    "program": f"{program['course']} {program['branch']}",
-                },
-            )
-        )
-
-    # Larger-but-legitimate groups: an extended family, or students who gave a shared
-    # hostel / warden contact. 4-6 students on one contact sits between normal siblings
-    # and a ghost cluster, so the detector's threshold has to be a real decision rather
-    # than a trivially separable one. These must NOT be flagged either.
-    for institution in _sample(gen, candidates, 3):
-        program = _pick_program(gen, institution["id"], adding=6)
-        if program is None:
-            continue
-        upload = gen.upload_by[(institution["id"], year)]
-        shared = gen.b.new_phone()
-        size = gen.rng.randint(4, 6)
-        member_ids: list[int] = []
-        for _ in range(size):
-            student_id = gen.b.add_student(guardian_phone=shared)
-            member_ids.append(student_id)
-            gen.b.add_enrolment(
-                student_id=student_id,
-                program=program,
-                academic_year=year,
-                year_of_study=1,
-                admission_type="regular",
-                admitted_on=gen.b.random_date_in(
-                    calendar.admission_window_start, calendar.admission_window_end
-                ),
-                created_at=upload["created_at"],
-                upload_id=upload["id"],
-            )
-        gen.b.label(
-            GroundTruthCase(
-                scenario="B_sibling_control",
-                flag_type="NONE",
-                key_kind="institution_year",
-                key=f"{institution['id']}|{year}",
-                institution_id=institution["id"],
-                institution_name=institution["name"],
-                details={
-                    "students": size,
-                    "guardian_contacts": 1,
-                    "student_ids": member_ids,
-                    "note": (
-                        f"{size} students sharing one guardian/warden contact — "
-                        "legitimate, must not be flagged"
-                    ),
-                },
-            )
-        )
-
-    # Normal sibling pairs — these must NOT be flagged (false-positive control).
-    for institution in _sample(gen, candidates, 6):
-        program = _pick_program(gen, institution["id"], adding=3)
-        if program is None:
-            continue
-        upload = gen.upload_by[(institution["id"], year)]
-        shared = gen.b.new_phone()
-        sibling_ids: list[int] = []
-        for _ in range(gen.rng.randint(2, 3)):
-            student_id = gen.b.add_student(guardian_phone=shared)
-            sibling_ids.append(student_id)
-            gen.b.add_enrolment(
-                student_id=student_id,
-                program=program,
-                academic_year=year,
-                year_of_study=1,
-                admission_type="regular",
-                admitted_on=gen.b.random_date_in(
-                    calendar.admission_window_start, calendar.admission_window_end
-                ),
-                created_at=upload["created_at"],
-                upload_id=upload["id"],
-            )
-        gen.b.label(
-            GroundTruthCase(
-                scenario="B_sibling_control",
-                flag_type="NONE",
-                key_kind="institution_year",
-                key=f"{institution['id']}|{year}",
-                institution_id=institution["id"],
-                institution_name=institution["name"],
-                details={
-                    "students": len(sibling_ids),
-                    "guardian_contacts": 1,
-                    "student_ids": sibling_ids,
-                    "note": "2-3 siblings sharing one guardian contact — must not be flagged",
-                },
-            )
-        )
 
 
 # --------------------------------------------------------------------------- C and D
@@ -606,195 +461,7 @@ def scenario_f_late_admissions(gen: SyntheticDataGenerator) -> None:
             )
 
 
-def scenario_g_sequential_apaar(gen: SyntheticDataGenerator) -> None:
-    """One institution with a run of 20 near-consecutive APAAR IDs."""
-    year = CURRENT_YEAR
-    calendar = year_calendar(year)
-    candidates = [
-        inst for inst in _eligible_institutions(gen) if _regular_programs(gen, inst["id"])
-    ]
-    if not candidates:
-        return
-    institution = gen.rng.choice(candidates)
-    program = _pick_program(gen, institution["id"], adding=20)
-    if program is None:
-        return
-    upload = gen.upload_by[(institution["id"], year)]
-    run = gen.b.sequential_apaars(20)
-    student_ids: list[int] = []
-    for apaar in run:
-        student_id = gen.b.add_student(apaar=apaar)
-        gen.b.add_enrolment(
-            student_id=student_id,
-            program=program,
-            academic_year=year,
-            year_of_study=1,
-            admission_type="regular",
-            admitted_on=gen.b.random_date_in(
-                calendar.admission_window_start, calendar.admission_window_end
-            ),
-            created_at=upload["created_at"],
-            upload_id=upload["id"],
-        )
-        student_ids.append(student_id)
-
-    gen.b.label(
-        GroundTruthCase(
-            scenario="G_sequential_apaar",
-            flag_type="SEQUENTIAL_APAAR",
-            key_kind="institution_year",
-            key=f"{institution['id']}|{year}",
-            institution_id=institution["id"],
-            institution_name=institution["name"],
-            details={
-                "run_length": len(run),
-                "first_masked": mask_apaar(run[0]),
-                "last_masked": mask_apaar(run[-1]),
-                "student_ids": student_ids,
-            },
-        )
-    )
-
-
-def scenario_h_last_minute_bulk(gen: SyntheticDataGenerator) -> None:
-    """One institution reports 60% of its records in the final 6 hours before the deadline."""
-    year = CURRENT_YEAR
-    calendar = year_calendar(year)
-    candidates = [
-        inst for inst in _eligible_institutions(gen) if _regular_programs(gen, inst["id"])
-    ]
-    if not candidates:
-        return
-    institution = gen.rng.choice(candidates)
-    rows = [
-        row
-        for row in gen.b.enrolments
-        if row["institution_id"] == institution["id"] and row["academic_year"] == year
-    ]
-    if not rows:
-        return
-
-    late_upload = gen.b.add_upload(
-        institution_id=institution["id"],
-        filename=f"students_{year.replace('-', '_')}_final.xlsx",
-        academic_year=year,
-        created_at=calendar.reporting_deadline - timedelta(hours=3),
-        rows_total=0,
-        rows_ok=0,
-        rows_error=0,
-        quality_score=gen.rng.randint(55, 70),
-    )
-
-    bulk = gen.rng.sample(rows, int(len(rows) * 0.6))
-    for row in bulk:
-        row["created_at"] = calendar.reporting_deadline - timedelta(
-            hours=gen.rng.uniform(0.2, 5.8)
-        )
-        row["upload_id"] = late_upload["id"]
-
-    gen.b.label(
-        GroundTruthCase(
-            scenario="H_last_minute_bulk",
-            flag_type="LAST_MINUTE_BULK",
-            key_kind="institution_year",
-            key=f"{institution['id']}|{year}",
-            institution_id=institution["id"],
-            institution_name=institution["name"],
-            details={
-                "share_percent": 60,
-                "window_hours": 6,
-                "records_in_window": len(bulk),
-                "total_records": len(rows),
-            },
-        )
-    )
-
-
 # --------------------------------------------------------------------------- I
-
-
-def scenario_i_phantom_progression(gen: SyntheticDataGenerator) -> None:
-    """Year-2 regular students with no year-1 record, and students who vanish silently."""
-    year = CURRENT_YEAR
-    previous_year = gen.years[0]
-    candidates = [
-        inst for inst in _eligible_institutions(gen) if _regular_programs(gen, inst["id"])
-    ]
-
-    if not candidates:
-        return
-
-    # (a) Year-2 regular students who were never in year 1 and are not lateral entrants.
-    institution = gen.rng.choice(candidates)
-    program = _pick_program(gen, institution["id"])
-    if program is None:
-        return
-    upload = gen.upload_by[(institution["id"], year)]
-    for _ in range(12):
-        student_id = gen.b.add_student()
-        gen.b.add_enrolment(
-            student_id=student_id,
-            program=program,
-            academic_year=year,
-            year_of_study=2,
-            admission_type="regular",
-            admitted_on=None,
-            created_at=upload["created_at"],
-            upload_id=upload["id"],
-        )
-        gen.b.label(
-            GroundTruthCase(
-                scenario="I_phantom_progression",
-                flag_type="PHANTOM_PROGRESSION",
-                key_kind="student",
-                key=str(student_id),
-                institution_id=institution["id"],
-                institution_name=institution["name"],
-                details={
-                    "kind": "year2_without_year1",
-                    "program": f"{program['course']} {program['branch']}",
-                },
-            )
-        )
-
-    # (b) Students present in year 1 who disappear in year 2 with no exit status.
-    others = [inst for inst in candidates if inst["id"] != institution["id"]]
-    if not others:
-        return
-    other = gen.rng.choice(others)
-    other_program = _pick_program(gen, other["id"])
-    if other_program is None:
-        return
-    cohort = gen.cohorts.get((other_program["id"], previous_year), [])
-    vanishing = set(gen.rng.sample(cohort, min(15, len(cohort))))
-    if vanishing:
-        before = len(gen.b.enrolments)
-        gen.b.enrolments = [
-            row
-            for row in gen.b.enrolments
-            if not (
-                row["student_id"] in vanishing
-                and row["academic_year"] == year
-                and row["program_id"] == other_program["id"]
-            )
-        ]
-        removed = before - len(gen.b.enrolments)
-        for student_id in vanishing:
-            gen.b.label(
-                GroundTruthCase(
-                    scenario="I_phantom_progression",
-                    flag_type="PHANTOM_PROGRESSION",
-                    key_kind="student",
-                    key=str(student_id),
-                    institution_id=other["id"],
-                    institution_name=other["name"],
-                    details={
-                        "kind": "vanished_without_status",
-                        "previous_year": previous_year,
-                        "removed_rows": removed,
-                    },
-                )
-            )
 
 
 # --------------------------------------------------------------------------- J
@@ -863,93 +530,15 @@ def scenario_j_identity_duplicates(gen: SyntheticDataGenerator) -> None:
 # --------------------------------------------------------------------------- K
 
 
-def scenario_k_supernumerary_misuse(gen: SyntheticDataGenerator) -> None:
-    """One institution labels an unusual share of admissions as TFW / other supernumerary.
-
-    Every bucket stays INSIDE its cap, so this is not an intake breach — it is the
-    pattern you would expect if regular admissions were being relabelled to keep them
-    outside approved intake. The detector must raise it as a review signal, not as
-    EXCESS_INTAKE.
-    """
-    year = CURRENT_YEAR
-    calendar = year_calendar(year)
-    candidates = [
-        inst
-        for inst in _eligible_institutions(gen)
-        if len(_regular_programs(gen, inst["id"])) >= 2
-    ]
-    if not candidates:
-        return
-    institution = gen.rng.choice(candidates)
-    upload = gen.upload_by[(institution["id"], year)]
-
-    added: dict[str, int] = {"tfw": 0, "other_supernumerary": 0}
-    for program in _regular_programs(gen, institution["id"]):
-        _reserved(gen).add(program["id"])
-        caps = supernumerary_caps(program["intake"])
-        for admission_type in ("tfw", "other_supernumerary"):
-            cap = caps.get(admission_type, 0)
-            if cap <= 0:
-                continue
-            # Top up TO almost the whole cap, counting what is already reported:
-            # legal, but far above what peers report. Adding on top of existing
-            # admissions would breach the cap and turn this into a real EXCESS_INTAKE.
-            existing = _count_admission_type(gen, program["id"], year, admission_type)
-            count = max(int(cap * 0.95) - existing, 0)
-            for _ in range(count):
-                student_id = gen.b.add_student()
-                gen.b.add_enrolment(
-                    student_id=student_id,
-                    program=program,
-                    academic_year=year,
-                    year_of_study=1,
-                    admission_type=admission_type,
-                    admitted_on=gen.b.random_date_in(
-                        calendar.admission_window_start, calendar.admission_window_end
-                    ),
-                    created_at=upload["created_at"],
-                    upload_id=upload["id"],
-                )
-                added[admission_type] += 1
-
-    if not sum(added.values()):
-        return
-
-    gen.b.label(
-        GroundTruthCase(
-            scenario="K_supernumerary_misuse",
-            flag_type="STATISTICAL_ANOMALY",
-            key_kind="institution_year",
-            key=f"{institution['id']}|{year}",
-            institution_id=institution["id"],
-            institution_name=institution["name"],
-            details={
-                "signal": "supernumerary_share",
-                "added": added,
-                "within_caps": True,
-                "note": (
-                    "Every bucket is inside its cap, so this must NOT be flagged as "
-                    "EXCESS_INTAKE - only as a review signal."
-                ),
-            },
-        )
-    )
-
-
 # --------------------------------------------------------------------------- entry point
 
 SCENARIOS = {
     "A_excess_intake": scenario_a_excess_intake,
-    "B_ghost_cluster": scenario_b_ghost_clusters,
     "C_cross_institution_duplicate": scenario_c_cross_institution_duplicates,
     "D_dual_degree": scenario_d_dual_degree,
     "E_apaar_problems": scenario_e_apaar_problems,
     "F_late_admission": scenario_f_late_admissions,
-    "G_sequential_apaar": scenario_g_sequential_apaar,
-    "H_last_minute_bulk": scenario_h_last_minute_bulk,
-    "I_phantom_progression": scenario_i_phantom_progression,
     "J_identity_duplicate": scenario_j_identity_duplicates,
-    "K_supernumerary_misuse": scenario_k_supernumerary_misuse,
 }
 
 

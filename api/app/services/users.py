@@ -47,7 +47,7 @@ BASE_ACCOUNTS: tuple[DemoAccount, ...] = (
         username="admin",
         role="admin",
         display_name="Demo Operator",
-        label="Demo operator (reseed, scenarios, audit chain)",
+        label="Demo operator (reseed, audit chain)",
     ),
     DemoAccount(
         username="verifier_demo",
