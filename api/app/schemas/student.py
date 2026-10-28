@@ -232,3 +232,17 @@ class TokenCheckOut(BaseModel):
     academic_year: str | None = None
     institution_name: str | None = None
     checked_at: datetime
+
+
+class DocumentCheckOut(BaseModel):
+    """Public check of a signed document. Only ``state`` is set unless it is genuine or revoked."""
+
+    state: str
+    kind: str | None = None
+    serial: str | None = None
+    issued_at: datetime | None = None
+    revoked_at: datetime | None = None
+    claims: dict[str, Any] | None = None
+    signature_alg: str | None = None
+    key_id: str | None = None
+    checked_at: datetime

@@ -17,6 +17,7 @@ PUBLIC_PATHS = {
     "/auth/login",
     "/auth/demo-users",
     "/verify/token/{token}",
+    "/verify/document/{token}",
     "/openapi.json",
     "/docs",
     "/docs/oauth2-redirect",

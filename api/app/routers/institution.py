@@ -9,7 +9,7 @@ from collections import Counter
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
-from fastapi.responses import HTMLResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse, Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -23,6 +23,7 @@ from app.models.core import (
     EnrolmentHistory,
     Flag,
     Institution,
+    IssuedDocument,
     Program,
     Student,
     Upload,
@@ -31,6 +32,9 @@ from app.models.enums import ACTIVE_ENROLMENT_STATUSES, ENROLMENT_STATUSES, OPEN
 from app.schemas.common import PageParams, page_params, paginate
 from app.schemas.institution import (
     ConfirmMappingRequest,
+    DegreeCertificateIssue,
+    DegreeCertificateList,
+    DegreeCertificateOut,
     EnrolmentStatusResponse,
     EnrolmentStatusUpdate,
     InstitutionDashboard,
@@ -40,6 +44,7 @@ from app.schemas.institution import (
     InstitutionProfile,
     ProgramOut,
     QualityReport,
+    RevokeRequest,
     SeatMatrixOut,
     StudentPage,
     UploadCreateResponse,
@@ -52,8 +57,10 @@ from app.services.cases import (
     order_flags,
     update_flag,
 )
+from app.services import degree_certificate
 from app.services.certificate import eligibility, render_certificate
 from app.services.detectors import run_all_detectors
+from app.services.documents import DocumentError, revoke_document, token_for, verify_url
 from app.services.flags import sanitise_for_institution
 from app.services.intake import institution_seat_matrix
 from app.services.upload import UploadError
@@ -543,6 +550,117 @@ def compliance_certificate(
     )
     db.commit()
     return HTMLResponse(content=html)
+
+
+# --------------------------------------------------------------------------- degree certificates
+
+
+def _own_certificate(db: Session, serial: str, institution_id: int) -> IssuedDocument:
+    document = db.execute(
+        select(IssuedDocument).where(
+            IssuedDocument.serial == serial, IssuedDocument.kind == degree_certificate.KIND
+        )
+    ).scalar_one_or_none()
+    if document is None or document.institution_id != institution_id:
+        raise_not_found("No such certificate for this institution.")
+    return document
+
+
+def _certificate_out(document: IssuedDocument, token: str, created: bool) -> DegreeCertificateOut:
+    base = f"/institution/degree-certificates/{document.serial}"
+    return DegreeCertificateOut(
+        serial=document.serial,
+        status=document.status,
+        created=created,
+        issued_at=document.created_at,
+        verify_url=verify_url(token),
+        pdf_url=f"{base}?format=pdf",
+        html_url=f"{base}?format=html",
+    )
+
+
+@router.get("/degree-certificates", response_model=DegreeCertificateList)
+def list_degree_certificates(
+    academic_year: Annotated[str | None, Query()] = None,
+    institution_id: int = Depends(require_institution_scope),
+    db: Session = Depends(get_db),
+) -> DegreeCertificateList:
+    """Completed enrolments, each with the certificate issued for it, if any."""
+    return DegreeCertificateList(
+        items=degree_certificate.completed_enrolments(
+            db, institution_id=institution_id, academic_year=academic_year
+        ),
+        identity_display=settings.certificate_identity_display,
+    )
+
+
+@router.post(
+    "/degree-certificates", response_model=DegreeCertificateOut, status_code=status.HTTP_201_CREATED
+)
+def issue_degree_certificate(
+    payload: DegreeCertificateIssue,
+    user: CurrentUser = Depends(require_role("institution")),
+    institution_id: int = Depends(require_institution_scope),
+    db: Session = Depends(get_db),
+) -> DegreeCertificateOut:
+    """Issue a signed degree certificate for one of this institution's completed enrolments.
+
+    Idempotent: a second call for the same enrolment returns the certificate already issued.
+    """
+    try:
+        document, token, created = degree_certificate.issue_for_enrolment(
+            db, institution_id=institution_id, enrolment_id=payload.enrolment_id, actor=user.username
+        )
+    except LookupError:
+        raise_not_found("No such enrolment for this institution.")
+    except DocumentError as exc:
+        raise api_error(status.HTTP_409_CONFLICT, "NOT_COMPLETED", str(exc))
+    db.commit()
+    return _certificate_out(document, token, created)
+
+
+@router.get("/degree-certificates/{serial}")
+def degree_certificate_file(
+    serial: str,
+    format: Annotated[str, Query(pattern="^(pdf|html)$")] = "pdf",
+    user: CurrentUser = Depends(require_role("institution")),
+    institution_id: int = Depends(require_institution_scope),
+    db: Session = Depends(get_db),
+):
+    """The printable certificate, as PDF (default) or HTML."""
+    document = _own_certificate(db, serial, institution_id)
+    if document.status != "valid":
+        raise api_error(status.HTTP_409_CONFLICT, "REVOKED", "This certificate has been revoked.")
+    token = token_for(document)
+    identity = degree_certificate.printed_identity(db, document=document, actor=user.username)
+    db.commit()
+    if format == "html":
+        return HTMLResponse(content=degree_certificate.render_html(document, token, identity))
+    return Response(
+        content=degree_certificate.render_pdf(document, token, identity),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{document.serial}.pdf"'},
+    )
+
+
+@router.post("/degree-certificates/{serial}/revoke", response_model=DegreeCertificateOut)
+def revoke_degree_certificate(
+    serial: str,
+    payload: RevokeRequest,
+    user: CurrentUser = Depends(require_role("institution")),
+    institution_id: int = Depends(require_institution_scope),
+    db: Session = Depends(get_db),
+) -> DegreeCertificateOut:
+    """Withdraw a certificate. The public check reports it as revoked from then on."""
+    document = _own_certificate(db, serial, institution_id)
+    if document.status == "revoked":
+        raise api_error(status.HTTP_409_CONFLICT, "CONFLICT", "This certificate is already revoked.")
+    try:
+        revoke_document(db, document=document, actor=user.username, role="institution", reason=payload.reason)
+    except DocumentError as exc:
+        raise api_error(status.HTTP_400_BAD_REQUEST, "REASON_REQUIRED", str(exc))
+    db.commit()
+    return _certificate_out(document, token_for(document), False)
 
 
 # --------------------------------------------------------------------------- dashboard

@@ -372,6 +372,28 @@ class VerificationRequest(Base, TimestampMixin):
     expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
+class IssuedDocument(Base, TimestampMixin):
+    """A signed, verifiable document: a degree certificate or a student record.
+
+    ``claims`` is exactly what the QR carries and the page prints. It never holds a raw
+    APAAR ID, a hash or a contact detail, because anyone holding the paper can read it.
+    """
+
+    __tablename__ = "issued_documents"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    serial: Mapped[str] = mapped_column(String(32), unique=True, index=True)
+    kind: Mapped[str] = mapped_column(String(32), index=True)  # degree_certificate | student_record
+    student_id: Mapped[int] = mapped_column(ForeignKey("students.id"), index=True)
+    institution_id: Mapped[int | None] = mapped_column(ForeignKey("institutions.id"), nullable=True, index=True)
+    enrolment_id: Mapped[int | None] = mapped_column(ForeignKey("enrolments.id"), nullable=True, index=True)
+    claims: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    status: Mapped[str] = mapped_column(String(16), default="valid", index=True)  # valid | revoked
+    issued_by: Mapped[str] = mapped_column(String(64))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    revoke_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
 class CorrectionRequest(Base, TimestampMixin):
     """A student's correction request, routed to the institution's flag inbox."""
 

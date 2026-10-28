@@ -335,3 +335,45 @@ class InstitutionDashboard(BaseModel):
     compliance_certificate_eligible: bool
     compliance_certificate_reasons: list[str] = Field(default_factory=list)
     last_upload_at: datetime | None = None
+
+
+# --------------------------------------------------------------------------- degree certificates
+
+
+class CertificateRef(BaseModel):
+    serial: str
+    status: str
+    issued_at: datetime
+
+
+class DegreeCertificateRow(BaseModel):
+    enrolment_id: int
+    student_number: str
+    apaar_masked: str
+    name_masked: str
+    program: str
+    academic_year: str
+    certificate: CertificateRef | None = None
+
+
+class DegreeCertificateList(BaseModel):
+    items: list[DegreeCertificateRow]
+    identity_display: str = Field(description="masked | full, from CERTIFICATE_IDENTITY_DISPLAY")
+
+
+class DegreeCertificateIssue(BaseModel):
+    enrolment_id: int
+
+
+class DegreeCertificateOut(BaseModel):
+    serial: str
+    status: str
+    created: bool
+    issued_at: datetime
+    verify_url: str
+    pdf_url: str
+    html_url: str
+
+
+class RevokeRequest(BaseModel):
+    reason: str = Field(min_length=1, max_length=500)

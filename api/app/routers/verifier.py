@@ -21,6 +21,7 @@ from app.models.core import User, VerificationRequest
 from app.models.enums import VERIFIER_PURPOSES
 from app.schemas.common import PageParams, page_params, paginate
 from app.schemas.student import (
+    DocumentCheckOut,
     PurposeOut,
     PurposesResponse,
     TokenCheckOut,
@@ -30,6 +31,7 @@ from app.schemas.student import (
     VerificationStatusOut,
 )
 from app.services.consent import create_verification_request, expire_stale
+from app.services.documents import check_document
 from app.services.tokens import verify_token
 
 router = APIRouter(tags=["verifier"])
@@ -164,3 +166,23 @@ def check_token(token: str, db: Session = Depends(get_db)) -> TokenCheckOut:
     )
     db.commit()
     return TokenCheckOut(**result)
+
+
+@router.get("/verify/document/{token}", response_model=DocumentCheckOut)
+def check_signed_document(token: str, db: Session = Depends(get_db)) -> DocumentCheckOut:
+    """Public check of a degree certificate or student record QR.
+
+    Returns genuine | revoked | invalid. The claims returned are the masked ones already
+    printed on the document, so the check reveals nothing the holder could not read.
+    """
+    result = check_document(db, token)
+    log_audit(
+        db,
+        actor="public",
+        role="verifier",
+        action="document_checked",
+        target=f"document:{result.get('serial') or 'unknown'}",
+        payload={"state": result["state"], "kind": result.get("kind")},
+    )
+    db.commit()
+    return DocumentCheckOut(**result)
