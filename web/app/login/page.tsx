@@ -67,7 +67,7 @@ export default function LoginPage() {
               }}
             >
               <div className="space-y-1.5">
-                <Label htmlFor="username">Username or email</Label>
+                <Label htmlFor="username">Username</Label>
                 <Input
                   id="username"
                   autoComplete="username"

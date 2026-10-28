@@ -109,7 +109,7 @@ export const NAV: Record<Role, NavItem[]> = {
     { href: "/student/records", label: "My records", icon: GraduationCap },
     { href: "/student/consents", label: "Consent requests", icon: ShieldCheck },
     { href: "/student/access-log", label: "Who accessed my data", icon: FileSearch },
-    { href: "/student/id-card", label: "Certificate", icon: IdCard },
+    { href: "/student/id-card", label: "Certificates & ID", icon: IdCard },
   ],
   // Admin has no portal: reset and reseed are CLI commands (scripts/tasks.py).
   admin: [],
@@ -120,7 +120,7 @@ export const SHORT_LABELS: Record<string, string> = {
   "/student/records": "Records",
   "/student/access-log": "Access",
   "/student/consents": "Consents",
-  "/student/id-card": "Certificate",
+  "/student/id-card": "Certificates",
 };
 
 /** The portal each role sees, used as the first breadcrumb. */

@@ -273,3 +273,20 @@ def test_a_signed_token_whose_claims_were_not_issued_is_invalid(
     claims["prog"] = "M.Tech — Something Else"
     resigned = documents.sign_claims(claims)
     assert client.get(f"/verify/document/{resigned}").json()["state"] == "invalid"
+
+
+def test_student_sees_only_their_own_certificate(client: TestClient, auth, completed) -> None:
+    assert client.get("/student/degree-certificates", headers=auth("student")).json() == {"items": []}
+    issued = client.post(
+        "/institution/degree-certificates",
+        json={"enrolment_id": completed["enrolment"].id},
+        headers=auth("institution"),
+    ).json()
+
+    items = client.get("/student/degree-certificates", headers=auth("student")).json()["items"]
+    assert [item["serial"] for item in items] == [issued["serial"]]
+    assert items[0]["qr"].startswith("data:image/png;base64,")
+    assert "/verify?doc=" in items[0]["verify_url"]
+
+    pdf = client.get(f"/student/degree-certificates/{issued['serial']}", headers=auth("student"))
+    assert pdf.status_code == 200 and pdf.content.startswith(b"%PDF")

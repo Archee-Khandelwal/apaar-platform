@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Clock, Copy, RefreshCw } from "lucide-react";
+import { Clock, Copy, FileDown, RefreshCw } from "lucide-react";
 
 import { PageHeader, SectionCard, TechnicalDetails } from "@/components/ui/page";
 import { MaskedApaar } from "@/components/Masked";
@@ -10,6 +10,46 @@ import { Badge, Button, Card } from "@/components/ui/primitives";
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
 import { dateTime } from "@/lib/format";
+
+function DegreeCertificateSection() {
+  const query = useQuery({ queryKey: ["my-certificates"], queryFn: api.myCertificates });
+  const items = query.data?.items ?? [];
+  return (
+    <SectionCard title="Degree certificate">
+      {query.isLoading ? (
+        <Skeleton rows={1} height="h-24" />
+      ) : items.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Degree certificate not issued yet.</p>
+      ) : (
+        <ul className="divide-y divide-border">
+          {items.map((item) => (
+            <li key={item.serial} className="flex flex-wrap items-center gap-4 py-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={item.qr} alt="QR code that verifies this certificate" className="h-28 w-28 rounded bg-white p-1" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold">{item.program}</p>
+                <p className="text-xs text-muted-foreground">
+                  {item.institution} · {item.academic_year}
+                </p>
+                <p className="mt-1 font-mono text-xs">{item.serial}</p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <Badge tone={item.status === "valid" ? "success" : "danger"}>
+                    {item.status === "valid" ? "Valid" : "Revoked"} · issued {dateTime(item.issued_at)}
+                  </Badge>
+                  {item.status === "valid" && (
+                    <Button variant="outline" size="sm" onClick={() => api.openMyCertificate(item.serial)}>
+                      <FileDown className="h-4 w-4" /> View / download PDF
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </SectionCard>
+  );
+}
 
 export default function IdCardPage() {
   const { toast } = useToast();
@@ -22,8 +62,8 @@ export default function IdCardPage() {
   return (
     <>
       <PageHeader
-        title="Certificate"
-        description="Show this QR to an employer or institution. It proves your enrolment without revealing anything else."
+        title="Certificates & ID"
+        description="Your degree certificate, if one has been issued, and your ID card. Show the ID QR to an employer or institution. It proves your enrolment without revealing anything else."
         actions={
           <Button variant="outline" onClick={() => query.refetch()} disabled={query.isFetching}>
             <RefreshCw className="h-4 w-4" />
@@ -31,6 +71,8 @@ export default function IdCardPage() {
           </Button>
         }
       />
+
+      <DegreeCertificateSection />
 
       {query.isLoading || !card ? (
         <Skeleton rows={4} height="h-32" />

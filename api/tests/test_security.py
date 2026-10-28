@@ -89,6 +89,8 @@ ROUTE_ROLES: dict[tuple[str, str], object] = {
     ("POST", "/aicte/master/import"): {"aicte_officer", "admin"},
     ("GET", "/aicte/master/template/{kind}"): {"aicte_officer", "admin"},
     ("GET", "/institution/reconciliation"): {"institution"},
+    ("GET", "/student/degree-certificates"): {"student"},
+    ("GET", "/student/degree-certificates/{serial}"): {"student"},
     ("GET", "/student/me"): {"student"},
     ("POST", "/student/corrections"): {"student"},
     ("GET", "/student/corrections"): {"student"},

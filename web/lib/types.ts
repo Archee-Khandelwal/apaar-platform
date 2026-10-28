@@ -775,3 +775,14 @@ export interface DocumentCheck {
   claims?: Record<string, unknown> | null;
   checked_at: string;
 }
+
+export interface StudentCertificate {
+  serial: string;
+  status: string;
+  issued_at: string;
+  institution: string | null;
+  program: string | null;
+  academic_year: string | null;
+  verify_url: string;
+  qr: string;
+}

@@ -471,3 +471,71 @@ def id_card(
         qr_png_base64=qr_base64,
         verify_url=verify_url,
     )
+
+
+# --------------------------------------------------------------------------- degree certificates
+
+
+@router.get("/degree-certificates")
+def my_degree_certificates(
+    user: CurrentUser = Depends(require_role("student")),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """The student's own issued degree certificates, with the QR that verifies each."""
+    from app.models.core import IssuedDocument
+    from app.services import degree_certificate
+    from app.services.documents import token_for, verify_url
+
+    student_id = _require_student(user)
+    documents = db.execute(
+        select(IssuedDocument)
+        .where(IssuedDocument.student_id == student_id, IssuedDocument.kind == degree_certificate.KIND)
+        .order_by(IssuedDocument.created_at.desc())
+    ).scalars()
+    items = []
+    for document in documents:
+        url = verify_url(token_for(document))
+        items.append(
+            {
+                "serial": document.serial,
+                "status": document.status,
+                "issued_at": document.created_at,
+                "institution": document.claims.get("inst"),
+                "program": document.claims.get("prog"),
+                "academic_year": document.claims.get("yr"),
+                "verify_url": url,
+                "qr": degree_certificate._qr_data_uri(url),
+            }
+        )
+    return {"items": items}
+
+
+@router.get("/degree-certificates/{serial}")
+def my_degree_certificate_file(
+    serial: str,
+    user: CurrentUser = Depends(require_role("student")),
+    db: Session = Depends(get_db),
+):
+    """The printable PDF of one of the student's own certificates (masked identity only)."""
+    from fastapi import Response
+
+    from app.models.core import IssuedDocument
+    from app.services import degree_certificate
+    from app.services.documents import token_for
+
+    student_id = _require_student(user)
+    document = db.execute(
+        select(IssuedDocument).where(
+            IssuedDocument.serial == serial, IssuedDocument.kind == degree_certificate.KIND
+        )
+    ).scalar_one_or_none()
+    if document is None or document.student_id != student_id:
+        raise_not_found("No such certificate.")
+    if document.status != "valid":
+        raise api_error(status.HTTP_409_CONFLICT, "REVOKED", "This certificate has been revoked.")
+    identity = {"apaar": document.claims["apaar"], "name": document.claims["name"]}
+    return Response(
+        content=degree_certificate.render_pdf(document, token_for(document), identity),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{document.serial}.pdf"'},
+    )

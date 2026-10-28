@@ -47,6 +47,7 @@ import type {
   DegreeCertificateList,
   DegreeCertificateOut,
   DocumentCheck,
+  StudentCertificate,
   Trends,
   UploadCreated,
   TamperResult,
@@ -322,6 +323,8 @@ export const api = {
     request<{ status: string; tokens_invalidated: number }>(`/student/consents/${id}/revoke`, {
       method: "POST",
     }),
+  myCertificates: () => request<{ items: StudentCertificate[] }>("/student/degree-certificates"),
+  openMyCertificate: (serial: string) => openFile(`/student/degree-certificates/${encodeURIComponent(serial)}`),
   idCard: () => request<IdCard>("/student/id-card"),
   myDocuments: () =>
     request<{
