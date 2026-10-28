@@ -263,12 +263,8 @@ class PdfDocument:
             rows.append("".join(f"{int(bits[i:i + 8], 2):02x}" for i in range(0, len(bits), 8)))
         self.page.ops.append(
             (
-                f"q {_num(size)} 0 0 {_num(size)} {_num(x)} {_num(self._y(y + size))} cm
-"
-                f"BI /W {side} /H {side} /BPC 1 /CS /G /F /AHx ID
-{''.join(rows)}>
-EI
-Q"
+                f"q {_num(size)} 0 0 {_num(size)} {_num(x)} {_num(self._y(y + size))} cm\n"
+                f"BI /W {side} /H {side} /BPC 1 /CS /G /F /AHx ID\n{''.join(rows)}>\nEI\nQ"
             ).encode("ascii")
         )
 
