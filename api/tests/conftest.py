@@ -20,6 +20,11 @@ os.environ["DATABASE_URL"] = f"sqlite:///{_TMP / 'apaar_test.db'}"
 os.environ["REGISTRY_DATABASE_URL"] = f"sqlite:///{_TMP / 'registry_test.db'}"
 os.environ["DEMO_MODE"] = "true"
 os.environ["CURRENT_ACADEMIC_YEAR"] = "2026-27"
+# Never reach a developer's running registry or issuer service: port 9 refuses at once,
+# so every external check takes its "unavailable" path unless a test injects a transport.
+os.environ["REGISTRY_URL"] = "http://127.0.0.1:9"
+os.environ["ISSUER_URL"] = "http://127.0.0.1:9"
+os.environ["ISSUER_DATABASE_URL"] = f"sqlite:///{_TMP / 'issuer_test.db'}"
 os.environ["BCRYPT_ROUNDS"] = "4"  # bcrypt at 12 rounds makes the suite needlessly slow
 
 import pytest  # noqa: E402

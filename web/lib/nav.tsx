@@ -50,6 +50,7 @@ export const NAV: Record<Role, NavItem[]> = {
   aicte_officer: [
     { href: "/aicte", label: "Overview", icon: LayoutDashboard },
     { href: "/aicte/flags", label: "Flag queue", icon: Flag },
+    { href: "/aicte/documents", label: "Document review", icon: FileCheck2 },
     { href: "/aicte/institutions", label: "Institutions", icon: Building2 },
     { href: "/aicte/reports", label: "Reports", icon: LineChart },
   ],
@@ -157,4 +158,5 @@ const DETAIL_CRUMBS: [string, string][] = [
   ["/aicte/institutions/", "Institution profile"],
   ["/institution/uploads", "Upload history"],
   ["/institution/documents/", "Student checklist"],
+  ["/aicte/documents/", "Case"],
 ];

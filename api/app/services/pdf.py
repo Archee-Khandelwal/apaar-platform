@@ -11,6 +11,7 @@ layout is naturally written; the conversion to PDF's bottom-left origin happens 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime
 
 import qrcode
 
@@ -85,6 +86,11 @@ def wrap(text: str, width: float, size: float, weight: str = "regular") -> list[
     return lines
 
 
+def _pdf_date(value: datetime) -> bytes:
+    """PDF date string, e.g. D:20260601093000Z."""
+    return value.strftime("D:%Y%m%d%H%M%SZ").encode("ascii")
+
+
 def _num(value: float) -> str:
     return f"{value:.2f}".rstrip("0").rstrip(".") or "0"
 
@@ -99,9 +105,20 @@ class Page:
 class PdfDocument:
     """Accumulate pages of drawing operations, then serialise with ``to_bytes()``."""
 
-    def __init__(self, *, title: str, size: tuple[float, float] = A4) -> None:
+    def __init__(
+        self,
+        *,
+        title: str,
+        size: tuple[float, float] = A4,
+        producer: str = "APAAR platform prototype",
+        created: datetime | None = None,
+        modified: datetime | None = None,
+    ) -> None:
         self.title = title
         self.size = size
+        self.producer = producer
+        self.created = created
+        self.modified = modified
         self.pages: list[Page] = []
         self.new_page()
 
@@ -263,9 +280,12 @@ class PdfDocument:
         objects[catalog - 1] = f"<< /Type /Catalog /Pages {pages_id} 0 R >>".encode()
         kids = " ".join(f"{page_id} 0 R" for page_id in page_ids)
         objects[pages_id - 1] = f"<< /Type /Pages /Kids [{kids}] /Count {len(page_ids)} >>".encode()
-        info = add(
-            b"<< /Title (" + _encode(self.title) + b") /Producer (APAAR platform prototype) >>"
-        )
+        info_body = b"<< /Title (" + _encode(self.title) + b") /Producer (" + _encode(self.producer) + b")"
+        if self.created is not None:
+            info_body += b" /CreationDate (" + _pdf_date(self.created) + b")"
+        if self.modified is not None:
+            info_body += b" /ModDate (" + _pdf_date(self.modified) + b")"
+        info = add(info_body + b" >>")
 
         out = bytearray(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
         offsets: list[int] = []

@@ -591,3 +591,43 @@ export interface BulkUploadReport {
     document_id?: number | null;
   }[];
 }
+
+export interface ReviewRow {
+  document_id: number;
+  doc_type: string;
+  label: string;
+  verification_status: VerificationStatus;
+  issuer_status: string;
+  issuer_label: string;
+  reasons: DocumentReason[];
+  student_id: number;
+  apaar_masked: string;
+  name_masked: string;
+  institution_id: number;
+  institution_name: string;
+  uploaded_at: string;
+}
+
+export interface ReviewPage extends Page<ReviewRow> {
+  counts: Record<string, number>;
+}
+
+export interface CaseFile {
+  document_id: number;
+  doc_type: string;
+  label: string;
+  content_type: string;
+  sha256: string;
+  uploaded_at: string;
+  uploaded_by?: string | null;
+  verification_status: VerificationStatus;
+  reasons: DocumentReason[];
+  student: { student_id: number; apaar_masked: string; apaar?: string | null; is_minor: boolean; nationality_status: string };
+  institution?: { id: number; name: string } | null;
+  comparison: { field: string; submitted?: string | null; on_document?: string | null; match?: boolean | null; detail?: number | null }[];
+  extracted: Record<string, unknown>;
+  issuer: { status: string; label: string; issuer_name?: string; matched_by?: string; reference_no?: string; issued_on?: string; differing_facts?: string[] };
+  tamper: { integrity_ok?: boolean; metadata?: { producer?: string; created?: string; modified?: string }; edited_after_issue?: string | null };
+  integrity_ok: boolean;
+  review: { decision?: string | null; reason?: string | null; by?: string | null; at?: string | null };
+}

@@ -17,6 +17,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 ROBUST_DB = REPO_ROOT / "apaar_robust.db"
 ROBUST_REGISTRY_DB = REPO_ROOT / "registry_robust.db"
+ROBUST_ISSUER_DB = REPO_ROOT / "issuer_robust.db"
 GROUND_TRUTH_ROBUST = REPO_ROOT / "datagen" / "ground_truth_robust.json"
 
 
@@ -37,8 +38,9 @@ def main() -> int:
     # builds an engine from settings.
     os.environ["DATABASE_URL"] = f"sqlite:///{ROBUST_DB}"
     os.environ["REGISTRY_DATABASE_URL"] = f"sqlite:///{ROBUST_REGISTRY_DB}"
+    os.environ["ISSUER_DATABASE_URL"] = f"sqlite:///{ROBUST_ISSUER_DB}"
 
-    for path in (ROBUST_DB, ROBUST_REGISTRY_DB):
+    for path in (ROBUST_DB, ROBUST_REGISTRY_DB, ROBUST_ISSUER_DB):
         path.unlink(missing_ok=True)
         for suffix in ("-wal", "-shm"):
             Path(str(path) + suffix).unlink(missing_ok=True)

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Run the API (8000), the mock registry (8001) and the web app (3000) together.
+# Run the API (8000), the mock APAAR registry (8001), the mock issuer registry (8002)
+# and the web app (3000) together.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 ROOT="$PWD"
@@ -28,6 +29,10 @@ trap cleanup EXIT INT TERM
 
 echo "Starting mock APAAR registry on http://localhost:8001 ..."
 "$VENV/bin/uvicorn" registry.app.main:app --port 8001 --reload --log-level warning &
+pids+=($!)
+
+echo "Starting mock Issuer & DigiLocker registry on http://localhost:8002 ..."
+"$VENV/bin/uvicorn" issuer.app.main:app --port 8002 --reload --log-level warning &
 pids+=($!)
 
 echo "Starting API on http://localhost:8000 (docs at /docs) ..."

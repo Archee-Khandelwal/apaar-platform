@@ -60,12 +60,13 @@ def _row(
     index: int,
     course: str = "B.Tech",
     branch: str = "CSE",
+    facts: list[dict[str, str]] | None = None,
 ) -> dict[str, str]:
     dob = date(rng.randint(2004, 2008), rng.randint(1, 12), rng.randint(1, 28))
     admitted = calendar.admission_window_start + timedelta(
         days=rng.randint(0, (calendar.admission_window_end - calendar.admission_window_start).days)
     )
-    return {
+    row = {
         MESSY_HEADERS["apaar_id"]: f"{rng.randint(10**11, 10**12 - 1)}",
         MESSY_HEADERS["student_name"]: names[index % len(names)],
         MESSY_HEADERS["gender"]: rng.choice(["M", "F", "Male", "female"]),
@@ -83,6 +84,21 @@ def _row(
         MESSY_HEADERS["admission_date"]: _mixed_date(admitted, rng),
         MESSY_HEADERS["status"]: rng.choice(["Admitted", "admitted"]),
     }
+    if facts is not None:
+        # The clean facts behind the messy cells, for printing these students' documents.
+        category = row[MESSY_HEADERS["category"]]
+        facts.append(
+            {
+                "apaar": row[MESSY_HEADERS["apaar_id"]],
+                "name": row[MESSY_HEADERS["student_name"]],
+                "dob": dob.isoformat(),
+                "category": "OBC-NCL" if category.lower() == "obc" else category,
+                "admission_type": "regular",
+                "nationality_status": "indian",
+                "academic_year": YEAR,
+            }
+        )
+    return row
 
 
 def _excess_target() -> dict | None:
@@ -186,8 +202,9 @@ def write_samples(*, seed: int = 42) -> list[Path]:
         course, branch = target["course"], target["branch"]
     else:
         row_count, course, branch = 70, "B.Tech", "CSE"
+    facts: list[dict[str, str]] = []
     rows = [
-        _row(rng, names, calendar, index=i, course=course, branch=branch)
+        _row(rng, names, calendar, index=i, course=course, branch=branch, facts=facts)
         for i in range(row_count)
     ]
     # Blank rows and a stray total line in the middle of the sheet.
@@ -201,6 +218,13 @@ def write_samples(*, seed: int = 42) -> list[Path]:
     with pd.ExcelWriter(path, engine="openpyxl") as writer:
         frame.to_excel(writer, index=False, sheet_name="Sheet1")
     written.append(path)
+
+    # ------------------------------------------- 4. documents for the first few of those students
+    from datagen.documents import write_sample_zip
+
+    zip_path = write_sample_zip(facts[:5], path=SAMPLES_DIR / "sample_4_documents.zip", seed=seed)
+    if zip_path is not None:
+        written.append(zip_path)
 
     # ---------------------------------------------------------------- 2. dirty errors
     rows = [_row(rng, names, calendar, index=i) for i in range(45)]
@@ -258,7 +282,13 @@ def write_samples(*, seed: int = 42) -> list[Path]:
         "  impossible date (31/02/2006), a post-cutoff admission, a missing name, a row\n"
         "  claiming no APAAR while being Indian, and a duplicate row inside the file.\n"
         "- `sample_3_garbage.csv` — no usable columns at all. The pipeline must reject it\n"
-        "  cleanly instead of crashing.\n",
+        "  cleanly instead of crashing.\n"
+        "- `sample_4_documents.zip` — the documents of the first five students in\n"
+        "  `sample_1_excess_intake.xlsx`, named `<APAAR ID>_<document type>.pdf`. Upload it on\n"
+        "  **Documents** after importing sample 1. Most are verified with the issuer\n"
+        "  automatically; the second student's Class 12 marksheet was edited after issue\n"
+        "  (rejected) and the third student's ID proof belongs to someone else (sent to an\n"
+        "  AICTE officer).\n",
         encoding="utf-8",
     )
     written.append(readme)

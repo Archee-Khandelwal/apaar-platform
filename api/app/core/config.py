@@ -27,13 +27,16 @@ class Settings(BaseSettings):
     vault_key: str = ""
     jwt_secret: str = ""
     registry_api_key: str = "dev-registry-key"
+    issuer_api_key: str = "dev-issuer-key"
 
     # Storage
     database_url: str = "sqlite:///./apaar.db"
     registry_database_url: str = "sqlite:///./registry.db"
+    issuer_database_url: str = "sqlite:///./issuer.db"
 
     # Services
     registry_url: str = "http://localhost:8001"
+    issuer_url: str = "http://localhost:8002"
     api_url: str = "http://localhost:8000"
     web_url: str = "http://localhost:3000"
 
@@ -44,6 +47,10 @@ class Settings(BaseSettings):
     consent_request_ttl_hours: int = 72
     verify_token_ttl_minutes: int = 15
     registry_timeout_seconds: float = 3.0
+    issuer_timeout_seconds: float = 3.0
+    # Path to tesseract.exe when it is not on PATH (Windows installs it under Program
+    # Files). Empty means: look on PATH, then in the usual Windows location.
+    tesseract_cmd: str = ""
     bcrypt_rounds: int = 12  # lowered in tests for speed
     max_upload_mb: int = 10
     # Login throttling: failed attempts allowed per window, per account and per client.

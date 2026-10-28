@@ -25,6 +25,10 @@ from app.models.core import Institution, StudentDocument
 from app.schemas.common import PageParams, page_params, paginate
 from app.schemas.documents import (
     BulkUploadReport,
+    CaseFileOut,
+    ReviewDecisionIn,
+    ReviewDecisionOut,
+    ReviewPage,
     ChecklistRulesOut,
     DocumentOverviewPage,
     DocumentSummaryOut,
@@ -35,6 +39,14 @@ from app.schemas.documents import (
     StudentDocumentOut,
 )
 from app.services import student_documents as documents
+from app.services.document_verification import (
+    ReviewError,
+    case_file,
+    record_decision,
+    review_counts,
+    review_queue,
+    verify_document,
+)
 from app.services.rules import document_checklist, document_types
 from app.services.student_documents import DocumentIntegrityError, DocumentRejected
 
@@ -153,8 +165,6 @@ async def upload_document(
         raise_not_found("No such student at this institution.")
     except DocumentRejected as exc:
         raise _rejected(exc)
-    from app.services.document_verification import verify_document
-
     verify_document(db, document)
     db.commit()
     return DocumentSummaryOut(**documents.document_summary(document))
@@ -176,8 +186,6 @@ async def upload_documents_zip(
         report = documents.import_zip(db, institution_id=institution_id, data=data, actor=user.username)
     except DocumentRejected as exc:
         raise _rejected(exc)
-    from app.services.document_verification import verify_document
-
     for row in report["results"]:
         if row.get("document_id"):
             verify_document(db, db.get(StudentDocument, row["document_id"]))
@@ -213,6 +221,79 @@ def officer_document_file(
     if document is None:
         raise_not_found("No such document.")
     return _serve(db, document, actor=user.username, role="aicte_officer", reason=payload.reason.strip())
+
+
+@router.get("/aicte/documents/review", response_model=ReviewPage)
+def document_review_queue(
+    status_filter: Annotated[
+        str, Query(alias="status", pattern="^(needs_review|rejected|auto_verified|verified|pending|all)$")
+    ] = "needs_review",
+    institution_id: Annotated[int | None, Query()] = None,
+    doc_type: Annotated[str | None, Query(max_length=48)] = None,
+    params: PageParams = Depends(page_params),
+    user: CurrentUser = Depends(require_role("aicte_officer")),
+    db: Session = Depends(get_db),
+) -> ReviewPage:
+    """The officer's queue. Masked: opening a case needs a reason."""
+    rows = review_queue(db, status=status_filter, institution_id=institution_id, doc_type=doc_type)
+    page_rows = rows[params.offset : params.offset + params.page_size]
+    return ReviewPage(**paginate(page_rows, len(rows), params), counts=review_counts(db))
+
+
+@router.post("/aicte/documents/{document_id}/case", response_model=CaseFileOut)
+def document_case(
+    document_id: int,
+    payload: DocumentViewRequest,
+    user: CurrentUser = Depends(require_role("aicte_officer")),
+    db: Session = Depends(get_db),
+) -> CaseFileOut:
+    """Submitted data beside what the document says, the issuer's answer and the tamper
+    checks. Shows identity data, so the reason is access-logged."""
+    document = db.get(StudentDocument, document_id)
+    if document is None:
+        raise_not_found("No such document.")
+    body = case_file(db, document=document, actor=user.username, reason=payload.reason.strip())
+    db.commit()
+    return CaseFileOut(**body)
+
+
+@router.post("/aicte/documents/{document_id}/decision", response_model=ReviewDecisionOut)
+def document_decision(
+    document_id: int,
+    payload: ReviewDecisionIn,
+    user: CurrentUser = Depends(require_role("aicte_officer")),
+    db: Session = Depends(get_db),
+) -> ReviewDecisionOut:
+    document = db.get(StudentDocument, document_id)
+    if document is None:
+        raise_not_found("No such document.")
+    try:
+        record_decision(db, document=document, decision=payload.decision, reason=payload.reason, actor=user.username)
+    except ReviewError as exc:
+        raise api_error(status.HTTP_409_CONFLICT, "CANNOT_DECIDE", str(exc))
+    db.commit()
+    return ReviewDecisionOut(
+        document_id=document.id,
+        verification_status=document.verification_status,
+        review_decision=document.review_decision or payload.decision,
+        reviewed_by=user.username,
+    )
+
+
+@router.post("/aicte/documents/{document_id}/recheck", response_model=DocumentSummaryOut)
+def document_recheck(
+    document_id: int,
+    user: CurrentUser = Depends(require_role("aicte_officer")),
+    db: Session = Depends(get_db),
+) -> DocumentSummaryOut:
+    """Run every check again, e.g. after the issuer was unavailable. An officer's earlier
+    decision is kept on record but the new automatic outcome replaces the status."""
+    document = db.get(StudentDocument, document_id)
+    if document is None:
+        raise_not_found("No such document.")
+    verify_document(db, document)
+    db.commit()
+    return DocumentSummaryOut(**documents.document_summary(document))
 
 
 # --------------------------------------------------------------------------- student

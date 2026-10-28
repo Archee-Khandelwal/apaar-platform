@@ -1,5 +1,6 @@
 # APAAR Student Data & Verification Platform (SIH26263)
-# Ports: API 8000, registry 8001, web 3000
+# Ports: API 8000, APAAR registry 8001, issuer registry 8002, web 3000
+# On Windows without make: python scripts/tasks.py <target> (same target names).
 
 SHELL := /bin/bash
 VENV := .venv
@@ -9,12 +10,12 @@ PYTEST := $(VENV)/bin/pytest
 UVICORN := $(VENV)/bin/uvicorn
 export PYTHONPATH := api:.
 
-.PHONY: help setup keys dev demo dev-api dev-registry dev-web test seed reset eval eval-robust clean
+.PHONY: help setup keys dev demo dev-api dev-registry dev-issuer dev-web test seed reset eval eval-robust clean
 
 help:
 	@echo "make setup   - create venv, install python + node dependencies"
 	@echo "make keys    - generate HMAC_KEY / VAULT_KEY / JWT_SECRET into .env"
-	@echo "make dev     - run api (8000), registry (8001) and web (3000) together"
+	@echo "make dev     - run api (8000), registries (8001, 8002) and web (3000) together"
 	@echo "make demo    - reset the data then start everything (one command before a demo)"
 	@echo "make test    - run pytest"
 	@echo "make seed    - generate synthetic data into the database"
@@ -48,6 +49,9 @@ dev-api:
 dev-registry:
 	@$(UVICORN) registry.app.main:app --reload --port 8001
 
+dev-issuer:
+	@$(UVICORN) issuer.app.main:app --reload --port 8002
+
 dev-web:
 	@cd web && npm run dev
 
@@ -58,7 +62,7 @@ seed: $(VENV)/.installed
 	@$(PY) -m datagen --seed 42
 
 reset: $(VENV)/.installed
-	@rm -f apaar.db apaar.db-wal apaar.db-shm registry.db registry.db-wal registry.db-shm
+	@rm -f apaar.db apaar.db-wal apaar.db-shm registry.db registry.db-wal registry.db-shm issuer.db issuer.db-wal issuer.db-shm
 	@$(PY) -m datagen --seed 42
 	@echo "Database reset and reseeded."
 

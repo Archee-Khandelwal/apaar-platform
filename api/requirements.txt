@@ -15,5 +15,10 @@ rapidfuzz==3.11.0
 PyYAML==6.0.2
 Faker==33.1.0
 qrcode[pil]==8.0
+# Document verification (Phase 5). Tesseract itself is a separate install; see README.
+pdfplumber==0.11.4
+pytesseract==0.3.13
+pyzbar==0.1.9
+Pillow==13.0.0
 httpx==0.28.1
 pytest==8.3.4

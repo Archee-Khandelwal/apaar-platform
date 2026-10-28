@@ -9,7 +9,7 @@ admissions one day past the cutoff, and an intake breach of a single seat.
 **No detector threshold was changed after seeing these results.** Every miss is
 diagnosed below with the rule that caused it and what a fix would be.
 
-- Generated: 2026-10-28T19:35:58
+- Generated: 2026-10-28T20:23:42
 - Seed: `2026`
 - Dataset: 24 institutions, 95 programmes, 9287 students, 15059 enrolments
 - Labelled cases: 137
@@ -106,6 +106,23 @@ Precision 1.000, recall 0.500 (6 missed, 0 unlabelled).
 | One person with two APAAR IDs | second record's name written with a reordered variation | **no** |
 | One person with two APAAR IDs | second record's name written with a initial variation | **no** |
 | One person with two APAAR IDs | second record's name written with a initial variation | **no** |
+
+## Document verification
+
+201 synthetic documents were printed, registered with the mock issuer registry (or deliberately not), submitted and run through the real pipeline: text extraction, data match, issuer check and tamper checks. A case counts as correct only if it ends in the expected status **and** carries the expected reason codes.
+
+| Case | Documents | Expected outcome | Correct |
+|---|---:|---|---:|
+| Genuine, unchanged | 168 | auto verified | 168 |
+| DOB differs from the record | 5 | needs review | 5 |
+| Edited after issue | 8 | rejected | 8 |
+| Someone else's document | 8 | needs review | 8 |
+| Reference unknown to any issuer | 8 | needs review | 8 |
+| Re-saved after issue, facts unchanged | 4 | needs review | 4 |
+| **All** | 201 | | **201 (100.0%)** |
+
+- Problem documents that were auto-verified (must be 0): **0**
+- Genuine documents that were rejected (must be 0): **0**
 
 ## Misses and extra flags
 

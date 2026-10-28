@@ -23,7 +23,7 @@ from typing import Any
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.models.core import Flag
+from app.models.core import Flag, StudentDocument
 from datagen.generator import GROUND_TRUTH_PATH
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -249,6 +249,65 @@ def misclassification_checks(db: Session, ground_truth: dict[str, Any]) -> dict[
     }
 
 
+DOCUMENT_CASE_LABELS = {
+    "genuine": "Genuine, unchanged",
+    "name_mismatch": "Someone else's document",
+    "dob_mismatch": "DOB differs from the record",
+    "tampered": "Edited after issue",
+    "not_at_issuer": "Reference unknown to any issuer",
+    "resaved": "Re-saved after issue, facts unchanged",
+}
+
+
+def score_documents(db: Session, ground_truth: dict[str, Any]) -> dict[str, Any]:
+    """Each labelled document must end in its expected status *with* the expected reasons."""
+    labels = ground_truth.get("documents", [])
+    by_id = {
+        document.id: document
+        for document in db.execute(
+            select(StudentDocument).where(StudentDocument.id.in_([row["document_id"] for row in labels] or [-1]))
+        ).scalars()
+    }
+    per_case: dict[str, dict[str, Any]] = {}
+    confusion: dict[str, dict[str, int]] = {}
+    wrong: list[dict[str, Any]] = []
+    for row in labels:
+        document = by_id.get(row["document_id"])
+        actual = document.verification_status if document else "missing"
+        codes = {reason["code"] for reason in (document.reasons or [])} if document else set()
+        correct = actual == row["expected_status"] and set(row["expected_reasons"]) <= codes
+        bucket = per_case.setdefault(row["case"], {"cases": 0, "correct": 0, "expected": row["expected_status"]})
+        bucket["cases"] += 1
+        bucket["correct"] += int(correct)
+        confusion.setdefault(row["expected_status"], {}).setdefault(actual, 0)
+        confusion[row["expected_status"]][actual] += 1
+        if not correct:
+            wrong.append({"key": row["key"], "case": row["case"], "expected": row["expected_status"],
+                          "actual": actual, "reasons": sorted(codes)})
+    total = len(labels)
+    correct_total = sum(bucket["correct"] for bucket in per_case.values())
+    # A genuine document wrongly rejected, or a forged one auto-verified, are the errors
+    # that matter most; both are reported on their own.
+    forged_passed = sum(
+        1 for row in labels
+        if row["case"] != "genuine" and (by_id.get(row["document_id"]) and by_id[row["document_id"]].verification_status == "auto_verified")
+    )
+    genuine_rejected = sum(
+        1 for row in labels
+        if row["case"] == "genuine" and (by_id.get(row["document_id"]) and by_id[row["document_id"]].verification_status == "rejected")
+    )
+    return {
+        "total": total,
+        "correct": correct_total,
+        "accuracy": round(correct_total / total, 3) if total else 1.0,
+        "per_case": per_case,
+        "confusion": confusion,
+        "wrong": wrong[:20],
+        "problem_documents_auto_verified": forged_passed,
+        "genuine_documents_rejected": genuine_rejected,
+    }
+
+
 def unlabelled_flags(db: Session, scores: list[ScenarioScore]) -> dict[str, int]:
     """Flag types produced that no scenario scores — reported for transparency."""
     scored_types = {flag_type for item in scores for flag_type in item.flag_types}
@@ -333,6 +392,19 @@ def print_report(
         f"{len(clean_flags)}"
         + ("  (none)" if not clean_flags else f"  <-- {[f['type'] for f in clean_flags]}")
     )
+
+    documents = checks.get("documents") or {}
+    if documents.get("total"):
+        print()
+        print("Document verification (status and reasons must both match the label)")
+        print("-" * 92)
+        for case, bucket in documents["per_case"].items():
+            print(f"  {DOCUMENT_CASE_LABELS.get(case, case):<44}{bucket['correct']:>4} / {bucket['cases']:<4} -> {bucket['expected']}")
+        print(
+            f"  {'ALL':<44}{documents['correct']:>4} / {documents['total']:<4} "
+            f"accuracy {documents['accuracy']:.3f}; problem docs auto-verified: "
+            f"{documents['problem_documents_auto_verified']}; genuine rejected: {documents['genuine_documents_rejected']}"
+        )
 
     if extra:
         print()
@@ -496,6 +568,34 @@ def write_markdown(
                     lines.append(f"| {item.label} | {perturbation} | {caught} |")
 
     misses = [item for item in scores if item.false_negatives]
+    documents = checks.get("documents") or {}
+    if documents.get("total"):
+        lines += [
+            "",
+            "## Document verification",
+            "",
+            f"{documents['total']} synthetic documents were printed, registered with the mock issuer "
+            "registry (or deliberately not), submitted and run through the real pipeline: text "
+            "extraction, data match, issuer check and tamper checks. A case counts as correct only "
+            "if it ends in the expected status **and** carries the expected reason codes.",
+            "",
+            "| Case | Documents | Expected outcome | Correct |",
+            "|---|---:|---|---:|",
+        ]
+        for case, bucket in documents["per_case"].items():
+            lines.append(
+                f"| {DOCUMENT_CASE_LABELS.get(case, case)} | {bucket['cases']} | {bucket['expected'].replace('_', ' ')} | "
+                f"{bucket['correct']} |"
+            )
+        lines += [
+            f"| **All** | {documents['total']} | | **{documents['correct']} ({documents['accuracy']:.1%})** |",
+            "",
+            f"- Problem documents that were auto-verified (must be 0): **{documents['problem_documents_auto_verified']}**",
+            f"- Genuine documents that were rejected (must be 0): **{documents['genuine_documents_rejected']}**",
+        ]
+        if documents["wrong"]:
+            lines.append(f"- Wrong outcomes: {documents['wrong']}")
+
     lines += ["", "## Misses and extra flags", ""]
     if misses:
         for item in misses:
@@ -608,6 +708,7 @@ def main() -> int:
         checks = misclassification_checks(db, ground_truth)
         checks["controls"] = control_checks(db, ground_truth)
         extra = unlabelled_flags(db, scores)
+        checks["documents"] = score_documents(db, ground_truth)
     finally:
         db.close()
 

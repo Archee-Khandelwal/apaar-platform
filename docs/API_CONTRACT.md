@@ -764,6 +764,31 @@ Document summary:
 { "id": 91, "doc_type": "class12_marksheet", "original_filename": "marks.pdf", "content_type": "application/pdf", "size_bytes": 18233, "sha256": "9f2c…", "uploaded_at": "2026-10-28T10:02:00", "uploaded_by": "vit_admin", "upload_channel": "single", "verification_status": "needs_review", "issuer_status": "verified", "integrity_ok": true, "reasons": [ { "code": "NAME_MISMATCH", "message": "…", "severity": "warning" } ], "review_decision": null, "review_reason": null }
 ```
 
+### Verification and officer review (Phase 5)
+
+Every stored document is checked at once: text extraction (PDF text layer, else Tesseract OCR, plus QR via pyzbar), data match against the submitted record (name fuzzy ≥ 90, DOB exact), issuer check (mock Issuer & DigiLocker registry), and tamper checks (upload hash, PDF metadata edited after the issue date). It ends `auto_verified`, `needs_review` or `rejected`, with `reasons[]` (`code`, `message`, `severity` info|warning|error). Codes: `VERIFIED_WITH_ISSUER`, `DATA_MATCHED`, `NOT_AT_ISSUER`, `ISSUER_UNAVAILABLE`, `ISSUER_MISMATCH`, `ISSUER_REVOKED`, `NO_REFERENCE`, `UNREADABLE`, `NAME_MISMATCH`, `NAME_NOT_FOUND`, `DOB_MISMATCH`, `HOLDER_MISMATCH`, `WRONG_DOCUMENT_TYPE`, `EDITED_AFTER_ISSUE`, `STORAGE_TAMPERED`. The name and DOB read from a document are stored vault-encrypted.
+
+| Route | Role | Notes |
+|---|---|---|
+| `GET /aicte/documents/review` | aicte_officer | Masked queue. Query `status` (`needs_review` default, `rejected`, `auto_verified`, `verified`, `pending`, `all`), `institution_id`, `doc_type`, pagination; `counts` per status |
+| `POST /aicte/documents/{id}/case` | aicte_officer | Body `{ "reason" }` (≥ 10 chars, access-logged as `view_document_case`). Returns submitted vs read values field by field, extracted facts, the issuer's answer, tamper checks and any decision |
+| `POST /aicte/documents/{id}/decision` | aicte_officer | Body `{ "decision": "approve" | "reject", "reason" }`. Writes `document_review_decision` to the audit chain. `409 CANNOT_DECIDE` when approving a document that failed its integrity check |
+| `POST /aicte/documents/{id}/recheck` | aicte_officer | Runs every check again (e.g. after the issuer was unavailable) |
+
+---
+
+## 8b. Mock Issuer & DigiLocker registry (port 8002) — `/issuer`
+
+API-key auth (`X-API-Key` = `ISSUER_API_KEY`). Production-shaped: replacing it with real issuer / DigiLocker APIs means replacing `api/app/services/issuer_client.py`.
+
+`POST /documents/verify` — `{ "reference_no", "doc_type", "sha256", "holder_name", "holder_dob", "facts": { "roll_no", "year", "marks_obtained", "marks_total" } }` →
+```json
+{ "reference_no": "SSE-2026-123456", "status": "verified", "matched_by": "hash", "issuer_name": "Kaveri Senior Secondary Board", "doc_type": "class12_marksheet", "issued_on": "2026-06-10", "doc_type_match": true, "holder_name_match": true, "holder_dob_match": true, "differing_facts": [], "checked_at": "2026-10-28T10:00:00Z", "source": "mock_issuer_registry_v1" }
+```
+`status`: `verified` (identical file by SHA-256, or every compared fact matches — a re-scan), `mismatch` (reference exists, contents differ; `differing_facts` names them), `not_found`, `revoked`. When the service does not answer the API records `unavailable` and sends the document to an officer.
+
+`GET /documents/{reference_no}` — what a QR scan resolves to: issuer, type, issue date, status. No holder data.
+
 ---
 
 ## 8. Mock APAAR registry (port 8001) — `/registry`
@@ -849,3 +874,4 @@ All ten Step-0 questions are now decided — see the decision table in `docs/PLA
 | 2026-10-28 | Refocus: removed `/aicte/risk`, `/aicte/inspection-shortlist(.csv)`, `/aicte/non-reporting`, `/aicte/remind/{id}`, `/aicte/graph/*`, `/institution/compliance-certificate`, `/student/enrolments/{id}/confirm` and `/dispute`, `/admin/scenarios`, `/admin/load-scenario/{name}`, `/admin/run-detectors`. Flag types `GHOST_CLUSTER`, `SEQUENTIAL_APAAR`, `LAST_MINUTE_BULK`, `PHANTOM_PROGRESSION`, `STUDENT_DISPUTE`, `STATISTICAL_ANOMALY` and the flag `cluster_id` field removed; student corrections now raise `STUDENT_CORRECTION`. Institution rows lose `risk_score`/`risk_band` and gain `open_flags_total` | Claude Code |
 | 2026-10-28 | Security: per-account random passwords (no `password` in `/auth/demo-users`), login throttling (`429 TOO_MANY_ATTEMPTS`), `POST /auth/change-password`, token versioning (`401 TOKEN_REVOKED`), `GET /admin/users`, `POST /admin/users/{id}/reset-password`, `403 PASSWORD_CHANGE_REQUIRED`; `user.must_change_password` added | Claude Code |
 | 2026-10-28 | Documents (section 7a): checklist, single and ZIP upload, encrypted storage with SHA-256, downloads for the owning institution, officers (with a reason) and the student; `DOCUMENT_TAMPERED` flag type | Claude Code |
+| 2026-10-28 | Document verification and officer review (`/aicte/documents/review`, `/case`, `/decision`, `/recheck`); mock Issuer & DigiLocker registry on port 8002 (section 8b) | Claude Code |

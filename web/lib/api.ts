@@ -13,6 +13,8 @@ import type {
   ConsentRow,
   AdminUser,
   BulkUploadReport,
+  CaseFile,
+  ReviewPage,
   DocumentOverviewPage,
   DocumentRules,
   DocumentSummary,
@@ -265,6 +267,15 @@ export const api = {
   ) => request<{ flag: Flag; audit_log_id?: number }>(`/aicte/flags/${id}`, { method: "PATCH", body }),
   reveal: (student_id: number, reason: string) =>
     request<Revealed>("/aicte/reveal", { method: "POST", body: { student_id, reason } }),
+  reviewQueue: (query?: Query) => request<ReviewPage>("/aicte/documents/review", { query }),
+  documentCase: (id: number, reason: string) =>
+    request<CaseFile>(`/aicte/documents/${id}/case`, { method: "POST", body: { reason } }),
+  documentDecision: (id: number, decision: "approve" | "reject", reason: string) =>
+    request<{ verification_status: string }>(`/aicte/documents/${id}/decision`, {
+      method: "POST",
+      body: { decision, reason },
+    }),
+  recheckDocument: (id: number) => request<DocumentSummary>(`/aicte/documents/${id}/recheck`, { method: "POST" }),
   trends: (query?: Query) => request<Trends>("/aicte/reports/trends", { query }),
 
   // ----------------------------------------------------------------- student

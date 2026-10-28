@@ -26,6 +26,7 @@ def main() -> int:
         "VAULT_KEY": Fernet.generate_key().decode(),
         "JWT_SECRET": secrets.token_hex(32),
         "REGISTRY_API_KEY": secrets.token_hex(16),
+        "ISSUER_API_KEY": secrets.token_hex(16),
     }
 
     lines: list[str] = []
@@ -36,7 +37,7 @@ def main() -> int:
         else:
             lines.append(line)
     ENV.write_text("\n".join(lines) + "\n")
-    print(f"Wrote {ENV} with freshly generated HMAC_KEY, VAULT_KEY, JWT_SECRET, REGISTRY_API_KEY.")
+    print(f"Wrote {ENV} with freshly generated HMAC_KEY, VAULT_KEY, JWT_SECRET, REGISTRY_API_KEY, ISSUER_API_KEY.")
     return 0
 
 

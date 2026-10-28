@@ -10,3 +10,9 @@ canonical field names on purpose — the mapping screen has to work them out.
   claiming no APAAR while being Indian, and a duplicate row inside the file.
 - `sample_3_garbage.csv` — no usable columns at all. The pipeline must reject it
   cleanly instead of crashing.
+- `sample_4_documents.zip` — the documents of the first five students in
+  `sample_1_excess_intake.xlsx`, named `<APAAR ID>_<document type>.pdf`. Upload it on
+  **Documents** after importing sample 1. Most are verified with the issuer
+  automatically; the second student's Class 12 marksheet was edited after issue
+  (rejected) and the third student's ID proof belongs to someone else (sent to an
+  AICTE officer).

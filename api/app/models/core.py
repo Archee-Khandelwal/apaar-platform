@@ -389,7 +389,11 @@ class StudentDocument(Base, TimestampMixin):
     # pending | auto_verified | needs_review | rejected | verified (approved by an officer)
     verification_status: Mapped[str] = mapped_column(String(16), default="pending")
     reasons: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    # Non-identifying facts read from the file (reference, year, marks, issuer, method).
     extracted: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    # The name and DOB read from the file are identity data, so they are vault-encrypted
+    # like every other raw name and DOB (CLAUDE.md section 5 rule 2).
+    extracted_identity_enc: Mapped[str | None] = mapped_column(Text, nullable=True)
     data_match: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     # verified | not_found | mismatch | unavailable | not_checked
     issuer_status: Mapped[str] = mapped_column(String(16), default="not_checked")

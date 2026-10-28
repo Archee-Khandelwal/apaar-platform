@@ -34,9 +34,11 @@ It is a hackathon prototype: it must run reliably on one laptop, be demoable in 
 - **Data:** pandas, openpyxl, rapidfuzz, PyYAML, Faker (`en_IN` locale)
 - **Security:** PyJWT, passlib[bcrypt], `cryptography` (Fernet) for the encrypted vault, `hmac` + `hashlib` (HMAC-SHA256)
 - **Other:** qrcode, pytest, httpx (tests)
+- **Document verification:** pdfplumber (text layer), pytesseract + the Tesseract binary (OCR for scans), pyzbar (QR codes), Pillow
 - **Mock APAAR registry:** separate small FastAPI app
+- **Mock Issuer & DigiLocker registry:** separate small FastAPI app (`/issuer`, port 8002)
 - **Frontend:** Next.js (App Router) + TypeScript, Tailwind CSS, shadcn/ui, TanStack Query, Recharts
-- **Ports:** API `8000`, registry `8001`, web `3000`
+- **Ports:** API `8000`, APAAR registry `8001`, issuer registry `8002`, web `3000`
 
 ## 4. Repository layout
 
@@ -52,10 +54,12 @@ It is a hackathon prototype: it must run reliably on one laptop, be demoable in 
     /rules      intake_rules.yaml
   /tests
 /registry       Mock APAAR registry (FastAPI)
+/issuer         Mock Issuer & DigiLocker registry (FastAPI, port 8002)
 /datagen        Synthetic data generator + ground_truth.json + evaluate.py
 /web            Next.js frontend
 /samples        Messy sample Excel/CSV files for demo uploads
 Makefile        make setup | make seed | make dev | make test | make reset
+scripts/tasks.py  the same targets without make (Windows): python scripts/tasks.py <target>
 .env.example
 README.md
 ```

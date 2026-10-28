@@ -29,6 +29,7 @@ from app.models.core import (
     Institution,
     Program,
     Student,
+    StudentDocument,
     Upload,
     User,
     Vault,
@@ -47,6 +48,7 @@ BASE_COHORT_SHARE = 0.70
 
 # Tables wiped by a reseed, children first.
 WIPE_ORDER = (
+    StudentDocument,
     FlagHistory,
     Flag,
     CorrectionRequest,
@@ -123,6 +125,7 @@ class SyntheticDataGenerator:
         self.build_base_cohorts()
         self.inject_scenarios()
         self.persist()
+        self.build_documents()
         ground_truth = self.write_ground_truth()
         return ground_truth
 
@@ -519,6 +522,13 @@ class SyntheticDataGenerator:
         self.populate_registry()
         self.create_users_and_demo_data()
 
+    def build_documents(self) -> None:
+        """Synthetic documents for a sample of students, verified by the real pipeline."""
+        from datagen.documents import build_documents
+
+        count = max(10, min(120, self.student_target // 125))
+        self.document_labels = build_documents(self, students=count)
+
     def populate_registry(self) -> None:
         """Insert every issued APAAR into the mock registry's own database.
 
@@ -588,10 +598,13 @@ class SyntheticDataGenerator:
                 "enrolments": len(self.b.enrolments),
                 "uploads": len(self.b.uploads),
                 "labelled_cases": len(self.b.cases),
+                "documents": len(getattr(self, "document_labels", [])),
             },
             "clean_institution": {"id": clean["id"], "name": clean["name"]} if clean else None,
             "demo_students": self.demo_students,
             "scenarios": by_scenario,
+            # Labelled document cases, scored by `make eval` (Phase 5).
+            "documents": getattr(self, "document_labels", []),
         }
         self.ground_truth_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
         return payload
