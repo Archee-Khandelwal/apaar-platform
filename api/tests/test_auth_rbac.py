@@ -213,3 +213,12 @@ def test_suppression_leaves_zero_and_booleans_alone() -> None:
     out = suppress_small_counts({"excess": 0, "eligible": True}, "aicte_viewer")
     assert out["excess"] == 0
     assert out["eligible"] is True
+
+
+def test_institution_can_use_the_verify_a_student_routes(client: TestClient, auth) -> None:
+    """The institution portal has a "Verify a student" tab using the same consent flow."""
+    assert client.get("/verifier/purposes", headers=auth("institution")).status_code == 200
+    assert client.get("/verifier/requests", headers=auth("institution")).status_code == 200
+    # Students and AICTE accounts still cannot.
+    assert client.get("/verifier/purposes", headers=auth("student")).status_code == 403
+    assert client.get("/verifier/purposes", headers=auth("aicte_officer")).status_code == 403

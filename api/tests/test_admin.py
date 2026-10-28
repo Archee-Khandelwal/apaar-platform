@@ -10,7 +10,6 @@ from app.models.core import AuditLog
 
 ADMIN_ROUTES = (
     ("GET", "/admin/status"),
-    ("GET", "/admin/audit/verify"),
     ("POST", "/admin/audit/tamper-test"),
 )
 
@@ -20,6 +19,13 @@ def test_admin_routes_refuse_every_other_role(client: TestClient, auth, users) -
         for role in ("institution", "aicte_officer", "aicte_viewer", "student", "verifier"):
             response = client.request(method, path, headers=auth(role))
             assert response.status_code == 403, f"{method} {path} allowed {role}"
+
+
+def test_audit_verify_is_open_to_admin_and_officer_only(client: TestClient, auth) -> None:
+    for role in ("admin", "aicte_officer"):
+        assert client.get("/admin/audit/verify", headers=auth(role)).status_code == 200
+    for role in ("institution", "aicte_viewer", "student", "verifier"):
+        assert client.get("/admin/audit/verify", headers=auth(role)).status_code == 403
 
 
 def test_admin_has_no_student_data_route(client: TestClient, auth, users) -> None:

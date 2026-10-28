@@ -17,21 +17,13 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 
-import { RoleSwitcher } from "@/components/RoleSwitcher";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/primitives";
+import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { NAV, PORTAL_LABELS, ROLE_LABELS, SHORT_LABELS, activeItem, breadcrumb } from "@/lib/nav";
+import { NAV, PORTAL_LABELS, SHORT_LABELS, activeItem } from "@/lib/nav";
 import type { Role } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-const ROLE_TONES: Record<Role, string> = {
-  institution: "bg-sky-50 text-sky-800 ring-sky-200",
-  aicte_officer: "bg-indigo-50 text-indigo-800 ring-indigo-200",
-  aicte_viewer: "bg-violet-50 text-violet-800 ring-violet-200",
-  student: "bg-emerald-50 text-emerald-800 ring-emerald-200",
-  verifier: "bg-amber-50 text-amber-900 ring-amber-200",
-  admin: "bg-slate-100 text-slate-800 ring-slate-300",
-};
 
 function Wordmark() {
   return (
@@ -40,9 +32,9 @@ function Wordmark() {
         AP
       </span>
       <span className="min-w-0">
-        <span className="block truncate text-sm font-semibold leading-tight">APAAR Platform</span>
+        <span className="block truncate text-sm font-semibold leading-tight">AICTE · APAAR</span>
         <span className="block truncate text-[11px] leading-tight text-muted-foreground">
-          Student data &amp; verification
+          Student data portal
         </span>
       </span>
     </span>
@@ -52,7 +44,7 @@ function Wordmark() {
 function SidebarNav({ role, pathname, onNavigate }: { role: Role; pathname: string; onNavigate?: () => void }) {
   const current = activeItem(role, pathname);
   return (
-    <nav className="space-y-1" aria-label={`${ROLE_LABELS[role]} navigation`}>
+    <nav className="space-y-1" aria-label="Navigation">
       {NAV[role].map((item) => {
         const active = item === current;
         const Icon = item.icon;
@@ -92,10 +84,88 @@ function SyntheticBanner({ className }: { className?: string }) {
   );
 }
 
-export function AppShell({ children }: { children: ReactNode }) {
+function TabStrip({
+  tabs,
+  pathname,
+}: {
+  tabs: { href: string; label: string }[];
+  pathname: string;
+}) {
+  // The longest matching tab wins, so "/institution" does not also light up for /institution/seat-matrix.
+  const best = tabs.reduce(
+    (found, tab) =>
+      (pathname === tab.href || pathname.startsWith(`${tab.href}/`)) && tab.href.length > found.length
+        ? tab.href
+        : found,
+    "",
+  );
+  return (
+    <div className="-mt-2 mb-6 flex gap-1 overflow-x-auto border-b border-border">
+      {tabs.map((tab) => (
+        <Link
+          key={tab.href}
+          href={tab.href}
+          aria-current={tab.href === best ? "page" : undefined}
+          className={cn(
+            "whitespace-nowrap border-b-2 px-3 py-2 text-sm transition-colors",
+            tab.href === best
+              ? "border-primary font-medium text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {tab.label}
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+/** Top-right: who is signed in, where they work, and the way out. */
+function UserMenu() {
   const { user, logout } = useAuth();
-  const pathname = usePathname();
   const router = useRouter();
+  const institution = useQuery({
+    queryKey: ["institution-me"],
+    queryFn: api.institutionMe,
+    enabled: user?.role === "institution",
+    staleTime: Infinity,
+  });
+  if (!user) return null;
+  const organisation =
+    user.role === "institution"
+      ? institution.data?.name
+      : user.role.startsWith("aicte")
+        ? "All India Council for Technical Education"
+        : undefined;
+  return (
+    <div className="flex shrink-0 items-center gap-3">
+      <div className="hidden min-w-0 text-right sm:block">
+        <p className="truncate text-sm font-medium leading-tight">{user.display_name}</p>
+        {organisation && <p className="truncate text-[11px] leading-tight text-muted-foreground">{organisation}</p>}
+      </div>
+      <Button asChild variant="ghost" size="icon" aria-label="Change password" title="Change password">
+        <Link href="/account/password">
+          <KeyRound className="h-4 w-4" />
+        </Link>
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => {
+          logout();
+          router.push("/login");
+        }}
+      >
+        <LogOut className="h-3.5 w-3.5" />
+        Sign out
+      </Button>
+    </div>
+  );
+}
+
+export function AppShell({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   // A route change should never leave the drawer hanging open behind the page.
@@ -103,7 +173,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   if (!user) return null;
   const role = user.role;
-  const trail = breadcrumb(role, pathname);
+  const current = activeItem(role, pathname);
+  const trail = [PORTAL_LABELS[role], ...(current ? [current.label] : [])];
   const isStudent = role === "student";
 
   return (
@@ -121,30 +192,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
         <div className="space-y-3 border-t border-border p-3">
           <SyntheticBanner />
-          <div className="px-1">
-            <p className="truncate text-xs font-medium" title={user.display_name}>
-              {user.display_name}
-            </p>
-            <p className="truncate text-[11px] text-muted-foreground">{user.username}</p>
-          </div>
-          <Button asChild variant="ghost" size="sm" className="w-full justify-start">
-            <Link href="/account/password">
-              <KeyRound className="h-3.5 w-3.5" />
-              Change password
-            </Link>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full justify-start"
-            onClick={() => {
-              logout();
-              router.push("/login");
-            }}
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            Sign out
-          </Button>
         </div>
       </aside>
 
@@ -170,24 +217,6 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
             <div className="space-y-3 border-t border-border p-3">
               <SyntheticBanner />
-              <Button asChild variant="ghost" size="sm" className="w-full justify-start">
-                <Link href="/account/password">
-                  <KeyRound className="h-3.5 w-3.5" />
-                  Change password
-                </Link>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full justify-start"
-                onClick={() => {
-                  logout();
-                  router.push("/login");
-                }}
-              >
-                <LogOut className="h-3.5 w-3.5" />
-                Sign out
-              </Button>
             </div>
           </div>
         </div>
@@ -231,15 +260,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               </ol>
             </nav>
 
-            <span
-              className={cn(
-                "hidden shrink-0 items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset sm:inline-flex",
-                ROLE_TONES[role],
-              )}
-            >
-              {ROLE_LABELS[role]}
-            </span>
-            <RoleSwitcher />
+            <UserMenu />
           </div>
         </header>
 
@@ -250,6 +271,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             isStudent && "pb-24 md:pb-8",
           )}
         >
+          {current?.children && <TabStrip tabs={current.children} pathname={pathname} />}
           <div className="space-y-6">{children}</div>
         </main>
       </div>
@@ -258,7 +280,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       {isStudent && (
         <nav
           aria-label="Student navigation"
-          className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] md:hidden"
+          className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] md:hidden"
         >
           {NAV[role].map((item) => {
             const active = item === activeItem(role, pathname);

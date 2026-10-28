@@ -98,10 +98,14 @@ bug someone finds during the demo. Pass role names to narrow it, e.g.
 
 ## Demo accounts
 
-| Username | Role | What it shows |
+There is one sign-in page. Enter a username and password and the account's own role decides which
+dashboard opens; there is no role picker. Passwords are in `demo_credentials.csv` (gitignored,
+written when the data is seeded).
+
+| Username | Portal | What it shows |
 |---|---|---|
-| `aicte_officer1` | AICTE Officer | Everything: flag evidence, reveal with a reason, case management |
-| `aicte_viewer1` | AICTE Analyst | The same screens with masked rows and counts below 5 shown as `<5` |
+| `aicte_officer1` | AICTE | Everything: flag evidence, reveal with a reason, document review, imports, audit log |
+| `aicte_viewer1` | AICTE | The same portal without officer-only actions; masked rows, counts below 5 shown as `<5` |
 | `kolhanpur32_admin` | Institution | The college used for the live upload in the script below |
 | `narmadapuri25_admin` | Institution | A college that is 25 seats over its approved intake |
 | `meghdoot40_admin` | Institution | The clean model college — no findings at all |
@@ -110,45 +114,42 @@ bug someone finds during the demo. Pass role names to narrow it, e.g.
 | `student_dual` | Student | A legitimate dual degree (regular + online) |
 | `student_minor` | Student | Under 18, so verification needs parental consent |
 | `student_fn` | Student | Foreign national, `apaar_status = not_applicable` |
-| `student_pending` | Student | Has a verifier request waiting |
+| `student_pending` | Student | Has a verification request waiting |
 | `student_revoked` | Student | Withdrew a consent earlier |
-| `verifier_demo` | Verifier | Employer asking to verify a student |
-| `admin` | Admin | Reseed, verify the audit chain |
+| `verifier_demo` | Employer / Regulator | Asks to verify a student |
 
-Any of the 40 institution accounts works; they are named `<invented-word><id>_admin`.
-Account names change when you reseed with a different seed — the login page always lists the
-current ones.
-
----
+The `admin` account is for the command line only (`python scripts/tasks.py reset`); it is not a portal
+login. Any of the 40 institution accounts works; they are named `<invented-word><id>_admin`. Account
+names change when you reseed with a different seed — see `demo_credentials.csv`.
 
 ## Demo script
 
-Reset the data first (see *Windows commands* below), then open http://localhost:3000. Passwords are in
-`demo_credentials.csv`. Nav labels below are the sidebar entries.
+Reset the data first (see *Windows commands* below), then open http://localhost:3000. Sign in at the one login page each time; the portal opens by itself. Nav labels below are the sidebar
+tabs. To change accounts, **Sign out** (top right) and sign in as the next one.
 
 1. **College login, and the wall between colleges.** Sign in as `kolhanpur32_admin`. Open **Students**
-   and **Seat matrix**: only Kolhanpur's programmes appear. Change the URL to another college's id
+   and **Dashboard → Seat matrix**: only Kolhanpur's programmes appear. Change the URL to another college's id
    (for example `/institution/documents/<another college's student id>`) and it returns *not found* —
    the institution comes from the login token, never from the request.
 2. **Upload data.** **Upload data** → `samples/sample_1_excess_intake.xlsx` → confirm the proposed
    column mapping → validate. Show the quality report and the **EXCESS_INTAKE** finding, then **Seat
    matrix**: *Approved Intake* vs *Actual Student Enrolment*, with *Supernumerary Seats* (TFW, lateral,
    NRI category, FN/PIO/OCI, PMSSS) shown outside intake, each against its own cap.
-3. **Upload documents.** **Documents** → bulk-upload `samples/sample_4_documents.zip`, or open one
+3. **Upload documents.** **Students → Documents** → bulk-upload `samples/sample_4_documents.zip`, or open one
    student's checklist and add files. Each file is OCR'd, its QR and issuer checked, and matched
    against the reported name and DOB.
-4. **AICTE cross-check dashboard.** Switch role to `aicte_officer1` → **Reconciliation**. Every
+4. **AICTE cross-check dashboard.** Sign in as `aicte_officer1` → **Reconciliation**. Every
    reported record is checked six ways (institution approved, programme approved, within intake,
    APAAR verified, documents verified, no duplicate) and shown *confirmed / needs review / rejected*
    with the reason.
 5. **Officer reviews a mismatched document.** **Document review** → open a case whose extracted
    name or DOB differs from the record → read the side-by-side comparison → approve or reject with a
    reason. Return to **Reconciliation**: the record now reads **confirmed**.
-6. **Employer verification with consent.** Switch role to `verifier_demo` → request verification of
-   `student_pending` (APAAR ID visible from that student's **My records**). Result: *pending*. As
-   `student_pending` → **Consents**, approve. Back as the verifier: only *verified*, programme and
+6. **Employer verification with consent.** Sign in as `verifier_demo` → **Verify a student** → request verification of
+   `student_pending` (the APAAR ID is on that student's **My records**; the same **Verify a student** tab is also in the institution portal). Result: *pending*. Sign in as
+   `student_pending` → **Consent requests**, approve. Back as `verifier_demo` (**My requests**): only *verified*, programme and
    year. Withdraw consent and the result and any QR token stop working.
-7. **Degree certificate.** As the institution → **Degree certificates** → *Issue certificate* for a
+7. **Degree certificate.** Sign in as the institution → **Degree certificates** → *Issue certificate* for a
    completed student. The PDF prints the APAAR ID beside the student ID and a QR. Scan it (or open
    its `/verify?doc=…` link, no login): **Genuine**, with the masked claims. Revoke it and the same
    link reads **Revoked**.
@@ -183,7 +184,7 @@ Windows command in *Quick start*) to re-prove all of them.
 | Admin reset | `POST /admin/users/{id}/reset-password` issues a one-time password shown once; the account can only change it, and all its sessions end | `test_security.py::test_admin_reset_issues_a_one_time_password` |
 | RBAC on every route | One `require_role(...)` dependency. An explicit route × role matrix is tested exhaustively (403 for every disallowed role, 401 with no token), and a new route without a matrix entry fails the build | `test_security.py::test_the_matrix_covers_every_route`, `::test_every_route_refuses_every_role_it_does_not_allow`, `::test_every_protected_route_refuses_a_missing_token`, `test_qa_invariants.py::test_every_route_is_guarded_or_documented_public` |
 | Tenant isolation | An institution's `institution_id` comes only from its JWT. Another college's id in the URL returns 404; an `institution_id` smuggled into the query or body is ignored | `test_tenant_isolation.py` (uploads, flags, enrolments, certificates; URL, query and body attacks) |
-| Hash-chained audit log | Each row stores `prev_hash` and `hash = sha256(prev_hash + canonical_json(row))`. Logins, failed logins, uploads, reveals, consent decisions and password events are recorded; the admin page verifies the chain and runs a tamper test on a copy | `test_audit.py` (tamper, delete, re-hash), `test_security.py::test_security_relevant_events_land_in_a_valid_audit_chain` |
+| Hash-chained audit log | Each row stores `prev_hash` and `hash = sha256(prev_hash + canonical_json(row))`. Logins, failed logins, uploads, reveals, consent decisions and password events are recorded; the officer's **Audit log** tab verifies the chain; the tamper test on a copy is `POST /admin/audit/tamper-test` | `test_audit.py` (tamper, delete, re-hash), `test_security.py::test_security_relevant_events_land_in_a_valid_audit_chain` |
 | Documents encrypted at rest | Submitted documents are stored Fernet-encrypted with the vault key; the type is decided by the file's first bytes (PDF/JPEG/PNG only), PDFs with JavaScript or launch actions are refused, and ZIP imports are size-checked before and while expanding | `test_documents.py::test_a_pdf_upload_is_stored_encrypted_with_its_hash`, `::test_the_type_is_decided_by_content_not_the_name`, `::test_a_pdf_with_javascript_is_refused`, `::test_a_zip_bomb_is_refused_before_it_is_expanded` |
 | Who may read a document | The owning institution, an AICTE officer with a written reason, or the student — every read is access-logged | `test_documents.py::test_the_owning_institution_can_download_and_it_is_logged`, `::test_an_officer_needs_a_reason_and_the_reason_is_logged`, `::test_the_student_can_read_their_own_documents_only`, `::test_another_institution_cannot_download_it` |
 | Tamper-evident documents | The SHA-256 of each file is recorded at upload and re-checked on every view; a mismatch withholds the file, rejects it and raises a critical `DOCUMENT_TAMPERED` flag | `test_documents.py::test_a_file_altered_in_storage_is_withheld_and_flagged`, `::test_a_corrupted_ciphertext_is_also_caught` |

@@ -166,15 +166,6 @@ const TARGETS: Target[] = [
       { label: "verify-qr", path: "/verify" },
     ],
   },
-  {
-    name: "admin",
-    username: "admin",
-    widths: DESKTOP,
-    pages: [
-      { label: "demo-controls", path: "/admin" },
-      { label: "audit", path: "/admin/audit" },
-    ],
-  },
 ];
 
 interface Session {

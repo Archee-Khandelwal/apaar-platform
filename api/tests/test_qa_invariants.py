@@ -99,7 +99,7 @@ def test_readme_documents_the_demo_and_its_limits() -> None:
     text = (REPO / "README.md").read_text()
     for marker in (
         "make demo",
-        "Five-minute demo script",
+        "Demo script",
         "Demo accounts",
         "Known limitations",
         "all data is synthetic",

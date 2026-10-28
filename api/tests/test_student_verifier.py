@@ -396,7 +396,7 @@ def test_a_verifier_cannot_read_another_verifiers_request(
 
 
 def test_verifier_routes_refuse_other_roles(client: TestClient, auth, student_setup) -> None:
-    for role in ("institution", "student", "aicte_officer", "aicte_viewer", "admin"):
+    for role in ("student", "aicte_officer", "aicte_viewer", "admin"):
         assert client.get("/verifier/purposes", headers=auth(role)).status_code == 403
         assert client.get("/verifier/requests", headers=auth(role)).status_code == 403
 

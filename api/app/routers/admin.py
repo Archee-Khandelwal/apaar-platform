@@ -113,7 +113,7 @@ def reseed(
 
 @router.get("/audit/verify")
 def verify_audit(
-    user: CurrentUser = Depends(require_role("admin")),
+    user: CurrentUser = Depends(require_role("admin", "aicte_officer")),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Recompute every hash in the audit chain."""

@@ -39,7 +39,7 @@ router = APIRouter(tags=["verifier"])
 
 @router.get("/verifier/purposes", response_model=PurposesResponse)
 def purposes(
-    user: CurrentUser = Depends(require_role("verifier")),
+    user: CurrentUser = Depends(require_role("verifier", "institution")),
 ) -> PurposesResponse:
     """The fixed list a request must choose from; free-text purposes are not accepted."""
     return PurposesResponse(
@@ -52,7 +52,7 @@ def purposes(
 )
 def create_request(
     payload: VerificationRequestIn,
-    user: CurrentUser = Depends(require_role("verifier")),
+    user: CurrentUser = Depends(require_role("verifier", "institution")),
     db: Session = Depends(get_db),
 ) -> VerificationRequestOut:
     """Ask a student for consent. The APAAR ID is hashed on receipt and never stored raw.
@@ -79,7 +79,7 @@ def create_request(
 def list_requests(
     status_filter: Annotated[str | None, Query(alias="status")] = None,
     params: PageParams = Depends(page_params),
-    user: CurrentUser = Depends(require_role("verifier")),
+    user: CurrentUser = Depends(require_role("verifier", "institution")),
     db: Session = Depends(get_db),
 ) -> VerificationPage:
     expire_stale(db)
@@ -121,7 +121,7 @@ def _request_out(request: VerificationRequest) -> dict:
 @router.get("/verifier/requests/{request_id}", response_model=VerificationStatusOut)
 def request_status(
     request_id: int,
-    user: CurrentUser = Depends(require_role("verifier")),
+    user: CurrentUser = Depends(require_role("verifier", "institution")),
     db: Session = Depends(get_db),
 ) -> VerificationStatusOut:
     expire_stale(db)
@@ -134,7 +134,7 @@ def request_status(
         log_access(
             db,
             actor=user.username,
-            role="verifier",
+            role=user.role,
             action="verification_result_read",
             target=f"student:{request.student_id}",
             student_id=request.student_id,

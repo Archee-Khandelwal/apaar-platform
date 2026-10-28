@@ -12,7 +12,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!ready) return;
-    router.replace(user ? ROLE_HOME[user.role] : "/login");
+    router.replace(user && ROLE_HOME[user.role] ? ROLE_HOME[user.role] : "/login");
   }, [ready, user, router]);
 
   return (

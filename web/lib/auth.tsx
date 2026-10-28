@@ -22,9 +22,10 @@ export const ROLE_HOME: Record<Role, string> = {
   institution: "/institution",
   aicte_viewer: "/aicte",
   aicte_officer: "/aicte",
-  student: "/student",
+  student: "/student/records",
   verifier: "/verifier",
-  admin: "/admin",
+  // Operators have no portal; reset and reseed are CLI commands.
+  admin: "",
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -90,7 +91,7 @@ export function useRequireRole(roles: Role[]) {
       router.replace("/account/password");
       return;
     }
-    if (!roles.includes(user.role)) router.replace(ROLE_HOME[user.role]);
+    if (!roles.includes(user.role)) router.replace(ROLE_HOME[user.role] || "/login");
   }, [ready, user, roles, router]);
 
   return {

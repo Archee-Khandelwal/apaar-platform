@@ -22,7 +22,7 @@ export default function IdCardPage() {
   return (
     <>
       <PageHeader
-        title="ID card"
+        title="Certificate"
         description="Show this QR to an employer or institution. It proves your enrolment without revealing anything else."
         actions={
           <Button variant="outline" onClick={() => query.refetch()} disabled={query.isFetching}>

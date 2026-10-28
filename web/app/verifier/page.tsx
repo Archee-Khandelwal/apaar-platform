@@ -4,6 +4,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BadgeCheck, Clock, ShieldOff, XCircle } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 import { Skeleton } from "@/components/States";
@@ -44,6 +45,7 @@ const STATES: Record<string, { tone: string; icon: React.ReactNode; blurb: strin
 };
 
 export default function VerifierHomePage() {
+  const base = usePathname().startsWith("/institution") ? "/institution/verify" : "/verifier";
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [apaar, setApaar] = useState("");
@@ -90,11 +92,11 @@ export default function VerifierHomePage() {
   return (
     <>
       <PageHeader
-        title="New request"
+        title="Verify a student"
         description="Ask a student to confirm an enrolment. They decide, and you never see more than verified, programme and year."
         actions={
           <Button asChild variant="outline">
-            <Link href="/verifier/requests">My requests</Link>
+            <Link href={`${base}/requests`}>My requests</Link>
           </Button>
         }
       />
@@ -223,7 +225,7 @@ export default function VerifierHomePage() {
                 )}
                 <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
                   That is the complete response. No name, date of birth, institution or contact
-                  detail is ever returned to a verifier.
+                  detail is ever returned to an employer or regulator.
                 </p>
               </div>
             ) : (

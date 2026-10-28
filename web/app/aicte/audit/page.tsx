@@ -9,7 +9,6 @@
  */
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle2, Link2, ShieldCheck } from "lucide-react";
-import { useState } from "react";
 
 import { ErrorState, KpiSkeleton } from "@/components/States";
 import { KpiCard, KpiRow, PageHeader, SectionCard, TechnicalDetails } from "@/components/ui/page";
@@ -17,14 +16,11 @@ import { Button, Spinner } from "@/components/ui/primitives";
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
 import { dateTime } from "@/lib/format";
-import type { TamperResult } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 export default function AuditLogPage() {
   const { toast } = useToast();
-  const [tamper, setTamper] = useState<TamperResult | null>(null);
 
-  const status = useQuery({ queryKey: ["admin-status"], queryFn: api.adminStatus });
+  const status = useQuery({ queryKey: ["audit-status"], queryFn: api.verifyAudit });
 
   const verify = useMutation({
     mutationFn: api.verifyAudit,
@@ -40,21 +36,9 @@ export default function AuditLogPage() {
     onError: (error: Error) => toast(error.message, "danger"),
   });
 
-  const runTamper = useMutation({
-    mutationFn: api.tamperTest,
-    onSuccess: (result) => {
-      setTamper(result);
-      toast(
-        result.detected ? "Tampering detected, as it should be." : "Tampering was NOT detected.",
-        result.detected ? "success" : "danger",
-      );
-    },
-    onError: (error: Error) => toast(error.message, "danger"),
-  });
-
   if (status.isError) return <ErrorState error={status.error} onRetry={status.refetch} />;
 
-  const audit = status.data?.audit;
+  const audit = status.data;
   const lastVerified = verify.data;
 
   return (
@@ -129,7 +113,7 @@ export default function AuditLogPage() {
                   hash = sha256(prev_hash + canonical_json(row))
                 </code>
                 . Verification walks the table in insertion order and recomputes every hash.
-                {audit.first_broken_row && (
+                {Boolean(audit.first_broken_row) && (
                   <>
                     {" "}
                     First broken row:{" "}
@@ -142,46 +126,6 @@ export default function AuditLogPage() {
             </TechnicalDetails>
           </SectionCard>
 
-          <SectionCard
-            title="Tamper test"
-            description="Copies the log, edits one row in the copy, and re-verifies. The live audit log is never touched."
-          >
-            <Button
-              variant="outline"
-              onClick={() => runTamper.mutate()}
-              disabled={runTamper.isPending}
-            >
-              {runTamper.isPending && <Spinner />}
-              Run the tamper test
-            </Button>
-
-            {tamper && (
-              <div
-                className={cn(
-                  "mt-4 rounded-md border p-4",
-                  tamper.detected
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-                    : "border-red-200 bg-red-50 text-red-900",
-                )}
-              >
-                <p className="flex items-start gap-2 text-sm font-semibold">
-                  {tamper.detected ? (
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-                  ) : (
-                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                  )}
-                  {tamper.detected ? "Detected" : "Not detected"}
-                </p>
-                <p className="mt-1.5 text-sm leading-relaxed">{tamper.message}</p>
-                <TechnicalDetails className="mt-3 border-current/20 bg-white/50">
-                  <p className="text-xs leading-relaxed">
-                    Edited row id {tamper.tampered_row_id} in a copy of {tamper.copy_rows} rows;
-                    verification first failed at row {tamper.first_broken_row_id ?? "—"}.
-                  </p>
-                </TechnicalDetails>
-              </div>
-            )}
-          </SectionCard>
         </>
       )}
     </>
