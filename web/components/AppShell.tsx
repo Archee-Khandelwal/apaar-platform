@@ -12,6 +12,7 @@
  * Below md the sidebar becomes a drawer. The student portal is mobile-first and
  * gets a bottom tab bar instead, because that is where it will actually be used.
  */
+import { SyntheticNotice } from "@/components/SyntheticNotice";
 import { ChevronRight, KeyRound, LogOut, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -68,19 +69,6 @@ function SidebarNav({ role, pathname, onNavigate }: { role: Role; pathname: stri
         );
       })}
     </nav>
-  );
-}
-
-function SyntheticBanner({ className }: { className?: string }) {
-  return (
-    <p
-      className={cn(
-        "rounded-md bg-amber-100 px-3 py-2 text-center text-[11px] font-medium leading-snug text-amber-900",
-        className,
-      )}
-    >
-      Prototype — all data is synthetic.
-    </p>
   );
 }
 
@@ -190,9 +178,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           <p className="px-3 pb-2 type-label">{PORTAL_LABELS[role]}</p>
           <SidebarNav role={role} pathname={pathname} />
         </div>
-        <div className="space-y-3 border-t border-border p-3">
-          <SyntheticBanner />
-        </div>
       </aside>
 
       {/* ------------------------------------------------- mobile nav drawer */}
@@ -214,9 +199,6 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="flex-1 overflow-y-auto p-3">
               <p className="px-3 pb-2 type-label">{PORTAL_LABELS[role]}</p>
               <SidebarNav role={role} pathname={pathname} onNavigate={() => setDrawerOpen(false)} />
-            </div>
-            <div className="space-y-3 border-t border-border p-3">
-              <SyntheticBanner />
             </div>
           </div>
         </div>
@@ -274,6 +256,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           {current?.children && <TabStrip tabs={current.children} pathname={pathname} />}
           <div className="space-y-6">{children}</div>
         </main>
+        <SyntheticNotice className={isStudent ? "pb-20 md:pb-4" : undefined} />
       </div>
 
       {/* ------------------------------------------- student bottom tab bar */}

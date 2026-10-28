@@ -1,6 +1,7 @@
 "use client";
 
 /** Public QR / token check. No login, and no portal shell. */
+import { SyntheticNotice } from "@/components/SyntheticNotice";
 import { useMutation } from "@tanstack/react-query";
 import { BadgeCheck, CircleSlash, Clock, HelpCircle, ShieldX } from "lucide-react";
 import { useSearchParams } from "next/navigation";
@@ -118,23 +119,18 @@ function VerifyInner() {
   if (doc) {
     return (
       <main className="min-h-screen bg-background">
-        <p className="bg-amber-100 px-4 py-2 text-center text-xs font-medium text-amber-900">
-          Prototype — all data is synthetic.
-        </p>
         <div className="mx-auto max-w-xl px-4 py-10 sm:py-14">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Public verification</p>
           <h1 className="mt-2 type-page-title">Degree certificate check</h1>
           <DocumentResult doc={doc} />
         </div>
+        <SyntheticNotice />
       </main>
     );
   }
 
   return (
     <main className="min-h-screen bg-background">
-      <p className="bg-amber-100 px-4 py-2 text-center text-xs font-medium text-amber-900">
-        Prototype â€” all data is synthetic.
-      </p>
       <div className="mx-auto max-w-xl px-4 py-10 sm:py-14">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
           Public verification
@@ -212,6 +208,7 @@ function VerifyInner() {
           is written to the platform&apos;s audit trail.
         </p>
       </div>
+      <SyntheticNotice />
     </main>
   );
 }

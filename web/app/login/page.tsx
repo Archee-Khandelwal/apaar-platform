@@ -1,6 +1,7 @@
 "use client";
 
 /** The single sign-in page. The account's own role decides which dashboard opens. */
+import { SyntheticNotice } from "@/components/SyntheticNotice";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -41,9 +42,6 @@ export default function LoginPage() {
 
   return (
     <main className="flex min-h-screen flex-col bg-background">
-      <p className="bg-amber-100 px-4 py-2 text-center text-xs font-medium text-amber-900">
-        Prototype — all data is synthetic.
-      </p>
 
       <div className="flex flex-1 items-center justify-center px-4 py-10">
         <div className="w-full max-w-md">
@@ -106,6 +104,7 @@ export default function LoginPage() {
           </p>
         </div>
       </div>
+      <SyntheticNotice />
     </main>
   );
 }

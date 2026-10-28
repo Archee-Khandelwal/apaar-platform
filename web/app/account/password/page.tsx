@@ -4,6 +4,7 @@
  * Change password. Reached from the sidebar, or forced straight after an admin reset —
  * in which case the temporary password unlocks nothing else until this form is done.
  */
+import { SyntheticNotice } from "@/components/SyntheticNotice";
 import { useMutation } from "@tanstack/react-query";
 import { ArrowLeft, KeyRound } from "lucide-react";
 import Link from "next/link";
@@ -44,9 +45,6 @@ export default function ChangePasswordPage() {
 
   return (
     <main className="min-h-screen bg-background">
-      <p className="bg-amber-100 px-4 py-2 text-center text-xs font-medium text-amber-900">
-        Prototype — all data is synthetic.
-      </p>
       <div className="mx-auto w-full max-w-md px-4 py-12">
         {!forced && (
           <Button asChild variant="ghost" size="sm" className="mb-3 -ml-2">
@@ -128,6 +126,7 @@ export default function ChangePasswordPage() {
           </form>
         </Card>
       </div>
+      <SyntheticNotice />
     </main>
   );
 }
