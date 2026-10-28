@@ -1,7 +1,8 @@
-"""Readers for the two versioned rule files in app/rules/.
+"""Readers for the versioned rule files in app/rules/.
 
-No cap, percentage or date is hardcoded in Python — it all comes from
-``intake_rules.yaml`` and ``reporting_calendar.yaml`` (CLAUDE.md section 6).
+No cap, percentage, date or document requirement is hardcoded in Python — it all comes
+from ``intake_rules.yaml``, ``reporting_calendar.yaml`` and ``document_checklist.yaml``
+(CLAUDE.md section 6).
 """
 from __future__ import annotations
 
@@ -18,6 +19,7 @@ from app.core.config import RULES_DIR
 
 INTAKE_RULES_PATH = RULES_DIR / "intake_rules.yaml"
 CALENDAR_PATH = RULES_DIR / "reporting_calendar.yaml"
+CHECKLIST_PATH = RULES_DIR / "document_checklist.yaml"
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -36,6 +38,36 @@ def intake_rules() -> dict[str, Any]:
 @lru_cache
 def reporting_calendar() -> dict[str, Any]:
     return _load_yaml(CALENDAR_PATH)
+
+
+@lru_cache
+def document_checklist() -> dict[str, Any]:
+    return _load_yaml(CHECKLIST_PATH)
+
+
+def document_types() -> dict[str, dict[str, Any]]:
+    return dict(document_checklist().get("document_types", {}))
+
+
+def document_limits() -> dict[str, Any]:
+    return dict(document_checklist().get("limits", {}))
+
+
+def required_documents(
+    *, admission_type: str | None, category: str | None, nationality_status: str | None
+) -> list[str]:
+    """The checklist for one student, in a stable order and without repeats."""
+    required = document_checklist().get("required", {})
+    ordered: list[str] = list(required.get("all", []))
+    for key, value in (
+        ("admission_type", admission_type),
+        ("category", category),
+        ("nationality_status", nationality_status),
+    ):
+        if value:
+            ordered += list((required.get(key) or {}).get(value, []))
+    seen: set[str] = set()
+    return [item for item in ordered if not (item in seen or seen.add(item))]
 
 
 def rule_set_version() -> str:

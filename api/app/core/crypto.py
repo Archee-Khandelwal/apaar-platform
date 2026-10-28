@@ -126,6 +126,20 @@ def vault_encrypt(plaintext: str | None) -> str | None:
     return _fernet().encrypt(str(plaintext).encode("utf-8")).decode("utf-8")
 
 
+def encrypt_bytes(data: bytes) -> bytes:
+    """Encrypt a whole file (a submitted document) with the vault key."""
+    return _fernet().encrypt(data)
+
+
+def decrypt_bytes(token: bytes) -> bytes:
+    """Raises CryptoConfigError if the ciphertext was altered or the key changed:
+    Fernet is authenticated, so a modified blob never decrypts to anything."""
+    try:
+        return _fernet().decrypt(token)
+    except InvalidToken as exc:
+        raise CryptoConfigError("Document ciphertext failed its integrity check") from exc
+
+
 def vault_decrypt(ciphertext: str | None) -> str | None:
     if ciphertext is None:
         return None

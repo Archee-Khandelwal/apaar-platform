@@ -9,6 +9,7 @@
 import {
   BadgeCheck,
   Building2,
+  FileCheck2,
   FileSearch,
   FileSpreadsheet,
   Flag,
@@ -42,6 +43,7 @@ export const NAV: Record<Role, NavItem[]> = {
     { href: "/institution", label: "Dashboard", icon: LayoutDashboard },
     { href: "/institution/upload", label: "Upload data", icon: FileSpreadsheet, owns: ["/institution/uploads"] },
     { href: "/institution/students", label: "Students", icon: Users },
+    { href: "/institution/documents", label: "Documents", icon: FileCheck2 },
     { href: "/institution/seat-matrix", label: "Seat matrix", icon: Table2 },
     { href: "/institution/flags", label: "Flags", icon: Flag },
   ],
@@ -154,4 +156,5 @@ export function breadcrumb(role: Role, pathname: string): string[] {
 const DETAIL_CRUMBS: [string, string][] = [
   ["/aicte/institutions/", "Institution profile"],
   ["/institution/uploads", "Upload history"],
+  ["/institution/documents/", "Student checklist"],
 ];

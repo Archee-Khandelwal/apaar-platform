@@ -89,7 +89,7 @@ def test_claude_md_privacy_rules_have_a_home_in_the_code() -> None:
 
 def test_the_rule_files_still_carry_their_verify_markers() -> None:
     """Every cap and date must stay marked as unverified against the real handbook."""
-    for name in ("intake_rules.yaml", "reporting_calendar.yaml"):
+    for name in ("intake_rules.yaml", "reporting_calendar.yaml", "document_checklist.yaml"):
         text = (REPO / "api" / "app" / "rules" / name).read_text()
         assert "VERIFY" in text, f"{name} lost its VERIFY markers"
         assert text.count("VERIFY") >= 5, f"{name} has suspiciously few VERIFY markers"

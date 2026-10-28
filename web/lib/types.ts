@@ -511,3 +511,83 @@ export interface TamperResult {
   first_broken_row_id?: number | null;
   message: string;
 }
+
+// ----------------------------------------------------------------- documents
+
+export type ChecklistStatus = "missing" | "uploaded" | "verified" | "rejected";
+export type VerificationStatus = "pending" | "auto_verified" | "needs_review" | "rejected" | "verified";
+
+export interface DocumentReason {
+  code: string;
+  message: string;
+  severity?: "info" | "warning" | "error";
+}
+
+export interface DocumentSummary {
+  id: number;
+  doc_type: string;
+  original_filename: string;
+  content_type: string;
+  size_bytes: number;
+  sha256: string;
+  uploaded_at: string;
+  uploaded_by?: string | null;
+  upload_channel: string;
+  verification_status: VerificationStatus;
+  issuer_status: string;
+  integrity_ok: boolean;
+  reasons: DocumentReason[];
+  review_decision?: string | null;
+  review_reason?: string | null;
+}
+
+export interface StudentChecklist {
+  student_id: number;
+  apaar_masked: string;
+  name_masked: string;
+  nationality_status: string;
+  category?: string | null;
+  admission_type: string;
+  academic_year: string;
+  items: { doc_type: string; label: string; status: ChecklistStatus; document?: DocumentSummary | null }[];
+  counts: Record<ChecklistStatus, number>;
+  complete: boolean;
+}
+
+export interface DocumentOverviewRow {
+  student_id: number;
+  apaar_masked: string;
+  name_masked: string;
+  admission_type: string;
+  nationality_status: string;
+  required: number;
+  counts: Record<ChecklistStatus, number>;
+  status: ChecklistStatus;
+  missing: string[];
+}
+
+export interface DocumentOverviewPage extends Page<DocumentOverviewRow> {
+  totals: Record<ChecklistStatus, number>;
+}
+
+export interface DocumentRules {
+  checklist_set: string;
+  document_types: { doc_type: string; label: string; issuer_kind?: string | null }[];
+  required: Record<string, unknown>;
+  limits: { max_file_mb?: number; zip_max_files?: number; zip_max_total_mb?: number };
+}
+
+export interface BulkUploadReport {
+  files: number;
+  stored: number;
+  rejected: number;
+  skipped: number;
+  results: {
+    file: string;
+    status: "stored" | "rejected" | "skipped";
+    reason?: string | null;
+    doc_type?: string | null;
+    student_id?: number | null;
+    document_id?: number | null;
+  }[];
+}

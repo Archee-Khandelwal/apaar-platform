@@ -85,6 +85,7 @@ FlagType = Literal[
     "IDENTITY_DUPLICATE",
     "LATE_ADMISSION",
     "STUDENT_CORRECTION",
+    "DOCUMENT_TAMPERED",
 ]
 FLAG_TYPES: Final[tuple[str, ...]] = (
     "INVALID_APAAR",
@@ -97,6 +98,7 @@ FLAG_TYPES: Final[tuple[str, ...]] = (
     "IDENTITY_DUPLICATE",
     "LATE_ADMISSION",
     "STUDENT_CORRECTION",
+    "DOCUMENT_TAMPERED",
 )
 
 ConsentStatus = Literal["pending", "approved", "denied", "revoked", "expired"]

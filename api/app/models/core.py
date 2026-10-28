@@ -7,6 +7,7 @@ from typing import Any
 from sqlalchemy import (
     JSON,
     Boolean,
+    LargeBinary,
     Date,
     DateTime,
     ForeignKey,
@@ -356,6 +357,51 @@ class IssuedDocument(Base, TimestampMixin):
     issued_by: Mapped[str] = mapped_column(String(64))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     revoke_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class StudentDocument(Base, TimestampMixin):
+    """A document an institution submitted for a student (Phase 4), and what checking it
+    found (Phase 5). The file itself is stored Fernet-encrypted; ``sha256`` is the hash
+    of the plaintext taken at upload, re-checked on every view."""
+
+    __tablename__ = "student_documents"
+    __table_args__ = (
+        Index("ix_documents_student_type", "student_id", "doc_type"),
+        Index("ix_documents_institution_status", "institution_id", "verification_status"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    student_id: Mapped[int] = mapped_column(ForeignKey("students.id"), index=True)
+    institution_id: Mapped[int] = mapped_column(ForeignKey("institutions.id"))
+    enrolment_id: Mapped[int | None] = mapped_column(ForeignKey("enrolments.id"), nullable=True)
+    doc_type: Mapped[str] = mapped_column(String(48))
+    original_filename: Mapped[str] = mapped_column(String(255))
+    content_type: Mapped[str] = mapped_column(String(48))  # sniffed from the bytes
+    size_bytes: Mapped[int] = mapped_column(Integer)
+    sha256: Mapped[str] = mapped_column(String(64))
+    content_enc: Mapped[bytes] = mapped_column(LargeBinary)
+    # A re-upload of the same type supersedes the earlier one; history is kept.
+    is_current: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    upload_channel: Mapped[str] = mapped_column(String(16), default="single")  # single | zip | api
+    uploaded_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+    # ---- verification (Phase 5)
+    # pending | auto_verified | needs_review | rejected | verified (approved by an officer)
+    verification_status: Mapped[str] = mapped_column(String(16), default="pending")
+    reasons: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    extracted: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    data_match: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    # verified | not_found | mismatch | unavailable | not_checked
+    issuer_status: Mapped[str] = mapped_column(String(16), default="not_checked")
+    issuer_result: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    tamper: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    integrity_ok: Mapped[bool] = mapped_column(Boolean, default=True)
+    integrity_checked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    reviewed_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    review_decision: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    review_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class CorrectionRequest(Base, TimestampMixin):

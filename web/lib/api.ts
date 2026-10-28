@@ -12,6 +12,11 @@ import type {
   ApiErrorBody,
   ConsentRow,
   AdminUser,
+  BulkUploadReport,
+  DocumentOverviewPage,
+  DocumentRules,
+  DocumentSummary,
+  StudentChecklist,
   DemoUser,
   PasswordReset,
   Flag,
@@ -109,7 +114,14 @@ function queryString(query?: Query): string {
 
 async function request<T>(
   path: string,
-  options: { method?: string; body?: unknown; query?: Query; raw?: boolean; form?: FormData } = {},
+  options: {
+    method?: string;
+    body?: unknown;
+    query?: Query;
+    raw?: boolean;
+    blob?: boolean;
+    form?: FormData;
+  } = {},
 ): Promise<T> {
   const headers: Record<string, string> = {};
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -138,6 +150,7 @@ async function request<T>(
     throw new ApiError(response.status, code, message, details);
   }
 
+  if (options.blob) return (await response.blob()) as unknown as T;
   if (options.raw) return (await response.text()) as unknown as T;
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
@@ -155,6 +168,20 @@ export async function download(path: string, filename: string, query?: Query) {
   URL.revokeObjectURL(url);
 }
 
+/** Open a binary response (a PDF or an image) in a new tab, without the token in the URL. */
+export async function openFile(path: string, init?: { method?: string; body?: unknown }) {
+  const blob = await request<Blob>(path, { blob: true, method: init?.method, body: init?.body });
+  const url = URL.createObjectURL(blob);
+  window.open(url, "_blank", "noopener");
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+/** Fetch a binary response as an object URL, for showing a document inline. */
+export async function fileUrl(path: string, init?: { method?: string; body?: unknown }) {
+  const blob = await request<Blob>(path, { blob: true, method: init?.method, body: init?.body });
+  return { url: URL.createObjectURL(blob), type: blob.type };
+}
+
 export const api = {
   // ----------------------------------------------------------------- auth
   health: () => request<{ status: string; registry: string; synthetic_data: boolean }>("/health"),
@@ -170,6 +197,24 @@ export const api = {
 
   // ----------------------------------------------------------------- institution
   institutionMe: () => request<InstitutionProfile>("/institution/me"),
+  documentRules: () => request<DocumentRules>("/institution/documents/rules"),
+  documentsOverview: (query?: Query) => request<DocumentOverviewPage>("/institution/documents", { query }),
+  studentChecklist: (studentId: number) =>
+    request<StudentChecklist>(`/institution/students/${studentId}/documents`),
+  uploadDocument: (studentId: number, docType: string, file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("doc_type", docType);
+    return request<DocumentSummary>(`/institution/students/${studentId}/documents`, {
+      method: "POST",
+      form,
+    });
+  },
+  uploadDocumentsZip: (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return request<BulkUploadReport>("/institution/documents/bulk", { method: "POST", form });
+  },
   institutionDashboard: (academic_year?: string) =>
     request<InstitutionDashboard>("/institution/dashboard", { query: { academic_year } }),
   createUpload: (file: File, academicYear?: string) => {
@@ -245,6 +290,10 @@ export const api = {
       method: "POST",
     }),
   idCard: () => request<IdCard>("/student/id-card"),
+  myDocuments: () =>
+    request<{
+      items: { id: number; doc_type: string; label: string; institution_name: string; uploaded_at: string; status: string }[];
+    }>("/student/documents"),
 
   // ----------------------------------------------------------------- verifier
   purposes: () => request<{ purposes: { value: string; label: string }[] }>("/verifier/purposes"),

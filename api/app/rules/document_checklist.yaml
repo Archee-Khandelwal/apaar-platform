@@ -1,0 +1,72 @@
+# Which documents an institution must submit for each student (Phase 4).
+#
+# A student's checklist is the union of:
+#   required.all                              every student
+#   required.admission_type[<admission type>] how they were admitted
+#   required.category[<category>]             reserved-category students
+#   required.nationality_status[<status>]     NRI / OCI / foreign national students
+#
+# Versioned like the other rule files. Every list is a placeholder for the demo and is
+# marked for checking against the AICTE Approval Process Handbook and admission rules.
+
+checklist_set: DOC_2026_27_v1
+
+# Upload limits apply to every document type.
+limits:
+  max_file_mb: 5
+  accepted_types: [application/pdf, image/jpeg, image/png]
+  zip_max_files: 500
+  zip_max_total_mb: 200
+
+document_types:
+  admission_letter:
+    label: Admission / seat allotment letter
+    issuer_kind: counselling_authority
+  class12_marksheet:
+    label: Class 12 marksheet
+    issuer_kind: school_board
+  id_proof:
+    label: Identity proof
+    issuer_kind: identity_authority
+  diploma_marksheet:
+    label: Diploma marksheet (lateral entry)
+    issuer_kind: technical_board
+  income_certificate:
+    label: Family income certificate (TFW)
+    issuer_kind: revenue_department
+  pmsss_allotment:
+    label: PMSSS allotment letter
+    issuer_kind: counselling_authority
+  category_certificate:
+    label: Category certificate
+    issuer_kind: revenue_department
+  nri_status_proof:
+    label: NRI status proof (sponsor's passport and overseas residence)
+    issuer_kind: identity_authority
+  oci_card:
+    label: OCI card
+    issuer_kind: immigration_authority
+  passport:
+    label: Passport
+    issuer_kind: immigration_authority
+  visa:
+    label: Student visa
+    issuer_kind: immigration_authority
+
+required:
+  all: [admission_letter, class12_marksheet, id_proof]  # VERIFY against AICTE admission rules
+  admission_type:
+    lateral: [diploma_marksheet]                         # VERIFY against AICTE Approval Process Handbook 2026-27
+    tfw: [income_certificate]                            # VERIFY against AICTE Approval Process Handbook 2026-27
+    pmsss: [pmsss_allotment]                             # VERIFY against AICTE Approval Process Handbook 2026-27
+    nri: [nri_status_proof]                              # VERIFY against AICTE Approval Process Handbook 2026-27
+    fn_pio_oci: [passport]                               # VERIFY against AICTE Approval Process Handbook 2026-27
+  category:
+    SC: [category_certificate]                           # VERIFY against AICTE admission rules
+    ST: [category_certificate]                           # VERIFY against AICTE admission rules
+    OBC-NCL: [category_certificate]                      # VERIFY against AICTE admission rules
+    EWS: [category_certificate]                          # VERIFY against AICTE admission rules
+  nationality_status:
+    nri: [nri_status_proof]                              # VERIFY against AICTE admission rules
+    oci: [oci_card]                                      # VERIFY against AICTE admission rules
+    fn: [passport, visa]                                 # VERIFY against AICTE admission rules

@@ -99,13 +99,14 @@ These are part of the product, not optional extras. Never violate them, even to 
 - `enrolments` (id, student_id, program_id, academic_year, year_of_study, admission_type: regular|lateral|tfw|fn_pio_oci|pmsss|other_supernumerary, status, admitted_on, created_at, upload_id, version)
 - `uploads` (id, institution_id, filename, rows_total, rows_ok, rows_error, quality_score, column_mapping JSON, created_at)
 - `flags` (id, type, severity, institution_id, student_id nullable, enrolment_id nullable, title, explanation, evidence JSON, status: open|under_review|escalated|dismissed|resolved, assigned_to, notes JSON, created_at)
+- `student_documents` (student_id, institution_id, doc_type, content_type sniffed from bytes, sha256 of the plaintext, content_enc Fernet, is_current, verification_status: pending|auto_verified|needs_review|rejected|verified, reasons, extracted, data_match, issuer_status, tamper, review fields). Required types per student come from `api/app/rules/document_checklist.yaml`
 - `access_log`, `audit_log` (hash-chained), `consents`, `verification_requests`, `users`
 
 ## 8. Flag types (use exactly these)
 
-`INVALID_APAAR, APAAR_NOT_FOUND, APAAR_MISMATCH, DUPLICATE_IN_UPLOAD, EXCESS_INTAKE, CROSS_INSTITUTION_DUPLICATE, POSSIBLE_DUAL_DEGREE, IDENTITY_DUPLICATE, LATE_ADMISSION, STUDENT_CORRECTION`
+`INVALID_APAAR, APAAR_NOT_FOUND, APAAR_MISMATCH, DUPLICATE_IN_UPLOAD, EXCESS_INTAKE, CROSS_INSTITUTION_DUPLICATE, POSSIBLE_DUAL_DEGREE, IDENTITY_DUPLICATE, LATE_ADMISSION, STUDENT_CORRECTION, DOCUMENT_TAMPERED`
 
-Each maps to a PS requirement 3 validation (duplicate records, invalid/missing APAAR, excess intake, data inconsistencies, cross-institution duplicates). `STUDENT_CORRECTION` is a low-severity request from a student to fix a field in their own record.
+Each maps to a PS requirement 3 validation (duplicate records, invalid/missing APAAR, excess intake, data inconsistencies, cross-institution duplicates). `STUDENT_CORRECTION` is a low-severity request from a student to fix a field in their own record. `DOCUMENT_TAMPERED` is raised when a stored document no longer matches the SHA-256 recorded at upload.
 
 Severity: `low | medium | high | critical`.
 **Every flag must have a human-readable `explanation` and structured `evidence`.** No unexplained flags — explainability is a core judging point.

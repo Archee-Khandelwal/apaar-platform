@@ -743,6 +743,29 @@ Role: admin. Issues a one-time temporary password, shown only in this response; 
 
 ---
 
+## 7a. Documents — routers/documents.py
+
+Files are accepted only as PDF, JPEG or PNG **by content** (first bytes), up to `limits.max_file_mb` in `document_checklist.yaml` (5 MB). PDFs carrying `/JavaScript`, `/JS`, `/Launch`, `/EmbeddedFile` or `/RichMedia` are refused (`415 UNSAFE_FILE`). Each file is stored Fernet-encrypted with its plaintext SHA-256; every read re-hashes it and answers `409 DOCUMENT_TAMPERED` (and raises a `DOCUMENT_TAMPERED` flag) on a mismatch. Every read writes the access log (`view_document`).
+
+| Route | Role | Notes |
+|---|---|---|
+| `GET /institution/documents/rules` | institution | Document types, checklist rules, limits |
+| `GET /institution/documents` | institution | One row per enrolled student: `counts` (missing/uploaded/verified/rejected), `status`, `missing`; query `status`, `q`, `academic_year`, pagination; `totals` across all students |
+| `GET /institution/students/{student_id}/documents` | institution | The student's checklist: each required `doc_type` with `status` and the current document. 404 for a student not enrolled at this institution |
+| `POST /institution/students/{student_id}/documents` | institution | multipart `file` + `doc_type`. `201` with the document summary. Errors: `400 NOT_REQUIRED` / `UNKNOWN_DOCUMENT_TYPE`, `413 FILE_TOO_LARGE`, `415 UNSUPPORTED_FILE` / `UNSAFE_FILE` |
+| `POST /institution/documents/bulk` | institution | multipart `file` = ZIP of `<APAAR or student id>_<doc_type>.<ext>` (or `<key>/<doc_type>.<ext>`). Per-file report `stored / rejected / skipped` with reasons. `400 TOO_MANY_FILES`, `413 FILE_TOO_LARGE` (checked from the headers before expanding) |
+| `GET /institution/documents/{document_id}/file` | institution (own only) | The file; `X-Content-SHA256` header |
+| `POST /aicte/documents/{document_id}/file` | aicte_officer | Body `{ "reason": "≥10 chars" }`; the reason is access-logged and visible to the student |
+| `GET /student/documents` | student | Own current documents with status |
+| `GET /student/documents/{document_id}/file` | student (own only) | |
+
+Document summary:
+```json
+{ "id": 91, "doc_type": "class12_marksheet", "original_filename": "marks.pdf", "content_type": "application/pdf", "size_bytes": 18233, "sha256": "9f2c…", "uploaded_at": "2026-10-28T10:02:00", "uploaded_by": "vit_admin", "upload_channel": "single", "verification_status": "needs_review", "issuer_status": "verified", "integrity_ok": true, "reasons": [ { "code": "NAME_MISMATCH", "message": "…", "severity": "warning" } ], "review_decision": null, "review_reason": null }
+```
+
+---
+
 ## 8. Mock APAAR registry (port 8001) — `/registry`
 
 Production-shaped stand-in for the real APAAR/ABC API. Auth: `X-API-Key: <REGISTRY_API_KEY>` on every route except `/health`. Artificial 20–50 ms latency.
@@ -825,3 +848,4 @@ All ten Step-0 questions are now decided — see the decision table in `docs/PLA
 | 2026-10-26 | Step 13: verifier request status gains `revoked` (a student withdrawing an approved consent is not the same as denying it); `GET /aicte/reports/trends` gains `new_admissions_only`; `GET /aicte/non-reporting` rows gain `days_to_deadline` and `reporting_deadline`; `GET /institution/compliance-certificate` gains `format=json` for an eligibility check without issuing | Claude Code |
 | 2026-10-28 | Refocus: removed `/aicte/risk`, `/aicte/inspection-shortlist(.csv)`, `/aicte/non-reporting`, `/aicte/remind/{id}`, `/aicte/graph/*`, `/institution/compliance-certificate`, `/student/enrolments/{id}/confirm` and `/dispute`, `/admin/scenarios`, `/admin/load-scenario/{name}`, `/admin/run-detectors`. Flag types `GHOST_CLUSTER`, `SEQUENTIAL_APAAR`, `LAST_MINUTE_BULK`, `PHANTOM_PROGRESSION`, `STUDENT_DISPUTE`, `STATISTICAL_ANOMALY` and the flag `cluster_id` field removed; student corrections now raise `STUDENT_CORRECTION`. Institution rows lose `risk_score`/`risk_band` and gain `open_flags_total` | Claude Code |
 | 2026-10-28 | Security: per-account random passwords (no `password` in `/auth/demo-users`), login throttling (`429 TOO_MANY_ATTEMPTS`), `POST /auth/change-password`, token versioning (`401 TOKEN_REVOKED`), `GET /admin/users`, `POST /admin/users/{id}/reset-password`, `403 PASSWORD_CHANGE_REQUIRED`; `user.must_change_password` added | Claude Code |
+| 2026-10-28 | Documents (section 7a): checklist, single and ZIP upload, encrypted storage with SHA-256, downloads for the owning institution, officers (with a reason) and the student; `DOCUMENT_TAMPERED` flag type | Claude Code |

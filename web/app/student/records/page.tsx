@@ -7,7 +7,8 @@ import { FieldList, PageHeader, SectionCard } from "@/components/ui/page";
 import { ErrorState, Skeleton } from "@/components/States";
 import { Badge, Button, Input, Label, Select, Spinner, Textarea } from "@/components/ui/primitives";
 import { useToast } from "@/components/ui/toast";
-import { api } from "@/lib/api";
+import { ChecklistBadge } from "@/components/DocumentStatusBadge";
+import { api, openFile } from "@/lib/api";
 import { dateOnly, dateTime } from "@/lib/format";
 
 const CORRECTABLE = [
@@ -26,6 +27,7 @@ export default function MyRecordsPage() {
   const queryClient = useQueryClient();
   const me = useQuery({ queryKey: ["student-me"], queryFn: api.studentMe });
   const corrections = useQuery({ queryKey: ["student-corrections"], queryFn: api.corrections });
+  const documents = useQuery({ queryKey: ["student-documents"], queryFn: api.myDocuments });
 
   const [field, setField] = useState(CORRECTABLE[0].value);
   const [value, setValue] = useState("");
@@ -166,6 +168,41 @@ export default function MyRecordsPage() {
               ))}
             </ul>
           )}
+      </SectionCard>
+
+      <SectionCard
+        title="Documents your institution submitted"
+        description="You can open any of them. Each opening is recorded in your access log, like any other access."
+        bodyClassName="p-0"
+      >
+        {(documents.data?.items.length ?? 0) === 0 ? (
+          <p className="p-5 text-sm text-muted-foreground">No documents have been submitted for you yet.</p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {documents.data!.items.map((item) => (
+              <li key={item.id} className="flex flex-wrap items-center gap-3 p-4">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">{item.label}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {item.institution_name} · {dateTime(item.uploaded_at)}
+                  </p>
+                </div>
+                <ChecklistBadge status={item.status as "uploaded" | "verified" | "rejected"} />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    openFile(`/student/documents/${item.id}/file`).catch((error: Error) =>
+                      toast(error.message, "danger"),
+                    )
+                  }
+                >
+                  View
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
       </SectionCard>
     </>
   );

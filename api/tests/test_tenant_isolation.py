@@ -6,6 +6,7 @@ must answer 404 (never confirming the row exists) or simply ignore the smuggled 
 """
 from __future__ import annotations
 
+import hashlib
 from datetime import date
 from typing import Any
 
@@ -15,7 +16,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.crypto import hmac_hash, mask_apaar, mask_name, vault_encrypt
-from app.models.core import Enrolment, Flag, Institution, Program, Student, Upload, Vault
+from app.core.crypto import encrypt_bytes
+from app.models.core import Enrolment, Flag, Institution, Program, Student, StudentDocument, Upload, Vault
 from app.services import degree_certificate
 
 YEAR = "2026-27"
@@ -51,12 +53,19 @@ def _seed_college(db: Session, institution: Institution, index: int) -> dict[str
                 academic_year=YEAR, notes=[])
     db.add(flag)
     db.flush()
+    pdf = b"%PDF-1.4\n%%EOF\n"
+    stored = StudentDocument(student_id=student.id, institution_id=institution.id, enrolment_id=enrolment.id,
+                             doc_type="admission_letter", original_filename="a.pdf", content_type="application/pdf",
+                             size_bytes=len(pdf), sha256=hashlib.sha256(pdf).hexdigest(),
+                             content_enc=encrypt_bytes(pdf), is_current=True)
+    db.add(stored)
+    db.flush()
     document, _token, _created = degree_certificate.issue_for_enrolment(
         db, institution_id=institution.id, enrolment_id=enrolment.id, actor="setup"
     )
     db.commit()
     return {"institution": institution, "student": student, "enrolment": enrolment,
-            "upload": upload, "flag": flag, "serial": document.serial}
+            "upload": upload, "flag": flag, "serial": document.serial, "document": stored}
 
 
 @pytest.fixture()
@@ -110,6 +119,17 @@ def test_another_colleges_certificates_are_out_of_reach(client: TestClient, auth
                            json={"reason": "Revoking a rival's certificate."}))
 
 
+def test_another_colleges_documents_are_out_of_reach(client: TestClient, auth, colleges) -> None:
+    headers = auth("institution")
+    other = colleges["other"]
+    _not_found(client.get(f"/institution/documents/{other['document'].id}/file", headers=headers))
+    _not_found(client.get(f"/institution/students/{other['student'].id}/documents", headers=headers))
+    _not_found(client.post(
+        f"/institution/students/{other['student'].id}/documents", headers=headers,
+        files={"file": ("a.pdf", b"%PDF-1.4\n%%EOF\n", "application/pdf")}, data={"doc_type": "admission_letter"},
+    ))
+
+
 # ------------------------------------------------------------------ institution_id in the query
 
 
@@ -121,6 +141,7 @@ LIST_ROUTES = (
     "/institution/seat-matrix?academic_year=2026-27",
     "/institution/dashboard",
     "/institution/degree-certificates",
+    "/institution/documents",
 )
 
 
