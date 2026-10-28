@@ -45,3 +45,7 @@ var/
 apaar_robust.db*
 registry_robust.db*
 issuer_robust.db*
+
+# Generated demo passwords (written at seed time; never commit)
+demo_credentials.csv
+*_credentials.csv
