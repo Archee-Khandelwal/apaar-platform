@@ -591,3 +591,103 @@ def test_quality_score_rewards_clean_complete_files(client: TestClient, auth, pr
 
     assert clean_report["quality_score"] > dirty_report["quality_score"]
     assert 0 <= dirty_report["quality_score"] <= 100
+
+
+# ------------------------------------------------------------------ demo samples vs registry
+
+
+def test_sample_1_raises_excess_intake_and_no_apaar_not_found(
+    client: TestClient, auth, users, db: Session, monkeypatch
+) -> None:
+    """The demo file must show only its own story: no 'not in registry' noise."""
+    import httpx
+    import pandas as pd
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.pool import StaticPool
+
+    from app.services.registry_client import RegistryClient
+    from app.services.users import DemoAccount, upsert_user
+    from datagen.samples import IDENTITIES_PATH, register_sample_identities
+    from registry.app.db import Base as RegistryBase
+    from registry.app.db import get_registry_db
+    from registry.app.main import app as registry_app
+
+    # A throwaway registry holding only what the seed registers for the samples.
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    RegistryBase.metadata.create_all(engine)
+    maker = sessionmaker(bind=engine, expire_on_commit=False)
+    with maker() as session:
+        assert register_sample_identities(session) > 0
+
+    def override():
+        with maker() as session:
+            yield session
+
+    registry_app.dependency_overrides[get_registry_db] = override
+    registry_http = TestClient(registry_app)
+
+    def bridge(request: httpx.Request) -> httpx.Response:
+        forwarded = registry_http.post(request.url.path, content=request.content, headers=request.headers)
+        return httpx.Response(forwarded.status_code, content=forwarded.content)
+
+    monkeypatch.setattr(
+        RegistryClient,
+        "_client",
+        lambda self: httpx.Client(
+            base_url="http://registry",
+            headers={"X-API-Key": self.api_key},
+            transport=httpx.MockTransport(bridge),
+        ),
+    )
+
+    try:
+        path = SAMPLES / "sample_1_excess_intake.xlsx"
+        frame = pd.read_excel(path, dtype=str).fillna("")
+        frame = frame[frame["APAAR No."].str.strip() != ""]
+        # The committed file and the registry seed list must not drift apart.
+        import json
+
+        known = {item["apaar"] for item in json.loads(IDENTITIES_PATH.read_text(encoding="utf-8"))}
+        assert set(frame["APAAR No."].str.strip()) <= known
+
+        institution = Institution(
+            aicte_permanent_id="1-7700112233", name="Kolhanpur College of Engineering",
+            state="Maharashtra", region="West", type="private_unaided",
+        )
+        db.add(institution)
+        db.flush()
+        program = Program(
+            institution_id=institution.id, course=frame["Course"].iloc[0],
+            branch=frame["Branch / Spec."].iloc[0], level="UG", mode="regular",
+        )
+        db.add(program)
+        db.flush()
+        db.add(
+            ApprovedIntake(
+                program_id=program.id, academic_year=YEAR, intake=len(frame) - 25,
+                supernumerary_caps=supernumerary_caps(len(frame) - 25),
+            )
+        )
+        upsert_user(
+            db,
+            DemoAccount(
+                username="kolhanpur32_admin", role="institution",
+                display_name="Kolhanpur — Data Cell", label=institution.name,
+                institution_id=institution.id,
+            ),
+            password="Test-Pass-2026",
+        )
+        db.commit()
+
+        headers = auth("kolhanpur32_admin")
+        body = _upload(client, headers, path.read_bytes(), path.name)
+        mapping = {item["source_column"]: item["field"] for item in body["proposed_mapping"]}
+        _confirm(client, headers, body["upload_id"], mapping)
+
+        types = [flag_type for (flag_type,) in db.execute(select(Flag.type)).all()]
+        assert "EXCESS_INTAKE" in types
+        assert types.count("APAAR_NOT_FOUND") == 0
+    finally:
+        registry_app.dependency_overrides.pop(get_registry_db, None)
+        registry_http.close()

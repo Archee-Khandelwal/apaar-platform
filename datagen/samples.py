@@ -19,6 +19,8 @@ from datagen.generator import GROUND_TRUTH_PATH
 
 SAMPLES_DIR = REPO_ROOT / "samples"
 YEAR = "2026-27"
+# Who the sample files' valid APAAR IDs belong to (clean name and DOB), for the registry.
+IDENTITIES_PATH = SAMPLES_DIR / "sample_identities.json"
 
 # Headers a college actually sends us — nothing matches our canonical field names.
 MESSY_HEADERS = {
@@ -99,6 +101,32 @@ def _row(
             }
         )
     return row
+
+
+def register_sample_identities(session=None) -> int:
+    """Add the sample files' valid APAAR IDs to the mock registry. Returns how many were added.
+
+    Registry entries only: nobody is enrolled. IDs already in the registry are left alone.
+    Pass a session to target a specific registry database (tests do).
+    """
+    from registry.app.db import IssuedApaar, SessionLocal, init_registry_db
+
+    identities = json.loads(IDENTITIES_PATH.read_text(encoding="utf-8"))
+    own = session is None
+    if own:
+        init_registry_db()
+        session = SessionLocal()
+    try:
+        added = 0
+        for item in identities:
+            if session.get(IssuedApaar, item["apaar"]) is None:
+                session.add(IssuedApaar(apaar=item["apaar"], name=item["name"], dob=item["dob"]))
+                added += 1
+        session.commit()
+        return added
+    finally:
+        if own:
+            session.close()
 
 
 def _excess_target() -> dict | None:
@@ -227,7 +255,8 @@ def write_samples(*, seed: int = 42) -> list[Path]:
         written.append(zip_path)
 
     # ---------------------------------------------------------------- 2. dirty errors
-    rows = [_row(rng, names, calendar, index=i) for i in range(45)]
+    facts_2: list[dict[str, str]] = []
+    rows = [_row(rng, names, calendar, index=i, facts=facts_2) for i in range(45)]
     rows[3][MESSY_HEADERS["apaar_id"]] = "12345678"          # too short
     rows[5][MESSY_HEADERS["apaar_id"]] = "1234-5678-12AB"    # not digits
     rows[7][MESSY_HEADERS["apaar_id"]] = ""                   # missing
@@ -246,6 +275,23 @@ def write_samples(*, seed: int = 42) -> list[Path]:
     with pd.ExcelWriter(path, engine="openpyxl") as writer:
         frame.to_excel(writer, index=False, sheet_name="Admissions 2026-27")
     written.append(path)
+
+    # The registry must know every correctly formatted APAAR in sample 1 and 2, so the demo
+    # uploads raise only the flags they are about. Deliberately invalid IDs were overwritten
+    # in the rows above and are left out. Nobody is enrolled: these are registry entries only.
+    sent = {
+        str(cell).strip()
+        for row in rows
+        for cell in [row[MESSY_HEADERS["apaar_id"]]]
+        if str(cell).strip().isdigit() and len(str(cell).strip()) == 12
+    }
+    identities = {
+        fact["apaar"]: {"apaar": fact["apaar"], "name": fact["name"], "dob": fact["dob"]}
+        for fact in [*facts, *(f for f in facts_2 if f["apaar"] in sent)]
+    }
+    IDENTITIES_PATH.write_text(json.dumps(list(identities.values()), indent=1), encoding="utf-8")
+    written.append(IDENTITIES_PATH)
+    register_sample_identities()
 
     # ---------------------------------------------------------------- 3. garbage CSV
     path = SAMPLES_DIR / "sample_3_garbage.csv"
